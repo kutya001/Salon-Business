@@ -319,7 +319,7 @@ window.handleSetupSave = async function () {
     setUI({ loading: true });
 
     try {
-        const { token } = await api.authenticate(password);
+        const { token } = await api.authenticate(password, true);
         if (token) {
             api.setToken(token);
             const business = await api.updateSettings({ name });

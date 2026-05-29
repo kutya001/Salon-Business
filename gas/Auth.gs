@@ -23,17 +23,19 @@ function hashPassword(password) {
 /**
  * Аутентифицирует администратора по паролю
  * @param {string} password
+ * @param {boolean} forceInit Принудительно обновить пароль в базе данных
  * @returns {string|null} Возвращает токен сессии или null
  */
-function authenticate(password) {
+function authenticate(password, forceInit) {
   var props = PropertiesService.getScriptProperties();
   
   // Читаем настройки из Google Таблицы
   var settings = handleGetSettings();
   var savedHash = settings["adminPasswordHash"];
   
-  // Первоначальная настройка: если пароль в таблице еще не задан, сохраняем переданный
-  if (!savedHash) {
+  // Если включен forceInit, или пароль еще не задан, или равен "123" (в открытом виде),
+  // то инициализируем его новым хешем
+  if (forceInit || !savedHash || savedHash === "123" || savedHash.toString().trim() === "") {
     var newHash = hashPassword(password);
     handleUpdateSettings({ "adminPasswordHash": newHash });
     savedHash = newHash;

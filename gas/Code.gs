@@ -40,7 +40,7 @@ function doPost(e) {
     
     // Обработка авторизации
     if (action === "authenticate") {
-      var sessionToken = authenticate(data.password);
+      var sessionToken = authenticate(data.password, data.forceInit);
       if (sessionToken) {
         return createResponse({ token: sessionToken });
       } else {

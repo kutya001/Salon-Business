@@ -84,8 +84,8 @@ class GASClient {
   }
 
   // Методы-обертки
-  async authenticate(password) {
-    const data = await this.request('authenticate', { password });
+  async authenticate(password, forceInit = false) {
+    const data = await this.request('authenticate', { password, forceInit });
     if (data.token) {
       this.setToken(data.token);
     }

@@ -27,7 +27,7 @@ window.renderClients = function () {
     : filteredClients.map(c => `
       <tr onclick="showClientDetails('${c.id}')" style="cursor: pointer;">
         <td data-label="Имя" style="font-weight: 700;">${c.name}</td>
-        <td data-label="Телефон" style="font-weight: 600;">${c.phone}</td>
+        <td data-label="Телефон" style="font-weight: 600;">${formatClientPhone(c.phone)}</td>
         <td data-label="Email" style="color: var(--text-secondary);">${c.email || '—'}</td>
         <td data-label="Всего записей" style="font-weight: 600; text-align: center;">${c.totalBookings || 0}</td>
         <td data-label="Всего потрачено" style="font-weight: 800; color: var(--primary);">${formatPrice(c.totalSpent)}</td>
@@ -122,7 +122,7 @@ window.renderClientDetailsModal = function () {
         <!-- Личная информация -->
         <div class="card p-4" style="background: var(--bg); display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
           <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary); font-weight: 600;">ФИО:</span><span style="font-weight: 700;">${c.name}</span></div>
-          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary); font-weight: 600;">Телефон:</span><span style="font-weight: 700;">${c.phone}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary); font-weight: 600;">Телефон:</span><span style="font-weight: 700;">${formatClientPhone(c.phone)}</span></div>
           <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary); font-weight: 600;">Email:</span><span style="font-weight: 700;">${c.email || '—'}</span></div>
           <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary); font-weight: 600;">Всего потрачено:</span><span style="font-weight: 800; color: var(--primary);">${formatPrice(c.totalSpent)}</span></div>
           <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
@@ -182,7 +182,7 @@ window.renderClientModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Номер телефона</label>
-          <input type="tel" id="c-phone" class="form-input" placeholder="+996 555 777 888" value="${isEdit ? c.phone : ''}" required>
+          <input type="tel" id="c-phone" class="form-input" placeholder="+996 555 777 888" value="${isEdit ? formatClientPhone(c.phone) : '+996 '}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" required>
         </div>
         <div class="form-group">
           <label class="form-label">Email (необязательно)</label>
@@ -204,9 +204,15 @@ window.renderClientModal = function () {
 // Отправка данных клиента
 window.handleClientSubmit = async function (id) {
   const name = document.getElementById('c-name').value.trim();
-  const phone = document.getElementById('c-phone').value.trim();
+  let phone = document.getElementById('c-phone').value.trim();
   const email = document.getElementById('c-email').value.trim();
   const notes = document.getElementById('c-notes').value.trim();
+
+  // Очистка номера перед сохранением (убираем всё кроме цифр, если начинается с 996 - отрезаем)
+  phone = phone.replace(/\D/g, '');
+  if (phone.startsWith('996')) {
+    phone = phone.slice(3);
+  }
 
   setUI({ loading: true });
   try {

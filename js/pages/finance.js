@@ -179,10 +179,12 @@ window.renderFinance = function () {
 
 // Открытие модалки добавления транзакции
 window.showCreateTransactionModal = function () {
-  setUI({ modal: 'createTransaction', modalData: null });
+  setUI({ modal: 'createTransaction', modalData: { type: 'income', paymentMethod: 'cash' } });
 };
 
 window.renderTransactionModal = function () {
+  const md = state.ui.modalData || { type: 'income', paymentMethod: 'cash' };
+  
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
@@ -193,10 +195,10 @@ window.renderTransactionModal = function () {
       <form id="tx-form" onsubmit="event.preventDefault(); handleTransactionSubmit();" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="form-group">
           <label class="form-label">Тип транзакции</label>
-          <select id="tx-type" class="form-select" required>
-            <option value="income">📈 Приход (Поступление средств)</option>
-            <option value="expense">📉 Расход (Выплата зарплаты, закуп материалов)</option>
-          </select>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, type: 'income' } })" class="btn ${md.type === 'income' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">📈 Приход</button>
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, type: 'expense' } })" class="btn ${md.type === 'expense' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">📉 Расход</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Сумма (сом)</label>
@@ -204,11 +206,11 @@ window.renderTransactionModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Способ оплаты</label>
-          <select id="tx-payment" class="form-select" required>
-            <option value="cash">💵 Наличные</option>
-            <option value="card">💳 Безналичный (Карта/Перевод)</option>
-            <option value="bonus">🌟 Бонусы</option>
-          </select>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, paymentMethod: 'cash' } })" class="btn ${md.paymentMethod === 'cash' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💵 Наличные</button>
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, paymentMethod: 'card' } })" class="btn ${md.paymentMethod === 'card' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💳 Карта</button>
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, paymentMethod: 'bonus' } })" class="btn ${md.paymentMethod === 'bonus' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">🌟 Бонусы</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Назначение / Описание</label>
@@ -225,9 +227,9 @@ window.renderTransactionModal = function () {
 
 // Сохранение транзакции
 window.handleTransactionSubmit = async function () {
-  const type = document.getElementById('tx-type').value;
+  const type = state.ui.modalData.type;
   const amount = parseFloat(document.getElementById('tx-amount').value) || 0;
-  const paymentMethod = document.getElementById('tx-payment').value;
+  const paymentMethod = state.ui.modalData.paymentMethod;
   const description = document.getElementById('tx-desc').value.trim();
 
   setUI({ loading: true });

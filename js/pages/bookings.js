@@ -158,7 +158,7 @@ function renderBookingsTable(bookings) {
         </td>
         <td data-label="Клиент">
           <div style="font-weight: 700;">${b.clientName}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">${b.clientPhone}</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">${formatClientPhone(b.clientPhone)}</div>
         </td>
         <td data-label="Процедура">
           <div style="font-weight: 600;">${b.serviceName}</div>
@@ -393,11 +393,15 @@ window.renderBookingDetailsModal = function () {
         </div>
       </div>
 
-      <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
         ${actionsHtml}
+        <button onclick="showBookingMessageModal('${b.id}')" class="btn btn-secondary" style="flex: 1; min-width: 140px; color: #3b82f6; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.05);">💬 Отправить сообщение</button>
       </div>
 
-      <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; justify-content: flex-end;">
+      <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; justify-content: space-between;">
+        <button onclick="showEditBookingModal('${b.id}')" class="btn btn-secondary" style="width: auto;">
+          ✏️ Редактировать
+        </button>
         <button onclick="handleDeleteBooking('${b.id}')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto;">
           🗑 Удалить запись
         </button>
@@ -406,15 +410,98 @@ window.renderBookingDetailsModal = function () {
   `;
 };
 
-// Открытие модалки создания записи
+// ------------------------------------------------------------------
+// Модалка отправки сообщений
+// ------------------------------------------------------------------
+
+window.showBookingMessageModal = function (id) {
+  const booking = state.bookings.find(b => b.id === id);
+  if (!booking) return;
+  
+  // Устанавливаем дефолтный шаблон
+  const defaultText = `Здравствуйте, ${booking.clientName}!\nНапоминаем о вашей записи на ${booking.serviceName}\nДата: ${formatDate(booking.date)}\nВремя: ${formatTime(booking.time)}\nЖдем вас!`;
+  
+  setUI({ modal: 'bookingMessage', modalData: { booking, messageText: defaultText } });
+};
+
+window.handleMessageTemplateSelect = function (templateType) {
+  const md = state.ui.modalData;
+  const b = md.booking;
+  let text = '';
+  
+  if (templateType === 'reminder') {
+    text = `Здравствуйте, ${b.clientName}!\nНапоминаем о вашей записи на ${b.serviceName}\nДата: ${formatDate(b.date)}\nВремя: ${formatTime(b.time)}\nЖдем вас!`;
+  } else if (templateType === 'thanks') {
+    text = `Здравствуйте, ${b.clientName}!\nСпасибо, что выбрали наш салон. Будем рады видеть вас снова!`;
+  } else if (templateType === 'confirmation') {
+    text = `Здравствуйте, ${b.clientName}!\nВаша запись на ${b.serviceName} успешно подтверждена.\nДата: ${formatDate(b.date)}\nВремя: ${formatTime(b.time)}.`;
+  }
+  
+  setUI({ modalData: { ...md, messageText: text } });
+};
+
+window.sendBookingMessage = function (platform) {
+  const md = state.ui.modalData;
+  const phone = formatClientPhone(md.booking.clientPhone).replace(/\D/g, '');
+  const text = document.getElementById('message-text').value;
+  
+  if (platform === 'whatsapp') {
+    const url = \`https://wa.me/\${phone}?text=\${encodeURIComponent(text)}\`;
+    window.open(url, '_blank');
+  } else if (platform === 'telegram') {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Текст скопирован! Вставьте его в чат Telegram.', 'info', 4000);
+      const url = \`https://t.me/+\${phone}\`;
+      window.open(url, '_blank');
+    }).catch(() => {
+      showToast('Не удалось скопировать текст', 'error');
+    });
+  }
+};
+
+window.renderBookingMessageModal = function () {
+  const md = state.ui.modalData;
+  
+  return \`
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">💬 Отправить сообщение</h3>
+        <button onclick="setUI({ modal: 'viewBooking', modalData: md.booking })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">⬅</button>
+      </div>
+      
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button onclick="handleMessageTemplateSelect('reminder')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto;">⏰ Напоминание</button>
+        <button onclick="handleMessageTemplateSelect('confirmation')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto;">✅ Подтверждение</button>
+        <button onclick="handleMessageTemplateSelect('thanks')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto;">❤️ Спасибо</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Текст сообщения</label>
+        <textarea id="message-text" class="form-textarea" rows="6" onchange="state.ui.modalData.messageText = this.value">\${md.messageText}</textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 8px;">
+        <button onclick="sendBookingMessage('whatsapp')" class="btn" style="flex: 1; background: #25D366; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          WhatsApp
+        </button>
+        <button onclick="sendBookingMessage('telegram')" class="btn" style="flex: 1; background: #0088cc; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          Telegram
+        </button>
+      </div>
+    </div>
+  \`;
+};
+
+// Открытие модалки создания/редактирования записи
 window.showCreateBookingModal = function () {
   setUI({ 
     modal: 'createBooking', 
     modalData: {
       step: 1,
+      isEdit: false,
       draft: {
         clientName: '',
-        clientPhone: '+996 ',
+        clientPhone: '',
         categoryId: '',
         serviceId: '',
         masterId: '',
@@ -422,6 +509,35 @@ window.showCreateBookingModal = function () {
         time: '',
         paymentMethod: 'cash',
         notes: ''
+      }
+    } 
+  });
+};
+
+window.showEditBookingModal = function (id) {
+  const b = state.bookings.find(x => x.id === id);
+  if (!b) return;
+  
+  // Ищем категорию услуги
+  const service = state.services.find(s => s.id === b.serviceId);
+  const categoryId = service ? service.categoryId : '';
+
+  setUI({ 
+    modal: 'createBooking', 
+    modalData: {
+      step: 1,
+      isEdit: true,
+      bookingId: id,
+      draft: {
+        clientName: b.clientName,
+        clientPhone: formatClientPhone(b.clientPhone),
+        categoryId: categoryId,
+        serviceId: b.serviceId,
+        masterId: b.masterId,
+        date: b.date,
+        time: b.time,
+        paymentMethod: b.paymentMethod || 'cash',
+        notes: b.notes || ''
       }
     } 
   });
@@ -570,11 +686,11 @@ window.renderBookingModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Способ оплаты</label>
-          <select id="b-payment" class="form-select">
-            <option value="cash" ${draft.paymentMethod === 'cash' ? 'selected' : ''}>💵 Наличные</option>
-            <option value="card" ${draft.paymentMethod === 'card' ? 'selected' : ''}>💳 Карта / Перевод</option>
-            <option value="bonus" ${draft.paymentMethod === 'bonus' ? 'selected' : ''}>🌟 Бонусы</option>
-          </select>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button type="button" onclick="state.ui.modalData.draft.paymentMethod='cash'; setUI({ modalData: state.ui.modalData })" class="btn ${draft.paymentMethod === 'cash' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💵 Наличные</button>
+            <button type="button" onclick="state.ui.modalData.draft.paymentMethod='card'; setUI({ modalData: state.ui.modalData })" class="btn ${draft.paymentMethod === 'card' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💳 Карта</button>
+            <button type="button" onclick="state.ui.modalData.draft.paymentMethod='bonus'; setUI({ modalData: state.ui.modalData })" class="btn ${draft.paymentMethod === 'bonus' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">🌟 Бонусы</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Заметки / Пожелания</label>
@@ -583,7 +699,7 @@ window.renderBookingModal = function () {
 
         <div style="display: flex; gap: 12px; margin-top: 10px;">
           <button type="button" onclick="setBookingWizardStep(4)" class="btn btn-secondary" style="flex: 1;">⬅ Назад</button>
-          <button type="button" onclick="handleCreateBookingSubmit()" class="btn btn-primary" style="flex: 2;">Создать запись ✅</button>
+          <button type="button" onclick="handleCreateBookingSubmit()" class="btn btn-primary" style="flex: 2;">${md.isEdit ? 'Сохранить изменения ✅' : 'Создать запись ✅'}</button>
         </div>
       </div>
     `;
@@ -616,27 +732,32 @@ window.handleCreateBookingSubmit = function () {
   // Сохраняем значения с 5 шага
   const dateInput = document.getElementById('b-date');
   const timeInput = document.getElementById('b-time');
-  const paymentInput = document.getElementById('b-payment');
   const notesInput = document.getElementById('b-notes');
-
+  
   if (!dateInput.value || !timeInput.value) {
     return showToast('Укажите дату и время записи', 'error');
   }
 
+  // Очистка номера перед сохранением (убираем всё кроме цифр, если начинается с 996 - отрезаем)
+  let cleanPhone = draft.clientPhone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('996')) {
+    cleanPhone = cleanPhone.slice(3);
+  }
+
   const payload = {
     clientName: draft.clientName,
-    clientPhone: draft.clientPhone,
+    clientPhone: cleanPhone,
     serviceId: draft.serviceId,
     masterId: draft.masterId, // Может быть пустой строкой, бэкенд должен обработать как "Любой"
     date: dateInput.value,
     time: timeInput.value,
-    paymentMethod: paymentInput.value,
+    paymentMethod: draft.paymentMethod,
     notes: notesInput.value.trim(),
-    status: 'confirmed'
+    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'confirmed') : 'confirmed'
   };
 
   // Оптимистичное обновление
-  const tempId = 'b_temp_' + Date.now();
+  const tempId = md.isEdit ? md.bookingId : ('b_temp_' + Date.now());
   const service = state.services.find(s => s.id === payload.serviceId) || {};
   const master = state.masters.find(m => m.id === payload.masterId) || { name: 'Любой мастер' };
   
@@ -658,12 +779,20 @@ window.handleCreateBookingSubmit = function () {
     notes: payload.notes
   };
 
-  state.bookings.push(optimisticBooking);
+  if (md.isEdit) {
+    const idx = state.bookings.findIndex(b => b.id === tempId);
+    if (idx !== -1) state.bookings[idx] = { ...state.bookings[idx], ...optimisticBooking };
+  } else {
+    state.bookings.push(optimisticBooking);
+  }
+  
   setUI({ modal: null, modalData: null });
-  showToast('Запись добавлена (синхронизация...)', 'info');
+  showToast(md.isEdit ? 'Изменения сохранены (синхронизация...)' : 'Запись добавлена (синхронизация...)', 'info');
 
   // Фоновая синхронизация
-  api.createBooking(payload).then(() => {
+  const apiCall = md.isEdit ? api.updateBooking(tempId, payload) : api.createBooking(payload);
+  
+  apiCall.then(() => {
     return api.getAll(); // перезапрашиваем все данные для точности (клиенты, транзакции и т.д.)
   }).then(allData => {
     setState({

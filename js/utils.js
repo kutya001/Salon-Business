@@ -16,8 +16,18 @@ window.formatDate = function (dateStr) {
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
   ];
+  const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} (${days[date.getDay()]})`;
+};
+
+window.formatClientPhone = function(phone) {
+  if (!phone) return '';
+  const clean = phone.replace(/\D/g, '');
+  if (clean.startsWith('996')) {
+    return '+' + clean;
+  }
+  return '+996' + clean;
 };
 
 window.formatRelativeDate = function (dateStr) {

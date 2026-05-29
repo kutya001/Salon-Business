@@ -59,6 +59,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
+  // Игнорируем запросы не по протоколам http/https (например, chrome-extension, data)
+  if (!requestUrl.protocol.startsWith('http')) {
+    return;
+  }
+
   // Запросы к Google Apps Script ВСЕГДА идут в сеть в обход кэша
   if (requestUrl.hostname === 'script.google.com' || requestUrl.pathname.includes('/macros/')) {
     event.respondWith(fetch(event.request));

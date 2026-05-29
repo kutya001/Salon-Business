@@ -256,3 +256,97 @@ window.handleHardReset = function () {
         location.reload(true);
     }
 };
+
+window.renderSetup = function () {
+    const currentUrl = api.gasUrl || '';
+    const currentName = state.business?.name || 'Мой салон красоты';
+    return `
+    <div class="auth-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;box-sizing:border-box;">
+        <div class="card animate-scale-in" style="width:100%;max-width:440px;padding:36px 32px;backdrop-filter:blur(20px);background:rgba(255,255,255,0.95);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;overflow:hidden;box-sizing:border-box;">
+            
+            <!-- Анимация загрузки подключения -->
+            ${state.ui.loading ? `
+            <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;animation:fadeIn 0.3s forwards;">
+                <span class="spinner" style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#764ba2;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;"></span>
+                <div style="font-weight:800;color:#1a1a2e;font-size:15px;animation:pulse 1.5s infinite;display:inline-block;">Проверка соединения...</div>
+            </div>
+            ` : ''}
+
+            <div style="text-align:center;margin-bottom:28px;">
+                <div style="font-size:48px;margin-bottom:8px;">⚙️</div>
+                <h1 style="font-size:24px;font-weight:800;color:#1a1a2e;margin:0 0 4px;">Настройка подключения</h1>
+                <p style="color:#666;font-size:13px;margin:0;">Подключите ваш бизнес к бэкенду Google</p>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;text-align:left;">
+                <label class="form-label" style="font-weight:600;font-size:13px;margin-bottom:6px;display:block;color:#374151;">URL Google Apps Script</label>
+                <input type="url" id="setup-gas-url" class="form-input" placeholder="https://script.google.com/macros/s/..." 
+                    value="${currentUrl}" style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e2e8f0;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;text-align:left;">
+                <label class="form-label" style="font-weight:600;font-size:13px;margin-bottom:6px;display:block;color:#374151;">Название бизнеса</label>
+                <input type="text" id="setup-business-name" class="form-input" placeholder="Мой салон красоты"
+                    value="${currentName}" style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e2e8f0;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div class="form-group" style="margin-bottom:24px;text-align:left;">
+                <label class="form-label" style="font-weight:600;font-size:13px;margin-bottom:6px;display:block;color:#374151;">Пароль доступа администратора</label>
+                <input type="password" id="setup-password" class="form-input" placeholder="Введите или придумайте пароль"
+                    style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e2e8f0;font-size:13px;box-sizing:border-box;">
+            </div>
+
+            <div style="display:flex;gap:10px;">
+                <button onclick="navigate('auth')" class="btn btn-secondary" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;">
+                    Отмена
+                </button>
+                <button onclick="handleSetupSave()" class="btn btn-primary" style="flex:2;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;">
+                    Сохранить и войти
+                </button>
+            </div>
+        </div>
+    </div>`;
+};
+
+window.handleSetupSave = async function () {
+    const gasUrl = document.getElementById('setup-gas-url')?.value.trim();
+    const name = document.getElementById('setup-business-name')?.value.trim();
+    const password = document.getElementById('setup-password')?.value.trim();
+
+    if (!gasUrl) { showToast('Укажите URL скрипта', 'error'); return; }
+    if (!name) { showToast('Укажите название бизнеса', 'error'); return; }
+    if (!password) { showToast('Введите пароль', 'error'); return; }
+
+    api.setGasUrl(gasUrl);
+    setUI({ loading: true });
+
+    try {
+        const { token } = await api.authenticate(password);
+        if (token) {
+            api.setToken(token);
+            const business = await api.updateSettings({ name });
+            const [masters, clients, services, bookings, transactions, shifts] = await Promise.all([
+                api.getMasters(), api.getClients(), api.getServices(),
+                api.getBookings(), api.getTransactions(), api.getShifts()
+            ]);
+
+            setState({ 
+                isAuthenticated: true, 
+                masters: masters || [], 
+                clients: clients || [], 
+                services: services || [], 
+                bookings: bookings || [], 
+                transactions: transactions || [], 
+                shifts: shifts || [], 
+                business: business || state.business 
+            });
+            navigate('dashboard');
+            showToast('Настройка и вход успешно завершены!', 'success');
+        } else {
+            throw new Error('Не удалось получить токен авторизации');
+        }
+    } catch (e) {
+        console.error('Setup Error:', e);
+        showToast('Не удалось подключиться к скрипту. Проверьте URL и пароль.', 'error');
+    } finally {
+        setUI({ loading: false });
+    }
+};

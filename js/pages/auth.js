@@ -198,21 +198,18 @@ window.handleLogin = async function () {
         const { token } = await api.authenticate(password);
         if (token) localStorage.setItem('auth_token', token);
 
-        // Подгружаем все данные с бэкенда
-        const [masters, clients, services, bookings, transactions, shifts, business] = await Promise.all([
-            api.getMasters(), api.getClients(), api.getServices(),
-            api.getBookings(), api.getTransactions(), api.getShifts(), api.getSettings()
-        ]);
+        // Подгружаем все данные с бэкенда за ОДИН запрос!
+        const allData = await api.getAll();
 
         setState({ 
             isAuthenticated: true, 
-            masters: masters || [], 
-            clients: clients || [], 
-            services: services || [], 
-            bookings: bookings || [], 
-            transactions: transactions || [], 
-            shifts: shifts || [], 
-            business: business || state.business 
+            masters: allData.masters || [], 
+            clients: allData.clients || [], 
+            services: allData.services || [], 
+            bookings: allData.bookings || [], 
+            transactions: allData.transactions || [], 
+            shifts: allData.shifts || [], 
+            business: allData.business || state.business 
         });
         
         navigate('dashboard');
@@ -323,20 +320,18 @@ window.handleSetupSave = async function () {
         if (token) {
             api.setToken(token);
             const business = await api.updateSettings({ name });
-            const [masters, clients, services, bookings, transactions, shifts] = await Promise.all([
-                api.getMasters(), api.getClients(), api.getServices(),
-                api.getBookings(), api.getTransactions(), api.getShifts()
-            ]);
+            // Подгружаем ВСЕ данные с бэкенда за ОДИН запрос!
+            const allData = await api.getAll();
 
             setState({ 
                 isAuthenticated: true, 
-                masters: masters || [], 
-                clients: clients || [], 
-                services: services || [], 
-                bookings: bookings || [], 
-                transactions: transactions || [], 
-                shifts: shifts || [], 
-                business: business || state.business 
+                masters: allData.masters || [], 
+                clients: allData.clients || [], 
+                services: allData.services || [], 
+                bookings: allData.bookings || [], 
+                transactions: allData.transactions || [], 
+                shifts: allData.shifts || [], 
+                business: business || allData.business || state.business 
             });
             navigate('dashboard');
             showToast('Настройка и вход успешно завершены!', 'success');

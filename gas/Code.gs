@@ -114,6 +114,11 @@ function doPost(e) {
         result = handleDeleteService(data.id);
         break;
         
+      // Категории
+      case "getCategories":
+        result = handleGetCategories();
+        break;
+        
       // Клиенты
       case "getClients":
         result = handleGetClients();
@@ -198,6 +203,7 @@ function createErrorResponse(message, code) {
  */
 function handleGetAll() {
   var settings = handleGetSettings();
+  var categories = handleGetCategories();
   var masters = handleGetMasters();
   var services = handleGetServices();
   var bookings = handleGetBookings({});
@@ -207,6 +213,7 @@ function handleGetAll() {
   
   return {
     business: settings,
+    categories: categories,
     masters: masters,
     services: services,
     bookings: bookings,

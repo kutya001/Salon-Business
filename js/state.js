@@ -30,7 +30,7 @@ window.state = {
   // Списки сущностей
   masters: [],
   services: [],
-  categories: ['Волосы', 'Ногти', 'Лицо', 'Тело', 'Макияж', 'Брови и ресницы', 'Депиляция', 'Массаж'],
+  categories: [],
   bookings: [],
   clients: [],
   transactions: [],

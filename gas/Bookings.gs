@@ -55,28 +55,34 @@ function handleCreateBooking(data) {
   data.duration = data.duration || service.duration;
   
   // Получаем информацию о мастере
-  var master = getSheetData("Masters").filter(function(m) { return m.id === data.masterId; })[0];
-  if (!master) throw new Error("Мастер не найден");
-  data.masterName = master.name;
+  if (!data.masterId) {
+    data.masterName = "Любой мастер";
+  } else {
+    var master = getSheetData("Masters").filter(function(m) { return m.id === data.masterId; })[0];
+    if (!master) throw new Error("Мастер не найден");
+    data.masterName = master.name;
+  }
   
   data.status = data.status || "confirmed";
   data.paymentMethod = data.paymentMethod || "cash";
   
   // Проверяем конфликты времени (опционально, но полезно)
-  var masterBookings = getSheetData("Bookings").filter(function(b) {
-    return b.masterId === data.masterId && b.date === data.date && b.status !== "cancelled";
-  });
-  
-  var newStart = parseTimeToMinutes(data.time);
-  var newEnd = newStart + parseInt(data.duration, 10);
-  
-  masterBookings.forEach(function(b) {
-    var start = parseTimeToMinutes(b.time);
-    var end = start + parseInt(b.duration, 10);
-    if ((newStart >= start && newStart < end) || (newEnd > start && newEnd <= end) || (newStart <= start && newEnd >= end)) {
-      throw new Error("У мастера " + master.name + " этот временной слот (" + b.time + ") уже занят!");
-    }
-  });
+  if (data.masterId) {
+    var masterBookings = getSheetData("Bookings").filter(function(b) {
+      return b.masterId === data.masterId && b.date === data.date && b.status !== "cancelled";
+    });
+    
+    var newStart = parseTimeToMinutes(data.time);
+    var newEnd = newStart + parseInt(data.duration, 10);
+    
+    masterBookings.forEach(function(b) {
+      var start = parseTimeToMinutes(b.time);
+      var end = start + parseInt(b.duration, 10);
+      if ((newStart >= start && newStart < end) || (newEnd > start && newEnd <= end) || (newStart <= start && newEnd >= end)) {
+        throw new Error("У мастера " + master.name + " этот временной слот (" + b.time + ") уже занят!");
+      }
+    });
+  }
   
   // Добавляем запись
   var booking = appendRow("Bookings", data);

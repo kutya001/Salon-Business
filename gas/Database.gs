@@ -26,8 +26,9 @@ function getSheet(name) {
 function initializeDatabase() {
   var schema = {
     "Settings": ["key", "value"],
+    "Categories": ["id", "name", "description", "status", "createdAt"],
     "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt"],
-    "Services": ["id", "name", "categoryName", "price", "duration", "description", "status", "createdAt"],
+    "Services": ["id", "name", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt"],
     "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
     "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
     "Transactions": ["id", "type", "amount", "description", "paymentMethod", "bookingId", "shiftId", "createdAt"],
@@ -63,6 +64,45 @@ function initializeDatabase() {
     for (var key in defaultSettings) {
       settingsSheet.appendRow([key, defaultSettings[key]]);
     }
+  }
+
+  // Заполняем справочник категорий по умолчанию
+  var categoriesSheet = getSheet("Categories");
+  if (categoriesSheet.getLastRow() <= 1) {
+    var defaultCategories = [
+      { id: "cat_1", name: "Волосы", description: "Стрижки, укладки, окрашивание", status: "active", createdAt: new Date().toISOString() },
+      { id: "cat_2", name: "Ногти", description: "Маникюр, педикюр", status: "active", createdAt: new Date().toISOString() },
+      { id: "cat_3", name: "Лицо", description: "Уход за лицом, макияж", status: "active", createdAt: new Date().toISOString() }
+    ];
+    var catHeaders = schema["Categories"];
+    defaultCategories.forEach(function(cat) {
+      categoriesSheet.appendRow(catHeaders.map(function(h) { return cat[h] || ""; }));
+    });
+  }
+
+  // Заполняем справочник мастеров по умолчанию
+  var mastersSheet = getSheet("Masters");
+  if (mastersSheet.getLastRow() <= 1) {
+    var defaultMaster = {
+      id: "master_1", name: "Айдана (Главный мастер)", phone: "+996555000111", email: "aidana@example.com",
+      specialization: "Универсал", percentage: 50, workDays: "mon,tue,wed,thu,fri",
+      workHoursStart: "09:00", workHoursEnd: "20:00", avatar: "", status: "active", createdAt: new Date().toISOString()
+    };
+    var masterHeaders = schema["Masters"];
+    mastersSheet.appendRow(masterHeaders.map(function(h) { return defaultMaster[h] || ""; }));
+  }
+
+  // Заполняем справочник услуг по умолчанию
+  var servicesSheet = getSheet("Services");
+  if (servicesSheet.getLastRow() <= 1) {
+    var defaultServices = [
+      { id: "svc_1", name: "Женская стрижка", categoryId: "cat_1", categoryName: "Волосы", price: 1000, duration: 60, description: "Базовая стрижка с укладкой", status: "active", createdAt: new Date().toISOString() },
+      { id: "svc_2", name: "Маникюр с покрытием", categoryId: "cat_2", categoryName: "Ногти", price: 800, duration: 90, description: "Классический маникюр + гель-лак", status: "active", createdAt: new Date().toISOString() }
+    ];
+    var svcHeaders = schema["Services"];
+    defaultServices.forEach(function(svc) {
+      servicesSheet.appendRow(svcHeaders.map(function(h) { return svc[h] || ""; }));
+    });
   }
 }
 

@@ -408,105 +408,238 @@ window.renderBookingDetailsModal = function () {
 
 // Открытие модалки создания записи
 window.showCreateBookingModal = function () {
-  setUI({ modal: 'createBooking', modalData: {} });
+  setUI({ 
+    modal: 'createBooking', 
+    modalData: {
+      step: 1,
+      draft: {
+        clientName: '',
+        clientPhone: '+996 ',
+        categoryId: '',
+        serviceId: '',
+        masterId: '',
+        date: '',
+        time: '',
+        paymentMethod: 'cash',
+        notes: ''
+      }
+    } 
+  });
+};
+
+// Переход по шагам в модалке
+window.setBookingWizardStep = function(step) {
+  const data = { ...state.ui.modalData };
+  
+  // Сохраняем значения текущего шага
+  if (data.step === 1) {
+    const nameInput = document.getElementById('b-client-name');
+    const phoneInput = document.getElementById('b-client-phone');
+    if (nameInput && phoneInput) {
+      if (!nameInput.value.trim() || !phoneInput.value.trim() || phoneInput.value.trim() === '+996') {
+        return showToast('Пожалуйста, заполните имя и телефон', 'error');
+      }
+      data.draft.clientName = nameInput.value.trim();
+      data.draft.clientPhone = phoneInput.value.trim();
+    }
+  } else if (data.step === 2) {
+    // Категория выбирается по клику, тут сохранять нечего, но переход делаем ниже
+  } else if (data.step === 3) {
+    // Услуга выбирается по клику
+  } else if (data.step === 4) {
+    // Мастер выбирается по клику
+  }
+
+  data.step = step;
+  setUI({ modalData: data });
+};
+
+window.handleWizardCategorySelect = function(categoryId) {
+  const data = { ...state.ui.modalData };
+  data.draft.categoryId = categoryId;
+  data.draft.serviceId = ''; // сбрасываем услугу при смене категории
+  data.step = 3;
+  setUI({ modalData: data });
+};
+
+window.handleWizardServiceSelect = function(serviceId) {
+  const data = { ...state.ui.modalData };
+  data.draft.serviceId = serviceId;
+  data.draft.masterId = ''; // сбрасываем мастера при смене услуги
+  data.step = 4;
+  setUI({ modalData: data });
+};
+
+window.handleWizardMasterSelect = function(masterId) {
+  const data = { ...state.ui.modalData };
+  data.draft.masterId = masterId; // если '', то 'Любой'
+  data.step = 5;
+  setUI({ modalData: data });
 };
 
 window.renderBookingModal = function () {
-  const masterOptions = state.masters.map(m => `
-    <option value="${m.id}">${m.name} (${m.specialization})</option>
-  `).join('');
+  const md = state.ui.modalData;
+  const step = md.step || 1;
+  const draft = md.draft || {};
 
-  const serviceOptions = state.services.map(s => `
-    <option value="${s.id}">${s.name} — ${formatPrice(s.price)} (${s.duration} мин)</option>
-  `).join('');
+  const totalSteps = 5;
+  const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
 
-  return `
-    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Новая запись на процедуру</h3>
-        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+  let stepContent = '';
+
+  if (step === 1) {
+    stepContent = `
+      <div class="form-group animate-slide-in-right">
+        <label class="form-label">Имя клиента</label>
+        <input type="text" id="b-client-name" class="form-input" placeholder="Иван Иванов" value="${draft.clientName}" required autofocus>
       </div>
+      <div class="form-group animate-slide-in-right" style="animation-delay: 0.1s;">
+        <label class="form-label">Телефон клиента</label>
+        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" required>
+      </div>
+      <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-primary" style="margin-top: 10px;">Далее: Категория ➔</button>
+    `;
+  } else if (step === 2) {
+    const cats = state.categories || [];
+    let catsHtml = cats.map(c => `
+      <button type="button" onclick="handleWizardCategorySelect('${c.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 16px; margin-bottom: 8px;">
+        <span style="font-weight: 700;">${c.name}</span>
+      </button>
+    `).join('');
+    
+    if (!catsHtml) catsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 20px;">Нет доступных категорий</div>`;
 
-      <form id="create-booking-form" onsubmit="event.preventDefault(); handleCreateBookingSubmit();" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 60vh; padding-right: 4px;">
-        <div class="form-group">
-          <label class="form-label">Имя клиента</label>
-          <input type="text" id="b-client-name" class="form-input" placeholder="Иван Иванов" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Телефон клиента</label>
-          <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Выберите процедуру</label>
-          <select id="b-service-id" class="form-select" required>
-            <option value="">Выберите процедуру...</option>
-            ${serviceOptions}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Выберите мастера</label>
-          <select id="b-master-id" class="form-select" required>
-            <option value="">Выберите мастера...</option>
-            ${masterOptions}
-          </select>
-        </div>
+    stepContent = `
+      <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">Выберите категорию услуг:</p>
+        ${catsHtml}
+        <button type="button" onclick="setBookingWizardStep(1)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
+      </div>
+    `;
+  } else if (step === 3) {
+    const svcs = (state.services || []).filter(s => s.categoryId === draft.categoryId);
+    let svcsHtml = svcs.map(s => `
+      <button type="button" onclick="handleWizardServiceSelect('${s.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+        <span style="font-weight: 700;">${s.name}</span>
+        <span style="font-size: 11px; color: var(--primary); font-weight: 800;">${formatPrice(s.price)} (${s.duration} мин)</span>
+      </button>
+    `).join('');
+
+    if (!svcsHtml) svcsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 20px;">В этой категории нет услуг</div>`;
+
+    stepContent = `
+      <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">Выберите процедуру:</p>
+        ${svcsHtml}
+        <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
+      </div>
+    `;
+  } else if (step === 4) {
+    const masters = state.masters || [];
+    let mastersHtml = `
+      <button type="button" onclick="handleWizardMasterSelect('')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; border-color: var(--primary);">
+        <span style="font-weight: 800; color: var(--primary);">👤 Любой мастер</span>
+      </button>
+    `;
+    mastersHtml += masters.map(m => `
+      <button type="button" onclick="handleWizardMasterSelect('${m.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+        <span style="font-weight: 700;">${m.name}</span>
+        <span style="font-size: 11px; color: var(--text-secondary);">${m.specialization}</span>
+      </button>
+    `).join('');
+
+    stepContent = `
+      <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">К какому мастеру записать?</p>
+        ${mastersHtml}
+        <button type="button" onclick="setBookingWizardStep(3)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
+      </div>
+    `;
+  } else if (step === 5) {
+    stepContent = `
+      <div class="animate-slide-in-right" style="display: flex; flex-direction: column; gap: 16px;">
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Дата</label>
-            <input type="date" id="b-date" class="form-input" required>
+            <input type="date" id="b-date" class="form-input" value="${draft.date}" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Время</label>
-            <input type="time" id="b-time" class="form-input" required>
+            <input type="time" id="b-time" class="form-input" value="${draft.time}" required>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Способ оплаты</label>
           <select id="b-payment" class="form-select">
-            <option value="cash">💵 Наличные</option>
-            <option value="card">💳 Карта / Банковский перевод</option>
-            <option value="bonus">🌟 Бонусы</option>
+            <option value="cash" ${draft.paymentMethod === 'cash' ? 'selected' : ''}>💵 Наличные</option>
+            <option value="card" ${draft.paymentMethod === 'card' ? 'selected' : ''}>💳 Карта / Перевод</option>
+            <option value="bonus" ${draft.paymentMethod === 'bonus' ? 'selected' : ''}>🌟 Бонусы</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Заметки / Пожелания</label>
-          <textarea id="b-notes" rows="2" class="form-textarea" placeholder="Например: первый раз, дизайн ногтей, аллергия..."></textarea>
+          <textarea id="b-notes" rows="2" class="form-textarea" placeholder="Например: первый раз, аллергия...">${draft.notes}</textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
-          Создать и подтвердить запись
-        </button>
+        <div style="display: flex; gap: 12px; margin-top: 10px;">
+          <button type="button" onclick="setBookingWizardStep(4)" class="btn btn-secondary" style="flex: 1;">⬅ Назад</button>
+          <button type="button" onclick="handleCreateBookingSubmit()" class="btn btn-primary" style="flex: 2;">Создать запись ✅</button>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Новая запись (Шаг ${step}/${totalSteps})</h3>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+      </div>
+
+      <!-- Прогресс-бар -->
+      <div style="height: 6px; background: var(--theme-50); border-radius: 3px; overflow: hidden; margin-top: -10px;">
+        <div style="height: 100%; width: ${progressPercent}%; background: var(--primary); transition: width 0.3s ease;"></div>
+      </div>
+
+      <form id="create-booking-form" onsubmit="event.preventDefault();" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 60vh; padding-right: 4px; overflow-x: hidden;">
+        ${stepContent}
       </form>
     </div>
   `;
 };
 
-// Обработчик отправки создания записи
+// Обработчик финальной отправки
 window.handleCreateBookingSubmit = async function () {
-  const name = document.getElementById('b-client-name').value.trim();
-  const phone = document.getElementById('b-client-phone').value.trim();
-  const serviceId = document.getElementById('b-service-id').value;
-  const masterId = document.getElementById('b-master-id').value;
-  const date = document.getElementById('b-date').value;
-  const time = document.getElementById('b-time').value;
-  const paymentMethod = document.getElementById('b-payment').value;
-  const notes = document.getElementById('b-notes').value.trim();
+  const md = state.ui.modalData;
+  const draft = md.draft || {};
+  
+  // Сохраняем значения с 5 шага
+  const dateInput = document.getElementById('b-date');
+  const timeInput = document.getElementById('b-time');
+  const paymentInput = document.getElementById('b-payment');
+  const notesInput = document.getElementById('b-notes');
+
+  if (!dateInput.value || !timeInput.value) {
+    return showToast('Укажите дату и время записи', 'error');
+  }
+
+  const payload = {
+    clientName: draft.clientName,
+    clientPhone: draft.clientPhone,
+    serviceId: draft.serviceId,
+    masterId: draft.masterId, // Может быть пустой строкой, бэкенд должен обработать как "Любой"
+    date: dateInput.value,
+    time: timeInput.value,
+    paymentMethod: paymentInput.value,
+    notes: notesInput.value.trim(),
+    status: 'confirmed'
+  };
 
   setUI({ loading: true });
   try {
-    const newBooking = await api.createBooking({
-      clientName: name,
-      clientPhone: phone,
-      serviceId,
-      masterId,
-      date,
-      time,
-      paymentMethod,
-      notes,
-      status: 'confirmed' // создаем подтвержденной
-    });
+    await api.createBooking(payload);
 
-    // Обновляем список записей и клиентов
+    // Обновляем списки
     const allData = await api.getAll();
     setState({
       bookings: allData.bookings,
@@ -515,7 +648,7 @@ window.handleCreateBookingSubmit = async function () {
       shifts: allData.shifts
     });
 
-    setUI({ modal: null });
+    setUI({ modal: null, modalData: null });
     showToast('Запись успешно добавлена!', 'success');
   } catch(e) {
     showToast(e.message || 'Ошибка создания записи', 'error');

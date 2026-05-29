@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setState({
           isAuthenticated: true,
           business: allData.business || state.business,
+          categories: allData.categories || [],
           masters: allData.masters || [],
           services: allData.services || [],
           bookings: allData.bookings || [],

@@ -222,13 +222,14 @@ async function handleLogin(pin) {
 
         setState({ 
             isAuthenticated: true, 
+            business: allData.business || state.business,
+            categories: allData.categories || [],
             masters: allData.masters || [], 
             clients: allData.clients || [], 
             services: allData.services || [], 
             bookings: allData.bookings || [], 
             transactions: allData.transactions || [], 
             shifts: allData.shifts || [], 
-            business: allData.business || state.business,
             currentPage: 'dashboard'
         });
         
@@ -319,13 +320,14 @@ window.handleSetupSave = async function () {
 
             setState({ 
                 isAuthenticated: true, 
+                business: allData.business || state.business,
+                categories: allData.categories || [],
                 masters: allData.masters || [], 
                 clients: allData.clients || [], 
                 services: allData.services || [], 
                 bookings: allData.bookings || [], 
                 transactions: allData.transactions || [], 
                 shifts: allData.shifts || [], 
-                business: allData.business || state.business,
                 currentPage: 'dashboard'
             });
             

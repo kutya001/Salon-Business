@@ -3,6 +3,19 @@
  */
 
 /**
+ * Получает список всех категорий
+ * @returns {object[]}
+ */
+function handleGetCategories() {
+  try {
+    var categories = getSheetData("Categories");
+    return categories.filter(function(c) { return c.status !== "inactive"; });
+  } catch (e) {
+    return []; // Если таблицы нет, вернем пустой массив
+  }
+}
+
+/**
  * Получает список всех активных услуг
  * @returns {object[]}
  */

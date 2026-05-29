@@ -446,12 +446,12 @@ window.sendBookingMessage = function (platform) {
   const text = document.getElementById('message-text').value;
   
   if (platform === 'whatsapp') {
-    const url = \`https://wa.me/\${phone}?text=\${encodeURIComponent(text)}\`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   } else if (platform === 'telegram') {
     navigator.clipboard.writeText(text).then(() => {
       showToast('Текст скопирован! Вставьте его в чат Telegram.', 'info', 4000);
-      const url = \`https://t.me/+\${phone}\`;
+      const url = `https://t.me/+${phone}`;
       window.open(url, '_blank');
     }).catch(() => {
       showToast('Не удалось скопировать текст', 'error');
@@ -462,7 +462,7 @@ window.sendBookingMessage = function (platform) {
 window.renderBookingMessageModal = function () {
   const md = state.ui.modalData;
   
-  return \`
+  return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">💬 Отправить сообщение</h3>
@@ -477,7 +477,7 @@ window.renderBookingMessageModal = function () {
 
       <div class="form-group">
         <label class="form-label">Текст сообщения</label>
-        <textarea id="message-text" class="form-textarea" rows="6" onchange="state.ui.modalData.messageText = this.value">\${md.messageText}</textarea>
+        <textarea id="message-text" class="form-textarea" rows="6" onchange="state.ui.modalData.messageText = this.value">${md.messageText}</textarea>
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 8px;">
@@ -489,7 +489,7 @@ window.renderBookingMessageModal = function () {
         </button>
       </div>
     </div>
-  \`;
+  `;
 };
 
 // Открытие модалки создания/редактирования записи

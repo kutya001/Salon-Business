@@ -8,7 +8,7 @@ window.navigate = function (page) {
 };
 
 window.renderApp = function () {
-  if (!api.isConfigured()) {
+  if (!api.isConfigured() || state.currentPage === 'setup') {
     return renderSetup();
   }
   if (!state.isAuthenticated) {

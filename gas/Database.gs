@@ -9,6 +9,10 @@
  */
 function getSheet(name) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    // Резервный вариант для автономных скриптов (Standalone scripts)
+    ss = SpreadsheetApp.openById("1lEc_lOVcoZ7eEaFrtChzu4pQPwO6fU9U1rPMhgt4pgM");
+  }
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);

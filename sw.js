@@ -2,7 +2,7 @@
 // sw.js — Service Worker для Suluu Business
 // ============================================
 
-const CACHE_NAME = 'suluu-business-v1';
+const CACHE_NAME = 'suluu-business-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -55,7 +55,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Перехват запросов
+// Перехват запросов (Network-First стратегия для гарантированного обновления)
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
@@ -65,31 +65,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Для остальных запросов используем Cache-First стратегию
+  // Для остальных запросов используем стратегию Network-First
+  // Сначала пытаемся получить самую свежую версию из сети, если не получается (офлайн) — берем из кэша
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
         // Проверяем валидность ответа
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        // Кэшируем новый статический ресурс
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
-      });
-    }).catch(() => {
-      // Offline fallback для HTML
-      if (event.request.headers.get('accept').includes('text/html')) {
-        return caches.match('./index.html');
-      }
-    })
+      })
+      .catch(() => {
+        // Если сеть недоступна, пытаемся отдать из кэша
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Офлайн-заглушка для HTML страниц
+          if (event.request.headers.get('accept')?.includes('text/html')) {
+            return caches.match('./index.html');
+          }
+        });
+      })
   );
 });

@@ -137,6 +137,7 @@ window.renderLayout = function () {
     else if (state.ui.modal === 'createClient' && window.renderClientModal) modalContent = renderClientModal();
     else if (state.ui.modal === 'viewClient' && window.renderClientDetailsModal) modalContent = renderClientDetailsModal();
     else if (state.ui.modal === 'createService' && window.renderServiceModal) modalContent = renderServiceModal();
+    else if (state.ui.modal === 'categories' && window.renderCategoriesModal) modalContent = renderCategoriesModal();
     else if (state.ui.modal === 'createTransaction' && window.renderTransactionModal) modalContent = renderTransactionModal();
     else if (state.ui.modal === 'openShift' && window.renderOpenShiftModal) modalContent = renderOpenShiftModal();
     else if (state.ui.modal === 'closeShift' && window.renderCloseShiftModal) modalContent = renderCloseShiftModal();
@@ -162,16 +163,21 @@ window.renderLayout = function () {
     </div>
   ` : '';
 
+  const syncingIcon = (state.ui.syncingCount > 0) ? `<div style="animation: spin 1.5s linear infinite; font-size: 16px; display: inline-block; margin-left: 8px;">🔄</div>` : '';
+
   return `
     <div class="app-layout">
       <!-- Навигационная панель для десктопа -->
       <aside class="sidebar">
-        <div class="sidebar-header" style="padding: 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border);">
-          <div style="font-size: 32px;">💎</div>
-          <div>
-            <h2 style="font-weight: 800; font-size: 18px; color: var(--text); line-height: 1.2;">Suluu</h2>
-            <p style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Управление бизнесом</p>
+        <div class="sidebar-header" style="padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 32px;">💎</div>
+            <div>
+              <h2 style="font-weight: 800; font-size: 18px; color: var(--text); line-height: 1.2;">Suluu</h2>
+              <p style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Управление бизнесом</p>
+            </div>
           </div>
+          ${syncingIcon}
         </div>
         <nav class="sidebar-menu" style="padding: 16px; display: flex; flex-direction: column; gap: 4px; flex-grow: 1;">
           ${sidebarLinks}
@@ -192,7 +198,7 @@ window.renderLayout = function () {
           ☰
         </button>
         <div style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 6px;">
-          💎 ${businessName}
+          💎 ${businessName} ${syncingIcon}
         </div>
         <div style="width: 32px;"></div>
       </header>

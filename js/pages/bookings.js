@@ -608,8 +608,8 @@ window.renderBookingModal = function () {
   `;
 };
 
-// Обработчик финальной отправки
-window.handleCreateBookingSubmit = async function () {
+// Обработчик финальной отправки (Optimistic UI)
+window.handleCreateBookingSubmit = function () {
   const md = state.ui.modalData;
   const draft = md.draft || {};
   
@@ -635,24 +635,46 @@ window.handleCreateBookingSubmit = async function () {
     status: 'confirmed'
   };
 
-  setUI({ loading: true });
-  try {
-    await api.createBooking(payload);
+  // Оптимистичное обновление
+  const tempId = 'b_temp_' + Date.now();
+  const service = state.services.find(s => s.id === payload.serviceId) || {};
+  const master = state.masters.find(m => m.id === payload.masterId) || { name: 'Любой мастер' };
+  
+  const optimisticBooking = {
+    id: tempId,
+    clientId: 'temp_client',
+    clientName: payload.clientName,
+    clientPhone: payload.clientPhone,
+    serviceId: payload.serviceId,
+    serviceName: service.name || 'Неизвестная услуга',
+    masterId: payload.masterId,
+    masterName: master.name,
+    date: payload.date,
+    time: payload.time,
+    duration: service.duration || 60,
+    price: service.price || 0,
+    status: payload.status,
+    paymentMethod: payload.paymentMethod,
+    notes: payload.notes
+  };
 
-    // Обновляем списки
-    const allData = await api.getAll();
+  state.bookings.push(optimisticBooking);
+  setUI({ modal: null, modalData: null });
+  showToast('Запись добавлена (синхронизация...)', 'info');
+
+  // Фоновая синхронизация
+  api.createBooking(payload).then(() => {
+    return api.getAll(); // перезапрашиваем все данные для точности (клиенты, транзакции и т.д.)
+  }).then(allData => {
     setState({
       bookings: allData.bookings,
       clients: allData.clients,
       transactions: allData.transactions,
       shifts: allData.shifts
     });
-
-    setUI({ modal: null, modalData: null });
-    showToast('Запись успешно добавлена!', 'success');
-  } catch(e) {
-    showToast(e.message || 'Ошибка создания записи', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+    showToast('Запись успешно синхронизирована!', 'success');
+  }).catch(e => {
+    showToast(e.message || 'Ошибка создания записи на сервере', 'error');
+    setState({ bookings: state.bookings.filter(b => b.id !== tempId) });
+  });
 };

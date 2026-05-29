@@ -39,6 +39,11 @@ class GASClient {
     // Логируем отправку
     if (window.logApiCall) window.logApiCall('send', action, data);
 
+    // Увеличиваем счетчик синхронизации (для спиннера)
+    if (window.state && window.state.ui) {
+      window.setUI({ syncingCount: (window.state.ui.syncingCount || 0) + 1 });
+    }
+
     try {
       const response = await fetch(this.gasUrl, {
         method: 'POST',
@@ -80,6 +85,11 @@ class GASClient {
       }
       showToast(error.message || 'Ошибка подключения к бэкенду', 'error');
       throw error;
+    } finally {
+      // Уменьшаем счетчик синхронизации
+      if (window.state && window.state.ui) {
+        window.setUI({ syncingCount: Math.max(0, (window.state.ui.syncingCount || 0) - 1) });
+      }
     }
   }
 
@@ -110,6 +120,23 @@ class GASClient {
 
   async changePassword(oldPassword, newPassword) {
     return await this.request('changePassword', { oldPassword, newPassword });
+  }
+
+  // Категории
+  async getCategories() {
+    return await this.request('getCategories');
+  }
+
+  async createCategory(data) {
+    return await this.request('createCategory', data);
+  }
+
+  async updateCategory(id, data) {
+    return await this.request('updateCategory', { id, ...data });
+  }
+
+  async deleteCategory(id) {
+    return await this.request('deleteCategory', { id });
   }
 
   async getMasters() {

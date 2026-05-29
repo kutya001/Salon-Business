@@ -8,15 +8,16 @@ window.renderServices = function () {
   // Фильтрация услуг по выбранной категории
   let filteredServices = [...state.services];
   if (activeTab !== 'Все') {
-    filteredServices = filteredServices.filter(s => s.categoryName === activeTab);
+    filteredServices = filteredServices.filter(s => s.categoryId === activeTab);
   }
 
   // Отрисовка табов категорий
-  const tabsHtml = ['Все', ...state.categories].map(cat => {
-    const isActive = activeTab === cat;
+  const allTab = { id: 'Все', name: 'Все' };
+  const tabsHtml = [allTab, ...state.categories].map(cat => {
+    const isActive = activeTab === cat.id;
     return `
-      <button onclick="handleSelectCategory('${cat}')" class="category-pill ${isActive ? 'active' : ''}" style="white-space: nowrap; padding: 10px 20px; border-radius: 9999px; font-weight: 700; font-size: 13px; border: 1px solid var(--border); background: ${isActive ? 'linear-gradient(135deg,var(--theme-500),var(--theme-600))' : 'var(--bg-secondary)'}; color: ${isActive ? '#ffffff' : 'var(--text-secondary)'}; cursor: pointer; transition: all 0.2s;">
-        ${cat}
+      <button onclick="handleSelectCategory('${cat.id}')" class="category-pill ${isActive ? 'active' : ''}" style="white-space: nowrap; padding: 10px 20px; border-radius: 9999px; font-weight: 700; font-size: 13px; border: 1px solid var(--border); background: ${isActive ? 'linear-gradient(135deg,var(--theme-500),var(--theme-600))' : 'var(--bg-secondary)'}; color: ${isActive ? '#ffffff' : 'var(--text-secondary)'}; cursor: pointer; transition: all 0.2s;">
+        ${cat.name}
       </button>
     `;
   }).join('');
@@ -70,9 +71,14 @@ window.renderServices = function () {
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Услуги и прайс-лист</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Каталог процедур салона, цены и продолжительность сеансов</p>
         </div>
-        <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-          ➕ Добавить услугу
-        </button>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button onclick="showCategoriesModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
+            📁 Категории
+          </button>
+          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+            ➕ Добавить услугу
+          </button>
+        </div>
       </div>
 
       <!-- Лента категорий -->
@@ -130,7 +136,7 @@ window.renderServiceModal = function () {
           <label class="form-label">Категория</label>
           <select id="s-category" class="form-select" required>
             <option value="">Выберите категорию...</option>
-            ${state.categories.map(c => `<option value="${c}" ${(isEdit && s.categoryName === c) ? 'selected' : ''}>${c}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.id}" ${(isEdit && s.categoryId === c.id) ? 'selected' : ''}>${c.name}</option>`).join('')}
           </select>
         </div>
         <div style="display: flex; gap: 12px; width: 100%;">
@@ -159,51 +165,136 @@ window.renderServiceModal = function () {
   `;
 };
 
-// Отправка формы услуги
-window.handleServiceSubmit = async function (id) {
+// Отправка формы услуги (Фоновая синхронизация)
+window.handleServiceSubmit = function (id) {
   const name = document.getElementById('s-name').value.trim();
-  const categoryName = document.getElementById('s-category').value;
+  const categoryId = document.getElementById('s-category').value;
+  const categoryName = state.categories.find(c => c.id === categoryId)?.name || '';
   const price = parseFloat(document.getElementById('s-price').value) || 0;
   const duration = parseInt(document.getElementById('s-duration').value, 10) || 60;
   const description = document.getElementById('s-description').value.trim();
 
-  setUI({ loading: true });
-  try {
-    let result;
-    if (id) {
-      result = await api.updateService(id, { name, categoryName, price, duration, description });
-      const idx = state.services.findIndex(s => s.id === id);
+  // Оптимистичное обновление
+  const tempId = id || 'temp_' + Date.now();
+  const serviceData = { id: tempId, name, categoryId, categoryName, price, duration, description, status: 'active' };
+
+  if (id) {
+    const idx = state.services.findIndex(s => s.id === id);
+    if (idx !== -1) state.services[idx] = { ...state.services[idx], ...serviceData };
+    showToast('Услуга обновлена', 'success');
+  } else {
+    state.services.push(serviceData);
+    showToast('Услуга успешно добавлена в прайс!', 'success');
+  }
+
+  setUI({ modal: null, modalData: null });
+
+  // Фоновая отправка на сервер
+  if (id) {
+    api.updateService(id, { name, categoryId, categoryName, price, duration, description }).catch(e => {
+      showToast('Ошибка фоновой синхронизации услуги', 'error');
+    });
+  } else {
+    api.createService({ name, categoryId, categoryName, price, duration, description }).then(result => {
+      // Заменяем временный ID на реальный
+      const idx = state.services.findIndex(s => s.id === tempId);
       if (idx !== -1) {
         state.services[idx] = result;
+        setState({ services: state.services });
       }
-      showToast('Услуга обновлена', 'success');
-    } else {
-      result = await api.createService({ name, categoryName, price, duration, description });
-      state.services.push(result);
-      showToast('Услуга успешно добавлена в прайс!', 'success');
-    }
-
-    setUI({ modal: null, modalData: null });
-  } catch(e) {
-    showToast('Ошибка при сохранении услуги', 'error');
-  } finally {
-    setUI({ loading: false });
+    }).catch(e => {
+      showToast('Ошибка фоновой синхронизации создания услуги', 'error');
+      setState({ services: state.services.filter(s => s.id !== tempId) });
+    });
   }
 };
 
 // Удаление услуги
-window.handleDeleteService = async function (id) {
+window.handleDeleteService = function (id) {
   if (!confirm('Вы действительно хотите удалить эту услугу из каталога?')) return;
   
-  setUI({ loading: true });
-  try {
-    await api.deleteService(id);
-    const services = state.services.filter(s => s.id !== id);
-    setState({ services });
-    showToast('Услуга удалена из списка', 'success');
-  } catch(e) {
-    showToast('Не удалось удалить услугу', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  // Оптимистичное обновление
+  const backup = [...state.services];
+  const services = state.services.filter(s => s.id !== id);
+  setState({ services });
+  showToast('Услуга удалена из списка', 'success');
+
+  // Фоновая синхронизация
+  api.deleteService(id).catch(e => {
+    showToast('Не удалось удалить услугу на сервере', 'error');
+    setState({ services: backup }); // откат
+  });
+};
+
+// ----------------------------------------------------
+// Модалка Управления Категориями
+// ----------------------------------------------------
+
+window.showCategoriesModal = function() {
+  setUI({ modal: 'categories', modalData: null });
+};
+
+window.renderCategoriesModal = function() {
+  const catsHtml = state.categories.length === 0 ? '<div style="color: var(--text-secondary); text-align: center; padding: 20px;">Категорий пока нет</div>' :
+    state.categories.map(c => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px;">
+        <span style="font-weight: 700;">${c.name}</span>
+        <button onclick="handleDeleteCategory('${c.id}')" class="btn" style="color: #ef4444; background: rgba(239,68,68,0.1); border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px;">Удалить</button>
+      </div>
+    `).join('');
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Справочник категорий</h3>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+      </div>
+
+      <div style="max-height: 50vh; overflow-y: auto;">
+        ${catsHtml}
+      </div>
+
+      <form onsubmit="event.preventDefault(); handleCreateCategory();" style="display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <input type="text" id="cat-name-input" class="form-input" placeholder="Новая категория..." required style="flex-grow: 1;">
+        <button type="submit" class="btn btn-primary" style="white-space: nowrap;">➕ Добавить</button>
+      </form>
+    </div>
+  `;
+};
+
+window.handleCreateCategory = function() {
+  const input = document.getElementById('cat-name-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+
+  const tempId = 'cat_temp_' + Date.now();
+  const newCat = { id: tempId, name, status: 'active' };
+  
+  // Оптимистичное добавление
+  state.categories.push(newCat);
+  setUI({ modal: 'categories' }); // перерисовка модалки
+
+  api.createCategory({ name }).then(result => {
+    const idx = state.categories.findIndex(c => c.id === tempId);
+    if (idx !== -1) {
+      state.categories[idx] = result;
+      setState({ categories: state.categories });
+    }
+  }).catch(e => {
+    showToast('Ошибка при добавлении категории', 'error');
+    setState({ categories: state.categories.filter(c => c.id !== tempId) });
+  });
+};
+
+window.handleDeleteCategory = function(id) {
+  if (!confirm('Удалить эту категорию?')) return;
+  
+  const backup = [...state.categories];
+  setState({ categories: state.categories.filter(c => c.id !== id) });
+
+  api.deleteCategory(id).catch(e => {
+    showToast('Ошибка при удалении категории', 'error');
+    setState({ categories: backup });
+  });
 };

@@ -16,6 +16,35 @@ function handleGetCategories() {
 }
 
 /**
+ * Создает новую категорию
+ */
+function handleCreateCategory(data) {
+  if (!data.name) throw new Error("Укажите название категории");
+  data.status = "active";
+  return appendRow("Categories", data);
+}
+
+/**
+ * Обновляет категорию
+ */
+function handleUpdateCategory(id, data) {
+  var updated = updateRow("Categories", id, data);
+  if (!updated) throw new Error("Категория не найдена");
+  
+  // При обновлении категории также желательно обновить название категории в услугах
+  // Но для MVP достаточно просто обновить категорию. При отображении услуг можно делать join.
+  return updated;
+}
+
+/**
+ * Удаляет категорию (мягкое удаление)
+ */
+function handleDeleteCategory(id) {
+  var updated = updateRow("Categories", id, { status: "inactive" });
+  return { success: !!updated };
+}
+
+/**
  * Получает список всех активных услуг
  * @returns {object[]}
  */

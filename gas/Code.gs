@@ -118,6 +118,15 @@ function doPost(e) {
       case "getCategories":
         result = handleGetCategories();
         break;
+      case "createCategory":
+        result = handleCreateCategory(data);
+        break;
+      case "updateCategory":
+        result = handleUpdateCategory(data.id, data);
+        break;
+      case "deleteCategory":
+        result = handleDeleteCategory(data.id);
+        break;
         
       // Клиенты
       case "getClients":

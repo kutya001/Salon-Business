@@ -139,26 +139,27 @@ window.renderSettings = function () {
       <!-- Секция: Смена пароля и информация о подключении -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        <!-- Смена пароля -->
+        <!-- Управление Пин-кодом -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">🔒 Безопасность</h3>
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">🔒 Безопасность (PIN-код)</h3>
+          <p style="font-size: 12px; color: var(--text-secondary);">Установите 4-значный цифровой пин-код для ограничения доступа к панели Suluu Business. Если вы настраиваете его впервые, поле старого пин-кода можно оставить пустым.</p>
           
-          <form onsubmit="event.preventDefault(); handlePasswordChangeSubmit();" style="display: flex; flex-direction: column; gap: 14px;">
+          <form onsubmit="event.preventDefault(); handlePinChangeSubmit();" style="display: flex; flex-direction: column; gap: 14px;">
             <div class="form-group">
-              <label class="form-label">Текущий пароль</label>
-              <input type="password" id="pass-old" class="form-input" required>
+              <label class="form-label">Старый PIN-код (4 цифры)</label>
+              <input type="password" id="pin-old" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••">
             </div>
             <div class="form-group">
-              <label class="form-label">Новый пароль</label>
-              <input type="password" id="pass-new" class="form-input" placeholder="Не менее 6 символов" required>
+              <label class="form-label">Новый PIN-код (4 цифры)</label>
+              <input type="password" id="pin-new" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Подтверждение нового пароля</label>
-              <input type="password" id="pass-confirm" class="form-input" required>
+              <label class="form-label">Подтверждение нового PIN-кода</label>
+              <input type="password" id="pin-confirm" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••" required>
             </div>
             
             <button type="submit" class="btn btn-primary" style="margin-top: 6px;">
-              🔑 Изменить пароль
+              🔑 Установить / Изменить PIN-код
             </button>
           </form>
         </div>
@@ -254,30 +255,31 @@ window.handleSaveSchedule = async function () {
   }
 };
 
-// Изменение пароля
-window.handlePasswordChangeSubmit = async function () {
-  const oldPassword = document.getElementById('pass-old').value;
-  const newPassword = document.getElementById('pass-new').value;
-  const confirmPassword = document.getElementById('pass-confirm').value;
+// Изменение PIN-кода
+window.handlePinChangeSubmit = async function () {
+  const oldPin = document.getElementById('pin-old').value.trim();
+  const newPin = document.getElementById('pin-new').value.trim();
+  const confirmPin = document.getElementById('pin-confirm').value.trim();
 
-  if (newPassword.length < 6) {
-    showToast('Новый пароль слишком короткий (мин 6 символов)', 'error');
+  const isDigits = /^\d{4}$/;
+  if (!isDigits.test(newPin)) {
+    showToast('Новый PIN-код должен состоять ровно из 4 цифр!', 'error');
     return;
   }
-  if (newPassword !== confirmPassword) {
-    showToast('Новые пароли не совпадают', 'error');
+  if (newPin !== confirmPin) {
+    showToast('Новые PIN-коды не совпадают', 'error');
     return;
   }
 
   setUI({ loading: true });
   try {
-    await api.changePassword(oldPassword, newPassword);
-    document.getElementById('pass-old').value = '';
-    document.getElementById('pass-new').value = '';
-    document.getElementById('pass-confirm').value = '';
-    showToast('Пароль администратора успешно изменен', 'success');
+    await api.changePassword(oldPin, newPin);
+    document.getElementById('pin-old').value = '';
+    document.getElementById('pin-new').value = '';
+    document.getElementById('pin-confirm').value = '';
+    showToast('PIN-код доступа успешно изменен!', 'success');
   } catch(e) {
-    showToast(e.message || 'Ошибка смены пароля', 'error');
+    showToast(e.message || 'Ошибка смены PIN-кода', 'error');
   } finally {
     setUI({ loading: false });
   }

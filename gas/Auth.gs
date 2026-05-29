@@ -21,27 +21,36 @@ function hashPassword(password) {
 }
 
 /**
- * Аутентифицирует администратора по паролю
- * @param {string} password
- * @param {boolean} forceInit Принудительно обновить пароль в базе данных
+ * Проверяет, настроен ли пин-код администратора
+ * @returns {boolean}
+ */
+function isPinConfigured() {
+  var settings = handleGetSettings();
+  var savedHash = settings["adminPasswordHash"];
+  return !!(savedHash && savedHash.toString().trim() !== "");
+}
+
+/**
+ * Аутентифицирует администратора по пин-коду
+ * @param {string} password Пин-код
  * @returns {string|null} Возвращает токен сессии или null
  */
-function authenticate(password, forceInit) {
+function authenticate(password) {
   var props = PropertiesService.getScriptProperties();
   
   // Читаем настройки из Google Таблицы
   var settings = handleGetSettings();
   var savedHash = settings["adminPasswordHash"];
   
-  // Если включен forceInit, или пароль еще не задан, или равен "123" (в открытом виде),
-  // то инициализируем его новым хешем
-  if (forceInit || !savedHash || savedHash === "123" || savedHash.toString().trim() === "") {
-    var newHash = hashPassword(password);
-    handleUpdateSettings({ "adminPasswordHash": newHash });
-    savedHash = newHash;
+  // Если пин-код в таблице еще не задан, то любой ввод (или пустой) считается верным
+  // для первоначального прохода на дашборд
+  if (!savedHash || savedHash.toString().trim() === "") {
+    var token = "token_" + generateId() + "_" + Date.now();
+    props.setProperty(token, Date.now().toString());
+    return token;
   }
   
-  var inputHash = hashPassword(password);
+  var inputHash = hashPassword(password !== undefined && password !== null ? password.toString().trim() : "");
   if (inputHash === savedHash) {
     // Создаем токен сессии
     var token = "token_" + generateId() + "_" + Date.now();
@@ -91,17 +100,17 @@ function removeToken(token) {
 }
 
 /**
- * Изменяет пароль администратора в Google Таблице
- * @param {string} oldPassword
- * @param {string} newPassword
+ * Изменяет пин-код администратора в Google Таблице
+ * @param {string} oldPassword Старый пин-код (не проверяется, если пин-код еще не задан)
+ * @param {string} newPassword Новый пин-код
  * @returns {boolean}
  */
 function changeAdminPassword(oldPassword, newPassword) {
   var settings = handleGetSettings();
   var savedHash = settings["adminPasswordHash"];
   
-  if (!savedHash || hashPassword(oldPassword) === savedHash) {
-    handleUpdateSettings({ "adminPasswordHash": hashPassword(newPassword) });
+  if (!savedHash || savedHash.toString().trim() === "" || hashPassword(oldPassword.toString().trim()) === savedHash) {
+    handleUpdateSettings({ "adminPasswordHash": hashPassword(newPassword.toString().trim()) });
     return true;
   }
   return false;

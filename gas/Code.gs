@@ -38,18 +38,24 @@ function doPost(e) {
     // Инициализируем БД при первом обращении, если таблицы отсутствуют
     initializeDatabase();
     
+    // Проверка, настроен ли пин-код
+    if (action === "isPinConfigured") {
+      return createResponse({ configured: isPinConfigured() });
+    }
+    
     // Обработка авторизации
     if (action === "authenticate") {
-      var sessionToken = authenticate(data.password, data.forceInit);
+      var sessionToken = authenticate(data.password);
       if (sessionToken) {
         return createResponse({ token: sessionToken });
       } else {
-        return createErrorResponse("Неверный пароль администратора", 401);
+        return createErrorResponse("Неверный пин-код администратора", 401);
       }
     }
     
     // Проверка токена сессии для всех остальных запросов
-    if (!validateToken(token)) {
+    // Если пин-код в базе данных еще не задан вообще, то пропускаем запросы без валидации токена
+    if (isPinConfigured() && !validateToken(token)) {
       return createErrorResponse("Сессия истекла или неавторизована. Войдите заново.", 401);
     }
     

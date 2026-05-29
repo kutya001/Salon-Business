@@ -84,8 +84,12 @@ class GASClient {
   }
 
   // Методы-обертки
-  async authenticate(password, forceInit = false) {
-    const data = await this.request('authenticate', { password, forceInit });
+  async isPinConfigured() {
+    return await this.request('isPinConfigured');
+  }
+
+  async authenticate(password) {
+    const data = await this.request('authenticate', { password });
     if (data.token) {
       this.setToken(data.token);
     }

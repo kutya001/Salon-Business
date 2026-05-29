@@ -24,8 +24,8 @@ const ASSETS_TO_CACHE = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/morphdom@2.7.4/dist/morphdom-umd.min.js',
+  './js/tailwind.min.js',
+  './js/morphdom.min.js',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
 ];
 

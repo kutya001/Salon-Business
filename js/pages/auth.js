@@ -6,7 +6,16 @@ window.renderAuth = function () {
     const loading = state.ui.loading;
     return `
     <div class="auth-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;">
-        <div class="card animate-scale-in" style="width:100%;max-width:400px;padding:40px 32px;text-align:center;backdrop-filter:blur(20px);background:rgba(255,255,255,0.95);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div class="card animate-scale-in" style="width:100%;max-width:400px;padding:40px 32px;text-align:center;backdrop-filter:blur(20px);background:rgba(255,255,255,0.95);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;overflow:hidden;">
+            
+            <!-- Анимация ответа от сервера (Стеклянный спиннер) -->
+            ${loading ? `
+            <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;animation:fadeIn 0.3s forwards;">
+                <span class="spinner" style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#764ba2;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;"></span>
+                <div style="font-weight:800;color:#1a1a2e;font-size:15px;letter-spacing:-0.01em;animation:pulse 1.5s infinite;display:inline-block;">Синхронизация с Google...</div>
+            </div>
+            ` : ''}
+
             <div style="font-size:56px;margin-bottom:12px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.1));">💎</div>
             <h1 style="font-size:28px;font-weight:800;color:#1a1a2e;margin:0 0 4px;">Suluu Business</h1>
             <p style="color:#666;font-size:14px;margin:0 0 32px;">Вход в панель управления</p>
@@ -34,10 +43,19 @@ window.renderAuth = function () {
                     : 'Войти'}
             </button>
 
+            <!-- Кнопка всегда изменить URL скрипта на странице входа -->
+            <button onclick="navigate('setup')" style="background:none;border:none;color:#764ba2;font-size:13px;font-weight:700;cursor:pointer;margin-top:20px;text-decoration:none;display:inline-block;transition:all 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#764ba2'">
+                🔧 Настройки подключения (GAS URL)
+            </button>
+
             <p style="margin-top:24px;font-size:11px;color:#aaa;">© Suluu Business v1.0</p>
         </div>
     </div>
-    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    <style>
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+    </style>`;
 };
 
 window.handleLogin = async function () {

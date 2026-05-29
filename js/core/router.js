@@ -8,13 +8,61 @@ window.navigate = function (page) {
 };
 
 window.renderApp = function () {
+  let html = '';
   if (!api.isConfigured() || state.currentPage === 'setup') {
-    return renderSetup();
+    html = renderSetup();
+  } else if (!state.isAuthenticated) {
+    html = renderAuth();
+  } else {
+    html = renderLayout();
   }
-  if (!state.isAuthenticated) {
-    return renderAuth();
-  }
-  return renderLayout();
+
+  // Добавляем глобальную панель логов GAS API в самом низу экрана
+  const showDevConsole = state.ui.showDevConsole;
+  const logsCount = (state.apiLogs || []).length;
+  
+  const devConsoleHtml = showDevConsole ? `
+    <div class="dev-console" style="position: fixed; bottom: 80px; left: 20px; right: 20px; height: 260px; background: rgba(15, 23, 42, 0.95); border: 2px dashed #3b82f6; border-radius: 20px; z-index: 99999; display: flex; flex-direction: column; overflow: hidden; font-family: monospace; color: #38bdf8; box-shadow: 0 20px 50px rgba(0,0,0,0.5); backdrop-filter: blur(12px); animation: slideUp 0.3s forwards;">
+        <div style="padding: 10px 18px; background: rgba(30, 41, 59, 0.9); border-bottom: 1px dashed #3b82f6; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <span style="font-weight: 800; color: #38bdf8;">📡 Лог сетевой интеграции с Google Apps Script</span>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button onclick="setState({ apiLogs: [] })" style="background: none; border: none; color: #f43f5e; cursor: pointer; font-size: 11px; font-weight: 700;">🧹 Очистить</button>
+                <button onclick="setUI({ showDevConsole: false })" style="background: none; border: none; color: white; cursor: pointer; font-size: 15px; font-weight: 700;">✕</button>
+            </div>
+        </div>
+        <div style="flex-grow: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 11px; text-align: left;">
+            ${logsCount === 0 ? `
+                <div style="color: #94a3b8; text-align: center; padding-top: 60px;">Сеть пассивна. Ждем сетевой активности...</div>
+            ` : state.apiLogs.map(log => {
+                let color = '#a78bfa'; // purple for send
+                let prefix = '📤 ОТПРАВЛЕНО';
+                if (log.type === 'recv') {
+                  color = '#34d399'; // green for recv
+                  prefix = '📥 ПОЛУЧЕНО';
+                } else if (log.type === 'error') {
+                  color = '#f87171'; // red for error
+                  prefix = '❌ ОШИБКА';
+                }
+                return `
+                  <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                    <div style="display: flex; gap: 10px; color: ${color}; font-weight: 700;">
+                      <span>[${log.time}]</span>
+                      <span>${prefix}</span>
+                      <span>"${log.action}"</span>
+                    </div>
+                    <pre style="margin-top: 4px; color: #e2e8f0; font-size: 10px; overflow-x: auto; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 6px; max-height: 80px;">${log.details}</pre>
+                  </div>
+                `;
+            }).join('')}
+        </div>
+    </div>
+  ` : `
+    <button onclick="setUI({ showDevConsole: true })" style="position: fixed; bottom: 80px; left: 20px; background: #0f172a; color: #38bdf8; border: 1px dashed #3b82f6; border-radius: 12px; padding: 8px 14px; font-family: monospace; font-size: 11px; font-weight: 700; cursor: pointer; z-index: 99998; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px;">
+        📡 Лог GAS API (${logsCount})
+    </button>
+  `;
+
+  return html + devConsoleHtml;
 };
 
 window.renderLayout = function () {

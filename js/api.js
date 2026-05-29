@@ -36,6 +36,9 @@ class GASClient {
       throw new Error('GAS URL not configured');
     }
 
+    // Логируем отправку
+    if (window.logApiCall) window.logApiCall('send', action, data);
+
     try {
       const response = await fetch(this.gasUrl, {
         method: 'POST',
@@ -58,16 +61,23 @@ class GASClient {
       
       if (!result.success) {
         if (result.code === 401) {
-          // Сессия недействительна
+          if (window.logApiCall) window.logApiCall('error', action, result.error || 'Сессия истекла');
           this.logout();
           throw new Error(result.error || 'Сессия истекла');
         }
+        if (window.logApiCall) window.logApiCall('error', action, result.error || 'Произошла ошибка');
         throw new Error(result.error || 'Произошла неизвестная ошибка');
       }
+
+      // Логируем успешный прием
+      if (window.logApiCall) window.logApiCall('recv', action, result.data);
 
       return result.data;
     } catch (error) {
       console.error(`API Error (${action}):`, error);
+      if (window.logApiCall && !error.message.includes('Сессия истекла')) {
+        window.logApiCall('error', action, error.message);
+      }
       showToast(error.message || 'Ошибка подключения к бэкенду', 'error');
       throw error;
     }

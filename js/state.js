@@ -51,8 +51,11 @@ window.state = {
     },
     selectedDate: new Date().toISOString().split('T')[0],
     toasts: [],
-    viewMode: 'table' // 'table' или 'timeline' для записей
-  }
+    viewMode: 'table', // 'table' или 'timeline' для записей
+    showSetupInline: false,
+    showDevConsole: false
+  },
+  apiLogs: [] // Массив логов API запросов
 };
 
 // Функция обновления состояния с автоматическим рендером
@@ -70,5 +73,25 @@ window.setUI = function (updates) {
 // Функция обновления фильтров
 window.setFilters = function (updates) {
   Object.assign(window.state.ui.filters, updates);
+  if (window.render) window.render();
+};
+
+// Вспомогательная функция ведения лога GAS API
+window.logApiCall = function (type, action, details) {
+  const time = new Date().toLocaleTimeString('ru-RU');
+  const logs = [...(window.state.apiLogs || [])];
+  
+  logs.unshift({
+    time,
+    type, // 'send' | 'recv' | 'error'
+    action,
+    details: typeof details === 'object' ? JSON.stringify(details, null, 2) : String(details)
+  });
+  
+  // Ограничиваем лог последними 30 записями
+  if (logs.length > 30) logs.pop();
+  
+  window.state.apiLogs = logs;
+  // Рендерим консоль без глубокого вызова setState для предотвращения зацикливания
   if (window.render) window.render();
 };

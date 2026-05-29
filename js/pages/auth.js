@@ -4,6 +4,16 @@
 
 window.renderAuth = function () {
     const loading = state.ui.loading;
+    const showSetupInline = state.ui.showSetupInline;
+    const isConfigured = api.isConfigured();
+
+    // Предупреждение если URL скрипта вообще не задан
+    const warningBanner = !isConfigured ? `
+        <div style="background:#fffbeb;border:1px solid #fef3c7;color:#d97706;padding:12px;border-radius:14px;font-size:12px;font-weight:600;margin-bottom:20px;text-align:left;line-height:1.4;">
+            ⚠️ Бэкенд не настроен. Пожалуйста, откройте «Настройки подключения» ниже и укажите URL вашего Google Apps Script.
+        </div>
+    ` : '';
+
     return `
     <div class="auth-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;">
         <div class="card animate-scale-in" style="width:100%;max-width:400px;padding:40px 32px;text-align:center;backdrop-filter:blur(20px);background:rgba(255,255,255,0.95);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;overflow:hidden;">
@@ -19,6 +29,8 @@ window.renderAuth = function () {
             <div style="font-size:56px;margin-bottom:12px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.1));">💎</div>
             <h1 style="font-size:28px;font-weight:800;color:#1a1a2e;margin:0 0 4px;">Suluu Business</h1>
             <p style="color:#666;font-size:14px;margin:0 0 32px;">Вход в панель управления</p>
+
+            ${warningBanner}
 
             <div id="auth-error" style="display:none;background:#fee2e2;color:#dc2626;padding:10px 16px;border-radius:12px;font-size:13px;margin-bottom:16px;font-weight:600;"></div>
 
@@ -37,16 +49,29 @@ window.renderAuth = function () {
 
             <button onclick="handleLogin()" class="btn btn-primary" 
                 style="width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;"
-                ${loading ? 'disabled' : ''}>
-                ${loading
-                    ? '<span style="display:inline-flex;align-items:center;gap:8px;"><span class="spinner" style="width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;display:inline-block;"></span> Входим...</span>'
-                    : 'Войти'}
+                ${loading || !isConfigured ? 'disabled' : ''}>
+                Войти
             </button>
 
-            <!-- Кнопка всегда изменить URL скрипта на странице входа -->
-            <button onclick="navigate('setup')" style="background:none;border:none;color:#764ba2;font-size:13px;font-weight:700;cursor:pointer;margin-top:20px;text-decoration:none;display:inline-block;transition:all 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#764ba2'">
+            <!-- Кнопка вызова настроек подключения (Локальный слайдер-аккордеон) -->
+            <button onclick="setUI({ showSetupInline: !state.ui.showSetupInline })" style="background:none;border:none;color:#764ba2;font-size:13px;font-weight:700;cursor:pointer;margin-top:20px;text-decoration:none;display:inline-block;transition:all 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#764ba2'">
                 🔧 Настройки подключения (GAS URL)
             </button>
+
+            <!-- Всплывающая форма настройки подключения -->
+            ${(showSetupInline || !isConfigured) ? `
+            <div style="margin-top:20px;border-top:1px dashed var(--border);padding-top:20px;text-align:left;animation:slideUp 0.25s forwards;">
+                <h4 style="font-weight:800;font-size:13px;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:6px;">⚙️ Параметры скрипта</h4>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label" style="font-size:11px;font-weight:600;margin-bottom:4px;display:block;">URL Google Apps Script</label>
+                    <input type="url" id="inline-gas-url" class="form-input" style="padding:10px 14px;font-size:12px;border-radius:10px;" value="${api.gasUrl || ''}" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="handleSaveInlineSetup()" class="btn btn-primary" style="flex:2;padding:10px;font-size:12px;border-radius:10px;width:auto;">Сохранить URL</button>
+                    ${isConfigured ? `<button onclick="setUI({ showSetupInline: false })" class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px;border-radius:10px;width:auto;">Скрыть</button>` : ''}
+                </div>
+            </div>
+            ` : ''}
 
             <p style="margin-top:24px;font-size:11px;color:#aaa;">© Suluu Business v1.0</p>
         </div>
@@ -55,8 +80,44 @@ window.renderAuth = function () {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
     </style>`;
 };
+
+// Функция быстрого сохранения URL-скрипта
+window.handleSaveInlineSetup = function () {
+    const url = document.getElementById('inline-gas-url')?.value.trim();
+    if (!url) {
+        showToast('Пожалуйста, укажите URL скрипта', 'error');
+        return;
+    }
+    
+    // Сохраняем URL в памяти и localStorage
+    api.setGasUrl(url);
+    setUI({ showSetupInline: false });
+    showToast('Связь настроена!', 'success');
+    
+    // Пингуем GAS-веб приложение в фоне для тестов связи
+    checkGasConnection(url);
+};
+
+// Фоновый пинг
+async function checkGasConnection(url) {
+    if (window.logApiCall) window.logApiCall('send', 'ping_check', { url });
+    try {
+        const res = await fetch(url, { method: 'GET', mode: 'cors' });
+        if (res.ok) {
+            const data = await res.json();
+            if (window.logApiCall) window.logApiCall('recv', 'ping_check', data);
+            showToast('Соединение с Google Apps Script успешно установлено!', 'success');
+        } else {
+            throw new Error(`Ошибка сети: ${res.status}`);
+        }
+    } catch(e) {
+        if (window.logApiCall) window.logApiCall('error', 'ping_check', e.message);
+        showToast('Не удалось установить соединение. Проверьте правильность URL.', 'warning');
+    }
+}
 
 window.handleLogin = async function () {
     const input = document.getElementById('auth-password');

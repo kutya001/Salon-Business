@@ -27,12 +27,15 @@ function hashPassword(password) {
  */
 function authenticate(password) {
   var props = PropertiesService.getScriptProperties();
-  var savedHash = props.getProperty("ADMIN_PASSWORD_HASH");
   
-  // Первоначальная настройка: если пароль еще не задан, сохраняем переданный
+  // Читаем настройки из Google Таблицы
+  var settings = handleGetSettings();
+  var savedHash = settings["adminPasswordHash"];
+  
+  // Первоначальная настройка: если пароль в таблице еще не задан, сохраняем переданный
   if (!savedHash) {
     var newHash = hashPassword(password);
-    props.setProperty("ADMIN_PASSWORD_HASH", newHash);
+    handleUpdateSettings({ "adminPasswordHash": newHash });
     savedHash = newHash;
   }
   
@@ -40,7 +43,7 @@ function authenticate(password) {
   if (inputHash === savedHash) {
     // Создаем токен сессии
     var token = "token_" + generateId() + "_" + Date.now();
-    // Сохраняем токен в свойствах скрипта (время жизни - 24 часа)
+    // Сохраняем токен в свойствах скрипта (время жизни - 24 часа) для быстрого доступа
     props.setProperty(token, Date.now().toString());
     return token;
   }
@@ -86,17 +89,17 @@ function removeToken(token) {
 }
 
 /**
- * Изменяет пароль администратора
+ * Изменяет пароль администратора в Google Таблице
  * @param {string} oldPassword
  * @param {string} newPassword
  * @returns {boolean}
  */
 function changeAdminPassword(oldPassword, newPassword) {
-  var props = PropertiesService.getScriptProperties();
-  var savedHash = props.getProperty("ADMIN_PASSWORD_HASH");
+  var settings = handleGetSettings();
+  var savedHash = settings["adminPasswordHash"];
   
   if (!savedHash || hashPassword(oldPassword) === savedHash) {
-    props.setProperty("ADMIN_PASSWORD_HASH", hashPassword(newPassword));
+    handleUpdateSettings({ "adminPasswordHash": hashPassword(newPassword) });
     return true;
   }
   return false;

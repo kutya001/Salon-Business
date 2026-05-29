@@ -76,13 +76,24 @@ window.renderAuth = function () {
             </div>
 
             <!-- Плашка GAS URL -->
-            <div style="margin: 16px 0; padding: 10px 12px; border-radius: 12px; background: rgba(118, 75, 162, 0.05); border: 1px solid rgba(118, 75, 162, 0.1); font-size: 11px; text-align: left; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight: 600; color: #4a5568; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; font-family: monospace;">
-                    🔗 ${api.gasUrl ? api.gasUrl.substring(0, 32) + '...' : 'URL бэкенда не задан'}
-                </span>
-                <button onclick="handleHardReset()" style="color: #ef4444; font-weight: 700; background: none; border: none; cursor: pointer; font-size: 10px; padding: 4px 6px; border-radius: 6px; hover:text-decoration:underline;">
-                    Сбросить URL
-                </button>
+            <div style="margin: 16px 0; padding: 10px 12px; border-radius: 12px; background: rgba(118, 75, 162, 0.05); border: 1px solid rgba(118, 75, 162, 0.1); font-size: 11px; text-align: left; box-sizing:border-box; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight: 600; color: #4a5568; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; font-family: monospace;" title="${api.gasUrl || ''}">
+                        🔗 ${api.gasUrl ? api.gasUrl.substring(0, 32) + '...' : 'URL бэкенда не задан'}
+                    </span>
+                    <button onclick="setUI({showSetupInline: !state.ui.showSetupInline})" style="color: #764ba2; font-weight: 700; background: none; border: none; cursor: pointer; font-size: 10px; padding: 4px 6px; border-radius: 6px;">
+                        Изменить
+                    </button>
+                </div>
+                ${state.ui.showSetupInline ? `
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; border-top: 1px dashed rgba(118, 75, 162, 0.2); padding-top: 8px;">
+                    <input type="url" id="inline-gas-url" value="${api.gasUrl || ''}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:10px; font-family:monospace; outline:none;" onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#cbd5e1'">
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="handleInlineUrlSave()" style="flex:1; background:#764ba2; color:white; border:none; border-radius:8px; padding:8px; font-weight:700; cursor:pointer;">Сохранить</button>
+                        <button onclick="handleHardReset()" style="flex:1; background:#fee2e2; color:#dc2626; border:none; border-radius:8px; padding:8px; font-weight:700; cursor:pointer;">Сброс PWA</button>
+                    </div>
+                </div>
+                ` : ''}
             </div>
 
             <!-- Монитор запросов -->
@@ -334,6 +345,19 @@ window.handleSetupSave = async function () {
     } finally {
         setUI({ loading: false });
     }
+};
+
+// Функция сохранения URL из inline-редактора
+window.handleInlineUrlSave = function () {
+    const newUrl = document.getElementById('inline-gas-url')?.value.trim();
+    if (!newUrl) {
+        showToast('Пожалуйста, укажите URL', 'error');
+        return;
+    }
+    
+    api.setGasUrl(newUrl);
+    setUI({ showSetupInline: false });
+    showToast('URL бэкенда обновлен!', 'success');
 };
 
 // Функция жесткого сброса кэша PWA и настроек

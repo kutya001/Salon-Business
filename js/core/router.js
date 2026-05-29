@@ -62,7 +62,7 @@ window.renderApp = function () {
     </button>
   `;
 
-  return html + devConsoleHtml;
+  return `<div id="app" class="min-h-screen">` + html + devConsoleHtml + `</div>`;
 };
 
 window.renderLayout = function () {

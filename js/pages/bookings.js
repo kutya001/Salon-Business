@@ -502,7 +502,7 @@ window.showCreateBookingModal = function () {
       draft: {
         clientName: '',
         clientPhone: '',
-        categoryId: '',
+        genderCategory: '',
         serviceId: '',
         masterId: '',
         date: '',
@@ -531,7 +531,7 @@ window.showEditBookingModal = function (id) {
       draft: {
         clientName: b.clientName,
         clientPhone: formatClientPhone(b.clientPhone),
-        categoryId: categoryId,
+        genderCategory: service ? service.genderCategory : '',
         serviceId: b.serviceId,
         masterId: b.masterId,
         date: b.date,
@@ -570,9 +570,9 @@ window.setBookingWizardStep = function(step) {
   setUI({ modalData: data });
 };
 
-window.handleWizardCategorySelect = function(categoryId) {
+window.handleWizardGenderSelect = function(genderCategory) {
   const data = { ...state.ui.modalData };
-  data.draft.categoryId = categoryId;
+  data.draft.genderCategory = genderCategory;
   data.draft.serviceId = ''; // сбрасываем услугу при смене категории
   data.step = 3;
   setUI({ modalData: data });
@@ -616,37 +616,53 @@ window.renderBookingModal = function () {
       <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-primary" style="margin-top: 10px;">Далее: Категория ➔</button>
     `;
   } else if (step === 2) {
-    const cats = state.categories || [];
-    let catsHtml = cats.map(c => `
-      <button type="button" onclick="handleWizardCategorySelect('${c.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 16px; margin-bottom: 8px;">
+    const genders = [
+      { id: 'female', name: '👩 Женская' },
+      { id: 'male', name: '👨 Мужская' },
+      { id: 'any', name: '🧑 Любая' }
+    ];
+    let catsHtml = genders.map(c => `
+      <button type="button" onclick="handleWizardGenderSelect('${c.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 16px; margin-bottom: 8px;">
         <span style="font-weight: 700;">${c.name}</span>
       </button>
     `).join('');
-    
-    if (!catsHtml) catsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 20px;">Нет доступных категорий</div>`;
 
     stepContent = `
       <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
-        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">Выберите категорию услуг:</p>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">Выберите категорию (пол):</p>
         ${catsHtml}
         <button type="button" onclick="setBookingWizardStep(1)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
       </div>
     `;
   } else if (step === 3) {
-    const svcs = (state.services || []).filter(s => s.categoryId === draft.categoryId);
-    let svcsHtml = svcs.map(s => `
-      <button type="button" onclick="handleWizardServiceSelect('${s.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-        <span style="font-weight: 700;">${s.name}</span>
-        <span style="font-size: 11px; color: var(--primary); font-weight: 800;">${formatPrice(s.price)} (${s.duration} мин)</span>
-      </button>
-    `).join('');
+    const svcs = (state.services || []).filter(s => s.genderCategory === draft.genderCategory);
+    
+    const grouped = {};
+    svcs.forEach(s => {
+      const t = s.categoryName || 'Другое';
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(s);
+    });
+
+    let svcsHtml = '';
+    for (const typeName in grouped) {
+      svcsHtml += `<h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 12px 0 8px 4px; font-weight: 800;">${typeName}</h4>`;
+      svcsHtml += grouped[typeName].map(s => `
+        <button type="button" onclick="handleWizardServiceSelect('${s.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span style="font-weight: 700;">${s.name}</span>
+          <span style="font-size: 11px; color: var(--primary); font-weight: 800;">${formatPrice(s.price)} (${s.duration} мин)</span>
+        </button>
+      `).join('');
+    }
 
     if (!svcsHtml) svcsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 20px;">В этой категории нет услуг</div>`;
 
     stepContent = `
       <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
-        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">Выберите процедуру:</p>
-        ${svcsHtml}
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600;">Выберите процедуру:</p>
+        <div class="scrollbar-hide" style="max-height: 40vh; overflow-y: auto; padding-right: 4px;">
+          ${svcsHtml}
+        </div>
         <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
       </div>
     `;

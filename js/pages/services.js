@@ -3,94 +3,126 @@
 // ============================================
 
 window.renderServices = function () {
-  const activeTab = state.ui.selectedCategory || 'Все';
+  const activeTab = state.ui.selectedGenderCategory || 'all';
+  const viewMode = state.ui.servicesViewMode || 'cards';
 
-  // Фильтрация услуг по выбранной категории
   let filteredServices = [...state.services];
-  if (activeTab !== 'Все') {
-    filteredServices = filteredServices.filter(s => s.categoryId === activeTab);
+  if (activeTab !== 'all') {
+    filteredServices = filteredServices.filter(s => s.genderCategory === activeTab);
   }
 
-  // Отрисовка табов категорий
-  const allTab = { id: 'Все', name: 'Все' };
-  const tabsHtml = [allTab, ...state.categories].map(cat => {
+  const genderTabs = [
+    { id: 'all', name: 'Все' },
+    { id: 'female', name: 'Женская' },
+    { id: 'male', name: 'Мужская' },
+    { id: 'any', name: 'Любая' }
+  ];
+
+  const tabsHtml = genderTabs.map(cat => {
     const isActive = activeTab === cat.id;
     return `
-      <button onclick="handleSelectCategory('${cat.id}')" class="category-pill ${isActive ? 'active' : ''}" style="white-space: nowrap; padding: 10px 20px; border-radius: 9999px; font-weight: 700; font-size: 13px; border: 1px solid var(--border); background: ${isActive ? 'linear-gradient(135deg,var(--theme-500),var(--theme-600))' : 'var(--bg-secondary)'}; color: ${isActive ? '#ffffff' : 'var(--text-secondary)'}; cursor: pointer; transition: all 0.2s;">
+      <button onclick="setUI({ selectedGenderCategory: '${cat.id}' })" class="category-pill ${isActive ? 'active' : ''}" style="white-space: nowrap; padding: 10px 20px; border-radius: 9999px; font-weight: 700; font-size: 13px; border: 1px solid var(--border); background: ${isActive ? 'linear-gradient(135deg,var(--theme-500),var(--theme-600))' : 'var(--bg-secondary)'}; color: ${isActive ? '#ffffff' : 'var(--text-secondary)'}; cursor: pointer; transition: all 0.2s;">
         ${cat.name}
       </button>
     `;
   }).join('');
 
-  // Список услуг по карточкам
-  const cardsHtml = filteredServices.length === 0
-    ? `
+  let contentHtml = '';
+  if (filteredServices.length === 0) {
+    contentHtml = `
       <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
         <span style="font-size: 56px; display: block; margin-bottom: 16px;">💇</span>
-        <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">В категории нет услуг</h3>
+        <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">В этой категории нет услуг</h3>
         <p style="font-size: 14px; margin-bottom: 16px;">Добавьте новую процедуру, чтобы сделать ее доступной для записи</p>
         <button onclick="showCreateServiceModal()" class="btn btn-primary" style="width: auto;">Добавить услугу</button>
       </div>
-    `
-    : filteredServices.map(s => `
-      <div class="card card-hover p-6" style="display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
-        <div>
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
-            <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">${s.name}</h3>
-            <span class="badge badge-info" style="font-size: 9px; padding: 2px 8px; text-transform: uppercase;">${s.categoryName}</span>
+    `;
+  } else if (viewMode === 'cards') {
+    contentHtml = `
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${filteredServices.map(s => `
+          <div class="card card-hover p-6" style="display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
+                <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">${s.name}</h3>
+                <span class="badge badge-info" style="font-size: 9px; padding: 2px 8px; text-transform: uppercase;">${s.categoryName}</span>
+              </div>
+              <p style="font-size: 13px; color: var(--text-secondary); min-height: 38px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 12px;">
+                ${s.description || 'Описание услуги отсутствует.'}
+              </p>
+              <span class="badge" style="font-size: 10px;">${s.genderCategory === 'male' ? '👨 Мужская' : s.genderCategory === 'female' ? '👩 Женская' : '🧑 Любая'}</span>
+            </div>
+            <div>
+              <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 14px;">
+                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">🕒 ${s.duration} мин</span>
+                <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto;">✏️</button>
+                <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);">🗑</button>
+              </div>
+            </div>
           </div>
-          <p style="font-size: 13px; color: var(--text-secondary); min-height: 38px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 12px;">
-            ${s.description || 'Описание услуги отсутствует.'}
-          </p>
-        </div>
-
-        <div>
-          <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 14px;">
-            <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">🕒 ${s.duration} мин</span>
-            <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
-          </div>
-
-          <div style="display: flex; gap: 8px; justify-content: flex-end;">
-            <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto;">
-              ✏️ Изменить
-            </button>
-            <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);">
-              🗑 Удалить
-            </button>
-          </div>
-        </div>
+        `).join('')}
       </div>
-    `).join('');
+    `;
+  } else {
+    // Table mode
+    contentHtml = `
+      <div class="card overflow-x-auto">
+        <table class="table" style="min-width: 700px;">
+          <thead>
+            <tr>
+              <th>Название</th>
+              <th>Вид услуги</th>
+              <th>Пол</th>
+              <th>Цена</th>
+              <th>Длительность</th>
+              <th style="text-align:right;">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredServices.map(s => `
+              <tr>
+                <td style="font-weight: 700;">${s.name}</td>
+                <td><span class="badge badge-info" style="font-size: 10px;">${s.categoryName}</span></td>
+                <td>${s.genderCategory === 'male' ? '👨 Мужская' : s.genderCategory === 'female' ? '👩 Женская' : '🧑 Любая'}</td>
+                <td style="font-weight: 800; color: var(--primary);">${formatPrice(s.price)}</td>
+                <td style="color: var(--text-secondary); font-size: 13px;">${s.duration} мин</td>
+                <td style="text-align: right;">
+                  <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; display: inline-block; width: auto; margin-right: 4px;">✏️</button>
+                  <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; display: inline-block; width: auto; color: #ef4444;">🗑</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
 
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px;">
-      
-      <!-- Заголовок страницы -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div>
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Услуги и прайс-лист</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Каталог процедур салона, цены и продолжительность сеансов</p>
         </div>
         <div style="display: flex; gap: 12px; align-items: center;">
-          <button onclick="showCategoriesModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
-            📁 Категории
-          </button>
-          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-            ➕ Добавить услугу
-          </button>
+          <div style="display: flex; background: var(--bg-secondary); border-radius: 12px; padding: 4px; border: 1px solid var(--border);">
+            <button onclick="setUI({ servicesViewMode: 'cards' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'cards' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'cards' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'cards' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'};">🗂 Карточки</button>
+            <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'};">📋 Таблица</button>
+          </div>
+          <button onclick="showCategoriesModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">📁 Справочник видов</button>
+          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">➕ Добавить услугу</button>
         </div>
       </div>
 
-      <!-- Лента категорий -->
       <div class="scrollbar-hide" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
         ${tabsHtml}
       </div>
 
-      <!-- Сетка карточек -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        ${cardsHtml}
-      </div>
-
+      ${contentHtml}
     </div>
   `;
 };
@@ -132,14 +164,24 @@ window.renderServiceModal = function () {
           <label class="form-label">Название услуги</label>
           <input type="text" id="s-name" class="form-input" placeholder="Классический маникюр" value="${isEdit ? s.name : ''}" required>
         </div>
-        <div class="form-group">
-          <label class="form-label">Категория</label>
-          <div style="display: flex; gap: 8px;">
-            <select id="s-category" class="form-select" required style="flex-grow: 1;">
-              <option value="">Выберите категорию...</option>
-              ${state.categories.map(c => `<option value="${c.id}" ${(isEdit && s.categoryId === c.id) ? 'selected' : ''}>${c.name}</option>`).join('')}
+        <div style="display: flex; gap: 12px; width: 100%;">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Пол (Категория)</label>
+            <select id="s-gender" class="form-select" required>
+              <option value="female" ${(isEdit && s.genderCategory === 'female') ? 'selected' : ''}>👩 Женская</option>
+              <option value="male" ${(isEdit && s.genderCategory === 'male') ? 'selected' : ''}>👨 Мужская</option>
+              <option value="any" ${(isEdit && s.genderCategory === 'any') ? 'selected' : ''}>🧑 Любая</option>
             </select>
-            <button type="button" onclick="handleQuickCreateCategory()" class="btn btn-secondary" style="width: auto; padding: 0 16px; display: flex; align-items: center; justify-content: center; font-size: 16px;">➕</button>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Вид услуги</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="s-category" class="form-select" required style="flex-grow: 1;">
+                <option value="">Выберите вид...</option>
+                ${state.categories.map(c => `<option value="${c.id}" ${(isEdit && s.categoryId === c.id) ? 'selected' : ''}>${c.name}</option>`).join('')}
+              </select>
+              <button type="button" onclick="handleQuickCreateCategory()" class="btn btn-secondary" style="width: auto; padding: 0 16px; display: flex; align-items: center; justify-content: center; font-size: 16px;">➕</button>
+            </div>
           </div>
         </div>
         <div style="display: flex; gap: 12px; width: 100%;">
@@ -171,6 +213,7 @@ window.renderServiceModal = function () {
 // Отправка формы услуги (Фоновая синхронизация)
 window.handleServiceSubmit = function (id) {
   const name = document.getElementById('s-name').value.trim();
+  const genderCategory = document.getElementById('s-gender').value;
   const categoryId = document.getElementById('s-category').value;
   const categoryName = state.categories.find(c => c.id === categoryId)?.name || '';
   const price = parseFloat(document.getElementById('s-price').value) || 0;
@@ -179,7 +222,7 @@ window.handleServiceSubmit = function (id) {
 
   // Оптимистичное обновление
   const tempId = id || 'temp_' + Date.now();
-  const serviceData = { id: tempId, name, categoryId, categoryName, price, duration, description, status: 'active' };
+  const serviceData = { id: tempId, name, genderCategory, categoryId, categoryName, price, duration, description, status: 'active' };
 
   if (id) {
     const idx = state.services.findIndex(s => s.id === id);
@@ -194,11 +237,11 @@ window.handleServiceSubmit = function (id) {
 
   // Фоновая отправка на сервер
   if (id) {
-    api.updateService(id, { name, categoryId, categoryName, price, duration, description }).catch(e => {
+    api.updateService(id, { name, genderCategory, categoryId, categoryName, price, duration, description }).catch(e => {
       showToast('Ошибка фоновой синхронизации услуги', 'error');
     });
   } else {
-    api.createService({ name, categoryId, categoryName, price, duration, description }).then(result => {
+    api.createService({ name, genderCategory, categoryId, categoryName, price, duration, description }).then(result => {
       // Заменяем временный ID на реальный
       const idx = state.services.findIndex(s => s.id === tempId);
       if (idx !== -1) {

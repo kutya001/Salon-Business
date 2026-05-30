@@ -17,64 +17,16 @@ window.renderApp = function () {
     html = renderLayout();
   }
 
-  // Добавляем глобальную панель логов GAS API в самом низу экрана
-  const showDevConsole = state.ui.showDevConsole;
-  const logsCount = (state.apiLogs || []).length;
-  
-  const isSyncing = state.ui.loading || state.ui.syncingCount > 0;
-  const syncClass = isSyncing ? 'sync-icon-spin' : '';
-
-  const devConsoleHtml = showDevConsole ? `
-    <div class="dev-console animate-scale-in" style="position: fixed; bottom: 80px; left: 20px; right: 20px; height: 300px; background: rgba(15, 23, 42, 0.95); border: 2px solid var(--primary); border-radius: 20px; z-index: 99999; display: flex; flex-direction: column; overflow: hidden; font-family: monospace; color: #38bdf8; box-shadow: 0 20px 50px rgba(0,0,0,0.5); backdrop-filter: blur(12px);">
-        <div style="padding: 12px 18px; background: rgba(30, 41, 59, 0.9); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; font-size: 12px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; color: #38bdf8;">
-                <i data-feather="cloud-lightning" style="width: 16px; height: 16px;"></i> Сетевой шлюз GAS
-            </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button onclick="forceSync()" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i data-feather="refresh-cw" class="${syncClass}" style="width: 12px; height: 12px;"></i> ${isSyncing ? 'Синхронизация...' : 'Синхронизировать'}</button>
-                <button onclick="setState({ apiLogs: [] })" style="background: rgba(244,63,94,0.1); border: 1px solid #f43f5e; color: #f43f5e; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px;"><i data-feather="trash-2" style="width: 12px; height: 12px;"></i> Очистить</button>
-                <button onclick="setUI({ showDevConsole: false })" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; font-weight: 700; display: flex; align-items: center;">✕</button>
-            </div>
-        </div>
-        <div style="flex-grow: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 11px; text-align: left;">
-            ${logsCount === 0 ? `
-                <div style="color: #94a3b8; text-align: center; padding-top: 60px;">Сеть пассивна. Нажмите «Синхронизировать» для обмена данными...</div>
-            ` : state.apiLogs.map(log => {
-                let color = '#a78bfa'; // purple for send
-                let prefix = '📤 ОТПРАВЛЕНО';
-                if (log.type === 'recv') {
-                  color = '#34d399'; // green for recv
-                  prefix = '📥 ПОЛУЧЕНО';
-                } else if (log.type === 'error') {
-                  color = '#f87171'; // red for error
-                  prefix = '❌ ОШИБКА';
-                }
-                return `
-                  <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
-                    <div style="display: flex; gap: 10px; color: ${color}; font-weight: 700;">
-                      <span>[${log.time}]</span>
-                      <span>${prefix}</span>
-                      <span>"${log.action}"</span>
-                    </div>
-                    <pre style="margin-top: 4px; color: #e2e8f0; font-size: 10px; overflow-x: auto; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 6px; max-height: 80px;">${log.details}</pre>
-                  </div>
-                `;
-            }).join('')}
-        </div>
-    </div>
-  ` : `
-    <button onclick="setUI({ showDevConsole: true })" title="Синхронизация и логи GAS" style="position: fixed; bottom: 20px; left: 20px; width: 50px; height: 50px; border-radius: 25px; background: var(--bg); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 99998; box-shadow: 0 8px 24px rgba(99,102,241,0.3); color: var(--primary);">
-        <i data-feather="refresh-cw" class="${syncClass}" style="width: 22px; height: 22px;"></i>
-        ${logsCount > 0 ? `<div style="position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 10px; font-weight: 800; width: 20px; height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: sans-serif; border: 2px solid var(--bg);">${logsCount}</div>` : ''}
-    </button>
-  `;
-
-  return `<div id="app" class="min-h-screen">` + html + devConsoleHtml + `</div>`;
+  return `<div id="app" class="min-h-screen">` + html + `</div>`;
 };
 
 window.renderLayout = function () {
   const page = state.currentPage;
   let pageContent = '';
+
+  const isSyncing = state.ui.loading || state.ui.syncingCount > 0;
+  const syncClass = isSyncing ? 'sync-icon-spin' : '';
+  const logsCount = (state.apiLogs || []).length;
 
   // Подключение рендеров страниц по условию
   if (page === 'dashboard' && window.renderDashboard) pageContent = renderDashboard();
@@ -157,6 +109,7 @@ window.renderLayout = function () {
     else if (state.ui.modal === 'viewShift' && window.renderShiftDetailsModal) modalContent = renderShiftDetailsModal();
     else if (state.ui.modal === 'bookingMessage' && window.renderBookingMessageModal) modalContent = renderBookingMessageModal();
     else if (state.ui.modal === 'viewMaster' && window.renderMasterDetailsModal) modalContent = renderMasterDetailsModal();
+    else if (state.ui.modal === 'syncLogs' && window.renderSyncLogsModal) modalContent = renderSyncLogsModal();
     else modalContent = `<div class="p-6">Неизвестное модальное окно: ${state.ui.modal}</div>`;
 
     modalHtml = `
@@ -182,6 +135,13 @@ window.renderLayout = function () {
 
   return `
     <div class="app-layout ${state.ui.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
+      <!-- Кнопка синхронизации для десктопа в правом верхнем углу -->
+      <button onclick="setUI({ modal: 'syncLogs' })" class="hidden lg-flex" style="position: fixed; top: 24px; right: 40px; z-index: 999; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: var(--text); align-items: center; gap: 8px; cursor: pointer; backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+        <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px; color: var(--primary);"></i>
+        <span>Синхронизация</span>
+        ${logsCount > 0 ? `<span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 2px;">${logsCount}</span>` : ''}
+      </button>
+
       <!-- Навигационная панель для десктопа -->
       <aside class="sidebar glass-island">
         <div class="sidebar-header" style="padding: 24px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
@@ -220,7 +180,11 @@ window.renderLayout = function () {
           ${page === 'bookings' ? `
             <button onclick="setUI({ showMobileSearch: !state.ui.showMobileSearch, showMobileFilters: false })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px;"><i data-feather="search" style="width: 20px; height: 20px;"></i></button>
             <button onclick="setUI({ showMobileFilters: !state.ui.showMobileFilters, showMobileSearch: false })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px;"><i data-feather="sliders" style="width: 20px; height: 20px;"></i></button>
-          ` : '<div style="width: 32px;"></div>'}
+          ` : ''}
+          <button onclick="setUI({ modal: 'syncLogs' })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px; display: flex; align-items: center; justify-content: center; position: relative;">
+            <i data-feather="refresh-cw" class="${syncClass}" style="width: 20px; height: 20px; color: var(--primary);"></i>
+            ${logsCount > 0 ? `<div style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; font-size: 8px; font-weight: 800; width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--bg); font-family: sans-serif;">${logsCount}</div>` : ''}
+          </button>
         </div>
       </header>
 
@@ -265,6 +229,67 @@ window.renderLayout = function () {
 
       <!-- Загрузчик -->
       ${globalSpinner}
+    </div>
+  `;
+};
+
+window.renderSyncLogsModal = function () {
+  const isSyncing = state.ui.loading || state.ui.syncingCount > 0;
+  const syncClass = isSyncing ? 'sync-icon-spin' : '';
+  const logsCount = (state.apiLogs || []).length;
+
+  const logsHtml = logsCount === 0 ? `
+    <div style="color: var(--text-secondary); text-align: center; padding: 40px 20px;">
+      <i data-feather="cloud-off" style="width: 48px; height: 48px; color: var(--border); margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;"></i>
+      <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">Сетевой лог пуст</div>
+      <p style="font-size: 12px;">Активные обмены данными с Google Apps Script еще не происходили.</p>
+    </div>
+  ` : state.apiLogs.map(log => {
+      let color = '#a78bfa'; // purple for send
+      let prefix = '📤 ОТПРАВЛЕНО';
+      if (log.type === 'recv') {
+        color = '#34d399'; // green for recv
+        prefix = '📥 ПОЛУЧЕНО';
+      } else if (log.type === 'error') {
+        color = '#f87171'; // red for error
+        prefix = '❌ ОШИБКА';
+      }
+      return `
+        <div style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; font-family: monospace;">
+          <div style="display: flex; gap: 8px; color: ${color}; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center; gap: 6px;">[${log.time}] ${prefix}</span>
+            <span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: normal; color: var(--text-secondary);">${log.action}</span>
+          </div>
+          <pre style="margin-top: 6px; color: #e2e8f0; font-size: 10px; overflow-x: auto; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; max-height: 120px; border: 1px solid var(--border);">${log.details}</pre>
+        </div>
+      `;
+  }).join('');
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 600px; width: 100%;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <div>
+          <h3 style="font-weight: 800; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px;">
+            <i data-feather="cloud-lightning" style="color: var(--primary);"></i> Сетевой шлюз GAS
+          </h3>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Контроль и детализация обмена данными</p>
+        </div>
+        <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="forceSync()" class="btn btn-primary" style="flex: 2; min-width: 180px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px;"></i>
+          ${isSyncing ? 'Синхронизация...' : 'Синхронизировать сейчас'}
+        </button>
+        <button onclick="setState({ apiLogs: [] })" class="btn btn-secondary" style="flex: 1; min-width: 100px; color: #f87171; border-color: rgba(248,113,113,0.2); background: rgba(248,113,113,0.05); display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Очистить
+        </button>
+      </div>
+
+      <div class="scrollbar-hide" style="max-height: 40vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; background: var(--bg-secondary); border-radius: 12px; padding: 12px; border: 1px solid var(--border);">
+        ${logsHtml}
+      </div>
     </div>
   `;
 };

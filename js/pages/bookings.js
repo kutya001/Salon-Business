@@ -865,6 +865,18 @@ window.showEditBookingModal = function (id) {
   });
 };
 
+window.toggleEditBookingService = function(id) {
+  const md = state.ui.modalData;
+  let currentIds = md.draft.serviceId ? md.draft.serviceId.split(',') : [];
+  if (currentIds.includes(id)) {
+    currentIds = currentIds.filter(x => x !== id);
+  } else {
+    currentIds.push(id);
+  }
+  md.draft.serviceId = currentIds.join(',');
+  setUI({ modalData: md });
+};
+
 window.renderEditBookingFullModal = function() {
   const md = state.ui.modalData;
   const draft = md.draft || {};
@@ -873,8 +885,8 @@ window.renderEditBookingFullModal = function() {
   let svcsHtml = (state.services || []).map(s => {
     const isSelected = selectedServiceIds.includes(s.id);
     return `
-      <div onclick="const el=document.getElementById('edit-svc-${s.id}'); el.checked=!el.checked; el.dispatchEvent(new Event('change'));" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
-        <input type="checkbox" id="edit-svc-${s.id}" value="${s.id}" onchange="event.stopPropagation();" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px;">
+      <div onclick="toggleEditBookingService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
+        <input type="checkbox" id="edit-svc-${s.id}" value="${s.id}" onchange="event.stopPropagation(); toggleEditBookingService('${s.id}');" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px;">
         <div style="flex: 1;">
           <div style="font-weight: 700; font-size: 13px;">${s.name}</div>
           <div style="font-size: 11px; color: var(--text-secondary);">${formatPrice(s.price)} (${s.duration} мин)</div>
@@ -894,17 +906,17 @@ window.renderEditBookingFullModal = function() {
         
         <div class="form-group">
           <label class="form-label">Имя клиента</label>
-          <input type="text" id="edit-b-name" class="form-input" value="${draft.clientName}" required>
+          <input type="text" id="edit-b-name" class="form-input" value="${draft.clientName}" oninput="state.ui.modalData.draft.clientName = this.value" required>
         </div>
         
         <div class="form-group">
           <label class="form-label">Телефон клиента</label>
-          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" required>
+          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 '; state.ui.modalData.draft.clientPhone = this.value;" required>
         </div>
 
         <div class="form-group">
           <label class="form-label">Статус записи</label>
-          <select id="edit-b-status" class="form-select" required>
+          <select id="edit-b-status" class="form-select" onchange="state.ui.modalData.draft.status = this.value" required>
             <option value="pending" ${draft.status === 'pending' ? 'selected' : ''}>Записан</option>
             <option value="confirmed" ${draft.status === 'confirmed' ? 'selected' : ''}>Подтверждён</option>
             <option value="completed" ${draft.status === 'completed' ? 'selected' : ''}>Выполнен</option>
@@ -921,7 +933,7 @@ window.renderEditBookingFullModal = function() {
 
         <div class="form-group">
           <label class="form-label">Мастер</label>
-          <select id="edit-b-master" class="form-select">
+          <select id="edit-b-master" class="form-select" onchange="state.ui.modalData.draft.masterId = this.value">
             <option value="">👤 Любой мастер</option>
             ${state.masters.map(m => `<option value="${m.id}" ${draft.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
           </select>
@@ -930,17 +942,17 @@ window.renderEditBookingFullModal = function() {
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Дата</label>
-            <input type="date" id="edit-b-date" class="form-input" value="${draft.date}" required>
+            <input type="date" id="edit-b-date" class="form-input" value="${draft.date}" onchange="state.ui.modalData.draft.date = this.value" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Время</label>
-            <input type="time" id="edit-b-time" class="form-input" value="${draft.time}" required>
+            <input type="time" id="edit-b-time" class="form-input" value="${draft.time}" onchange="state.ui.modalData.draft.time = this.value" required>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Способ оплаты</label>
-          <select id="edit-b-payment" class="form-select">
+          <select id="edit-b-payment" class="form-select" onchange="state.ui.modalData.draft.paymentMethod = this.value">
             <option value="cash" ${draft.paymentMethod === 'cash' ? 'selected' : ''}>💵 Наличные</option>
             <option value="card" ${draft.paymentMethod === 'card' ? 'selected' : ''}>💳 Карта</option>
             <option value="bonus" ${draft.paymentMethod === 'bonus' ? 'selected' : ''}>🌟 Бонусы</option>
@@ -949,7 +961,7 @@ window.renderEditBookingFullModal = function() {
 
         <div class="form-group">
           <label class="form-label">Заметки / Пожелания</label>
-          <textarea id="edit-b-notes" rows="2" class="form-textarea">${draft.notes}</textarea>
+          <textarea id="edit-b-notes" rows="2" class="form-textarea" oninput="state.ui.modalData.draft.notes = this.value">${draft.notes}</textarea>
         </div>
 
         <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Сохранить изменения ✅</button>
@@ -1122,11 +1134,11 @@ window.renderBookingModal = function () {
     stepContent = `
       <div class="form-group animate-slide-in-right">
         <label class="form-label">Имя клиента</label>
-        <input type="text" id="b-client-name" class="form-input" placeholder="Иван Иванов" value="${draft.clientName}" onkeydown="if(event.key==='Enter') { event.preventDefault(); document.getElementById('b-client-phone').focus(); }" required autofocus>
+        <input type="text" id="b-client-name" class="form-input" placeholder="Иван Иванов" value="${draft.clientName}" oninput="state.ui.modalData.draft.clientName = this.value" onkeydown="if(event.key==='Enter') { event.preventDefault(); document.getElementById('b-client-phone').focus(); }" required autofocus>
       </div>
       <div class="form-group animate-slide-in-right" style="animation-delay: 0.1s;">
         <label class="form-label">Телефон клиента</label>
-        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
+        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 '; state.ui.modalData.draft.clientPhone = this.value;" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
       </div>
       <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-primary" style="margin-top: 10px;">Далее: Категория ➔</button>
     `;
@@ -1221,11 +1233,11 @@ window.renderBookingModal = function () {
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Дата</label>
-            <input type="date" id="b-date" class="form-input" value="${draft.date}" required>
+            <input type="date" id="b-date" class="form-input" value="${draft.date}" onchange="state.ui.modalData.draft.date = this.value" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Время</label>
-            <input type="time" id="b-time" class="form-input" value="${draft.time}" required>
+            <input type="time" id="b-time" class="form-input" value="${draft.time}" onchange="state.ui.modalData.draft.time = this.value" required>
           </div>
         </div>
         <div class="form-group">
@@ -1238,7 +1250,7 @@ window.renderBookingModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Заметки / Пожелания</label>
-          <textarea id="b-notes" rows="2" class="form-textarea" placeholder="Например: первый раз, аллергия...">${draft.notes}</textarea>
+          <textarea id="b-notes" rows="2" class="form-textarea" placeholder="Например: первый раз, аллергия..." oninput="state.ui.modalData.draft.notes = this.value">${draft.notes}</textarea>
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 10px;">

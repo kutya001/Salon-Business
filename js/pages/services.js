@@ -134,10 +134,13 @@ window.renderServiceModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Категория</label>
-          <select id="s-category" class="form-select" required>
-            <option value="">Выберите категорию...</option>
-            ${state.categories.map(c => `<option value="${c.id}" ${(isEdit && s.categoryId === c.id) ? 'selected' : ''}>${c.name}</option>`).join('')}
-          </select>
+          <div style="display: flex; gap: 8px;">
+            <select id="s-category" class="form-select" required style="flex-grow: 1;">
+              <option value="">Выберите категорию...</option>
+              ${state.categories.map(c => `<option value="${c.id}" ${(isEdit && s.categoryId === c.id) ? 'selected' : ''}>${c.name}</option>`).join('')}
+            </select>
+            <button type="button" onclick="handleQuickCreateCategory()" class="btn btn-secondary" style="width: auto; padding: 0 16px; display: flex; align-items: center; justify-content: center; font-size: 16px;">➕</button>
+          </div>
         </div>
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
@@ -296,5 +299,39 @@ window.handleDeleteCategory = function(id) {
   api.deleteCategory(id).catch(e => {
     showToast('Ошибка при удалении категории', 'error');
     setState({ categories: backup });
+  });
+};
+
+window.handleQuickCreateCategory = function() {
+  const name = prompt("Введите название новой категории:");
+  if (!name || !name.trim()) return;
+  const tempId = 'cat_temp_' + Date.now();
+  const newCat = { id: tempId, name: name.trim(), status: 'active' };
+  
+  state.categories.push(newCat);
+  
+  const select = document.getElementById('s-category');
+  if (select) {
+    const option = document.createElement('option');
+    option.value = tempId;
+    option.text = newCat.name;
+    select.appendChild(option);
+    select.value = tempId;
+  }
+
+  api.createCategory({ name: name.trim() }).then(result => {
+    const idx = state.categories.findIndex(c => c.id === tempId);
+    if (idx !== -1) {
+      state.categories[idx] = result;
+      if (select && select.value === tempId) {
+        select.value = result.id;
+      }
+      if (select) {
+        const opt = Array.from(select.options).find(o => o.value === tempId);
+        if (opt) opt.value = result.id;
+      }
+    }
+  }).catch(e => {
+    showToast('Ошибка при фоновом добавлении категории', 'error');
   });
 };

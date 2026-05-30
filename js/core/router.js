@@ -145,7 +145,7 @@ window.renderLayout = function () {
     else modalContent = `<div class="p-6">Неизвестное модальное окно: ${state.ui.modal}</div>`;
 
     modalHtml = `
-      <div class="modal-overlay" onclick="if(event.target===this) setUI({modal: null, modalData: null})">
+      <div class="modal-overlay" onmousedown="if(event.target===this) this.dataset.overlayClick = 'true';" onmouseup="if(event.target===this && this.dataset.overlayClick === 'true') { setUI({modal: null, modalData: null}); } this.dataset.overlayClick = 'false';">
         <div class="modal animate-scale-in">
           ${modalContent}
         </div>

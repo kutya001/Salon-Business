@@ -607,11 +607,11 @@ window.renderBookingModal = function () {
     stepContent = `
       <div class="form-group animate-slide-in-right">
         <label class="form-label">Имя клиента</label>
-        <input type="text" id="b-client-name" class="form-input" placeholder="Иван Иванов" value="${draft.clientName}" required autofocus>
+        <input type="text" id="b-client-name" class="form-input" placeholder="Иван Иванов" value="${draft.clientName}" onkeydown="if(event.key==='Enter') { event.preventDefault(); document.getElementById('b-client-phone').focus(); }" required autofocus>
       </div>
       <div class="form-group animate-slide-in-right" style="animation-delay: 0.1s;">
         <label class="form-label">Телефон клиента</label>
-        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" required>
+        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
       </div>
       <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-primary" style="margin-top: 10px;">Далее: Категория ➔</button>
     `;

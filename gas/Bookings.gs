@@ -47,30 +47,7 @@ function handleCreateBooking(data) {
   var client = findOrCreateClient(data.clientName, data.clientPhone, data.clientEmail || "");
   data.clientId = client.id;
   
-  // Получаем информацию об услугах (поддерживаем множественный выбор через запятую)
-  var serviceIds = String(data.serviceId).split(",").map(function(id) { return id.trim(); });
-  var services = getSheetData("Services");
-  
-  var totalDuration = 0;
-  var totalPrice = 0;
-  var serviceNames = [];
-  
-  serviceIds.forEach(function(id) {
-    var s = services.filter(function(item) { return item.id === id; })[0];
-    if (s) {
-      totalDuration += parseInt(s.duration, 10) || 0;
-      totalPrice += parseFloat(s.price) || 0;
-      serviceNames.push(s.name);
-    }
-  });
-  
-  if (serviceNames.length === 0) {
-    throw new Error("Услуга не найдена");
-  }
-  
-  data.serviceName = serviceNames.join(" + ");
-  data.price = data.price || totalPrice;
-  data.duration = data.duration || totalDuration;
+  enrichBookingDataWithServices(data);
   
   // Получаем информацию о мастере
   if (!data.masterId) {
@@ -79,28 +56,13 @@ function handleCreateBooking(data) {
     var master = getSheetData("Masters").filter(function(m) { return m.id === data.masterId; })[0];
     if (!master) throw new Error("Мастер не найден");
     data.masterName = master.name;
+    
+    // Проверка занятости мастера
+    checkMasterAvailability(data.masterId, data.date, data.time, parseDurationToMinutes(data.duration));
   }
   
   data.status = data.status || "confirmed";
   data.paymentMethod = data.paymentMethod || "cash";
-  
-  // Проверяем конфликты времени (опционально, но полезно)
-  if (data.masterId) {
-    var masterBookings = getSheetData("Bookings").filter(function(b) {
-      return b.masterId === data.masterId && b.date === data.date && b.status !== "cancelled";
-    });
-    
-    var newStart = parseTimeToMinutes(data.time);
-    var newEnd = newStart + parseInt(data.duration, 10);
-    
-    masterBookings.forEach(function(b) {
-      var start = parseTimeToMinutes(b.time);
-      var end = start + parseInt(b.duration, 10);
-      if ((newStart >= start && newStart < end) || (newEnd > start && newEnd <= end) || (newStart <= start && newEnd >= end)) {
-        throw new Error("У мастера " + master.name + " этот временной слот (" + b.time + ") уже занят!");
-      }
-    });
-  }
   
   // Добавляем запись
   var booking = appendRow("Bookings", data);
@@ -129,6 +91,26 @@ function handleUpdateBooking(id, data) {
   var currentBooking = getSheetData("Bookings").filter(function(b) { return b.id === id; })[0];
   if (!currentBooking) throw new Error("Запись не найдена");
   
+  // Если изменились услуги, пересчитываем длительность и цену
+  if (data.serviceId && data.serviceId !== currentBooking.serviceId) {
+    enrichBookingDataWithServices(data);
+  } else {
+    data.duration = data.duration || currentBooking.duration;
+  }
+  
+  // Проверяем занятость мастера при смене времени, даты или мастера
+  var newMasterId = data.masterId || currentBooking.masterId;
+  var newDate = data.date || currentBooking.date;
+  var newTime = data.time || currentBooking.time;
+  
+  if (newMasterId) {
+    var master = getSheetData("Masters").filter(function(m) { return m.id === newMasterId; })[0];
+    if (master) {
+      data.masterName = master.name;
+      checkMasterAvailability(newMasterId, newDate, newTime, parseDurationToMinutes(data.duration), id);
+    }
+  }
+  
   var updated = updateRow("Bookings", id, data);
   
   // Обновляем статистику клиента
@@ -154,6 +136,87 @@ function handleDeleteBooking(id) {
     updateClientStats(booking.clientId);
   }
   return { success: success };
+}
+
+/**
+ * Обогащает объект записи данными об услугах (название, цена, длительность)
+ * @param {object} data 
+ */
+function enrichBookingDataWithServices(data) {
+  if (!data.serviceId) return;
+  var serviceIds = String(data.serviceId).split(",").map(function(id) { return id.trim(); });
+  var services = getSheetData("Services");
+  
+  var totalDuration = 0;
+  var totalPrice = 0;
+  var serviceNames = [];
+  
+  serviceIds.forEach(function(id) {
+    var s = services.filter(function(item) { return item.id === id; })[0];
+    if (s) {
+      totalDuration += parseDurationToMinutes(s.duration);
+      totalPrice += parseFloat(s.price) || 0;
+      serviceNames.push(s.name);
+    }
+  });
+  
+  if (serviceNames.length === 0) {
+    throw new Error("Услуга не найдена");
+  }
+  
+  data.serviceName = serviceNames.join(" + ");
+  data.price = data.price || totalPrice;
+  data.duration = data.duration || formatMinutesToDuration(totalDuration);
+}
+
+/**
+ * Проверка доступности мастера
+ * @param {string} masterId 
+ * @param {string} dateStr 
+ * @param {string} timeStr 
+ * @param {number} durationMins 
+ * @param {string} excludeBookingId 
+ */
+function checkMasterAvailability(masterId, dateStr, timeStr, durationMins, excludeBookingId) {
+  var masterBookings = getSheetData("Bookings").filter(function(b) {
+    return b.masterId === masterId && b.date === dateStr && b.status !== "cancelled" && b.id !== excludeBookingId;
+  });
+  
+  var newStart = parseTimeToMinutes(timeStr);
+  var newEnd = newStart + durationMins;
+  
+  masterBookings.forEach(function(b) {
+    var start = parseTimeToMinutes(b.time);
+    var end = start + parseDurationToMinutes(b.duration);
+    if (newStart < end && newEnd > start) {
+      throw new Error("Мастер занят в указанный промежуток времени");
+    }
+  });
+}
+
+/**
+ * Вспомогательное: переводит время "ЧЧ:ММ" или "ММ" в минуты
+ * @param {string|number} duration
+ * @returns {number}
+ */
+function parseDurationToMinutes(duration) {
+  if (!duration) return 60;
+  if (typeof duration === 'number') return duration;
+  var str = String(duration);
+  if (str.indexOf(':') === -1) return parseInt(str, 10) || 60;
+  var parts = str.split(':');
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
+/**
+ * Вспомогательное: переводит минуты в формат "ЧЧ:ММ"
+ * @param {number} mins 
+ * @returns {string}
+ */
+function formatMinutesToDuration(mins) {
+  var h = Math.floor(mins / 60);
+  var m = mins % 60;
+  return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
 }
 
 /**

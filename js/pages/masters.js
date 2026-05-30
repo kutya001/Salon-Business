@@ -43,7 +43,7 @@ window.renderMasters = function () {
             <div style="border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 12px 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: var(--text-secondary);">Телефон:</span>
-                <span style="font-weight: 600;">${m.phone}</span>
+                <span style="font-weight: 600;">${formatClientPhone(m.phone)}</span>
               </div>
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: var(--text-secondary);">Доля мастера:</span>
@@ -170,7 +170,7 @@ window.renderMasterModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Номер телефона</label>
-          <input type="tel" id="m-phone" class="form-input" placeholder="+996 555 111 222" value="${m.phone || ''}" oninput="state.ui.modalData.phone = this.value" required>
+          <input type="tel" id="m-phone" class="form-input" placeholder="+996 555 111 222" value="${formatClientPhone(m.phone)}" oninput="handlePhoneInput(event); state.ui.modalData.phone = this.value" required>
         </div>
         <div class="form-group">
           <label class="form-label">Специализация (категория)</label>
@@ -213,7 +213,7 @@ window.renderMasterModal = function () {
 // Отправка данных мастера на сервер
 window.handleMasterSubmit = async function (id) {
   const name = document.getElementById('m-name').value.trim();
-  const phone = document.getElementById('m-phone').value.trim();
+  const phone = window.formatClientPhone(document.getElementById('m-phone').value.trim());
   const specialization = document.getElementById('m-specialization').value;
   const percentage = parseFloat(document.getElementById('m-percentage').value) || 40;
   const workHoursStart = document.getElementById('m-hours-start').value;
@@ -296,7 +296,7 @@ window.renderMasterDetailsModal = function() {
       <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Телефон</div>
-          <a href="tel:${m.phone}" style="font-size: 14px; font-weight: 600; color: var(--primary); text-decoration: none;">${m.phone}</a>
+          <a href="tel:${m.phone}" style="font-size: 14px; font-weight: 600; color: var(--primary); text-decoration: none;">${formatClientPhone(m.phone)}</a>
         </div>
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Рабочие часы</div>

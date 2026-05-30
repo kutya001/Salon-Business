@@ -184,7 +184,7 @@ window.renderClientModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Номер телефона</label>
-          <input type="tel" id="c-phone" class="form-input" placeholder="+996 555 777 888" value="${isEdit ? formatClientPhone(c.phone) : '+996 '}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" required>
+          <input type="tel" id="c-phone" class="form-input" placeholder="+996 555 777 888" value="${isEdit ? formatClientPhone(c.phone) : '+996 '}" oninput="handlePhoneInput(event)" required>
         </div>
         <div class="form-group">
           <label class="form-label">Email (необязательно)</label>
@@ -210,11 +210,8 @@ window.handleClientSubmit = async function (id) {
   const email = document.getElementById('c-email').value.trim();
   const notes = document.getElementById('c-notes').value.trim();
 
-  // Очистка номера перед сохранением (убираем всё кроме цифр, если начинается с 996 - отрезаем)
-  phone = phone.replace(/\D/g, '');
-  if (phone.startsWith('996')) {
-    phone = phone.slice(3);
-  }
+  // Очистка номера перед сохранением (используем единый формат)
+  phone = window.formatClientPhone(phone);
 
   setUI({ loading: true });
   try {

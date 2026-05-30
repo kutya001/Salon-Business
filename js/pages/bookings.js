@@ -997,7 +997,7 @@ window.renderEditBookingFullModal = function() {
         
         <div class="form-group">
           <label class="form-label">Телефон клиента</label>
-          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="if(this.value && !this.value.startsWith('+996')) this.value='+996 ' + this.value; state.ui.modalData.draft.clientPhone = this.value;" required>
+          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="handlePhoneInput(event); state.ui.modalData.draft.clientPhone = this.value;" required>
         </div>
 
         <div class="form-group">
@@ -1107,8 +1107,7 @@ window.handleEditBookingFullSubmit = function() {
     return showToast('Выберите хотя бы одну процедуру', 'error');
   }
 
-  let cleanPhone = document.getElementById('edit-b-phone').value.replace(/\D/g, '');
-  if (cleanPhone.startsWith('996')) cleanPhone = cleanPhone.slice(3);
+  let cleanPhone = window.formatClientPhone(document.getElementById('edit-b-phone').value);
 
   const payload = {
     clientName: document.getElementById('edit-b-name').value.trim(),
@@ -1268,7 +1267,7 @@ window.renderBookingModal = function () {
       </div>
       <div class="form-group animate-slide-in-right" style="animation-delay: 0.1s;">
         <label class="form-label">Телефон клиента</label>
-        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(this.value && !this.value.startsWith('+996')) this.value='+996 ' + this.value; state.ui.modalData.draft.clientPhone = this.value;" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
+        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="handlePhoneInput(event); state.ui.modalData.draft.clientPhone = this.value;" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
       </div>
       <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-primary" style="margin-top: 10px;">Далее: Категория ➔</button>
     `;
@@ -1439,11 +1438,8 @@ window.handleCreateBookingSubmit = function () {
     return showToast('Укажите дату и время записи', 'error');
   }
 
-  // Очистка номера перед сохранением (убираем всё кроме цифр, если начинается с 996 - отрезаем)
-  let cleanPhone = draft.clientPhone.replace(/\D/g, '');
-  if (cleanPhone.startsWith('996')) {
-    cleanPhone = cleanPhone.slice(3);
-  }
+  // Используем единый формат
+  let cleanPhone = window.formatClientPhone(draft.clientPhone);
 
   const payload = {
     clientName: draft.clientName,

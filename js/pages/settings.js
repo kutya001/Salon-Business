@@ -78,7 +78,7 @@ window.renderSettings = function () {
           </div>
           <div class="form-group">
             <label class="form-label">Контактный телефон</label>
-            <input type="tel" id="set-phone" class="form-input" value="${biz.phone || ''}">
+            <input type="tel" id="set-phone" class="form-input" value="${formatClientPhone(biz.phone)}" oninput="handlePhoneInput(event)">
           </div>
           <div class="form-group">
             <label class="form-label">Email для связи</label>
@@ -195,11 +195,8 @@ window.handleSaveProfile = async function () {
   let phone = document.getElementById('set-phone').value.trim();
   const email = document.getElementById('set-email').value.trim();
 
-  // Очистка номера перед сохранением
-  phone = phone.replace(/\D/g, '');
-  if (phone.startsWith('996')) {
-    phone = phone.slice(3);
-  }
+  // Очистка номера перед сохранением (оставляем только красивый формат)
+  phone = window.formatClientPhone(phone);
 
   setUI({ loading: true });
   try {

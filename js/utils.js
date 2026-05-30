@@ -22,11 +22,39 @@ window.formatDate = function (dateStr) {
 window.formatClientPhone = function(phone) {
   if (!phone) return '';
   const phoneStr = String(phone);
-  const clean = phoneStr.replace(/\D/g, '');
+  let clean = phoneStr.replace(/\D/g, '');
+  
   if (clean.startsWith('996')) {
-    return '+' + clean;
+    clean = clean.substring(3);
   }
-  return '+996' + clean;
+  
+  if (clean.length === 0) return '+996';
+  
+  let formatted = '+996 ';
+  if (clean.length > 0) {
+    formatted += clean.substring(0, 3);
+  }
+  if (clean.length > 3) {
+    formatted += ' ' + clean.substring(3, 6);
+  }
+  if (clean.length > 6) {
+    formatted += ' ' + clean.substring(6, 9);
+  }
+  return formatted.trim();
+};
+
+window.handlePhoneInput = function(e) {
+  const input = e.target;
+  let cursorPosition = input.selectionStart;
+  const oldLength = input.value.length;
+  
+  input.value = window.formatClientPhone(input.value);
+  
+  if (cursorPosition !== null) {
+    const newLength = input.value.length;
+    cursorPosition = cursorPosition + (newLength - oldLength);
+    input.setSelectionRange(cursorPosition, cursorPosition);
+  }
 };
 
 window.formatRelativeDate = function (dateStr) {

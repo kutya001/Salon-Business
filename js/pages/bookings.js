@@ -310,7 +310,7 @@ function renderBookingsTable(bookings) {
     const masterText = `<span style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>`;
     
     const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
-    const statusHtmlMobile = `<span class="badge ${statusColor}" style="font-size: 10px; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px;"><i data-feather="${iconStr}" style="width: 12px; height: 12px;"></i> ${statusLabel}</span>`;
+    const statusHtmlMobile = `<span class="badge ${statusColor}" style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; padding: 0;" title="${statusLabel}"><i data-feather="${iconStr}" style="width: 14px; height: 14px;"></i></span>`;
 
     return `
       <div id="booking-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">

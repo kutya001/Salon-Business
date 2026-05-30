@@ -43,11 +43,26 @@ window.renderFinance = function () {
     fabAction = 'showCreateWalletModal()';
   }
 
+  let topButtonHtml = '';
+  if (activeTab !== 'shifts') {
+    let btnText = 'Добавить';
+    if (activeTab === 'transactions') btnText = 'Внести операцию';
+    else if (activeTab === 'categories') btnText = 'Добавить статью';
+    else if (activeTab === 'wallets') btnText = 'Добавить кошелек';
+    
+    topButtonHtml = `
+      <button onclick="${fabAction}" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+        <i data-feather="plus" style="width: 16px; height: 16px;"></i> ${btnText}
+      </button>
+    `;
+  }
+
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column;">
-      <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-        <div>
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Финансы</h1>
+          ${topButtonHtml}
         </div>
       </div>
 
@@ -56,7 +71,7 @@ window.renderFinance = function () {
       
       ${activeTab !== 'shifts' ? `
       <!-- Плавающая кнопка (FAB) -->
-      <button onclick="${fabAction}" class="animate-scale-in" style="position: fixed; bottom: 110px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;">
+      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 110px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;">
         <i data-feather="plus" style="width: 28px; height: 28px;"></i>
       </button>
       ` : ''}

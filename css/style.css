@@ -650,3 +650,27 @@ body {
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
+
+/* Dropdown Readability Fixes in Dark Themes */
+select option, option {
+  background-color: #12131e !important;
+  color: #ffffff !important;
+}
+
+/* Compact adjustments for PC */
+@media (min-width: 1024px) {
+  .main-content {
+    padding: 20px 24px !important;
+  }
+  
+  .data-table th {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+  
+  .data-table td {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+}
+

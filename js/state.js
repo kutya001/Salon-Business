@@ -52,6 +52,8 @@ window.state = {
     selectedDate: new Date().toISOString().split('T')[0],
     toasts: [],
     viewMode: 'table', // 'table' или 'timeline' для записей
+    sortField: 'date', // поле сортировки по умолчанию
+    sortOrder: 'desc', // направление сортировки по умолчанию
     showSetupInline: false,
     showDevConsole: false
   },

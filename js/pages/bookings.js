@@ -2,9 +2,24 @@
 // bookings.js — Управление записями клиентов
 // ============================================
 
+window.setBookingsSort = function (field) {
+  const currentField = state.ui.sortField || 'date';
+  const currentOrder = state.ui.sortOrder || 'desc';
+  
+  let nextOrder = 'asc';
+  if (currentField === field) {
+    nextOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+  }
+  
+  setUI({ sortField: field, sortOrder: nextOrder });
+};
+
 window.renderBookings = function () {
   const filters = state.ui.filters;
   const viewMode = state.ui.viewMode || 'table';
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isTodayActive = filters.dateFrom === todayStr && filters.dateTo === todayStr;
+  const isAllDatesActive = !filters.dateFrom && !filters.dateTo;
 
   // Фильтрация записей
   let filteredBookings = [...state.bookings];
@@ -30,6 +45,58 @@ window.renderBookings = function () {
     );
   }
 
+  // Сортировка записей
+  const sortField = state.ui.sortField || 'date';
+  const sortOrder = state.ui.sortOrder || 'desc';
+  
+  filteredBookings.sort((a, b) => {
+    let valA, valB;
+    
+    switch (sortField) {
+      case 'clientName':
+        valA = (a.clientName || '').toLowerCase();
+        valB = (b.clientName || '').toLowerCase();
+        break;
+      case 'clientPhone':
+        valA = a.clientPhone || '';
+        valB = b.clientPhone || '';
+        break;
+      case 'serviceName':
+        valA = (a.serviceName || '').toLowerCase();
+        valB = (b.serviceName || '').toLowerCase();
+        break;
+      case 'date':
+        valA = a.date || '';
+        valB = b.date || '';
+        break;
+      case 'time':
+        valA = a.time || '';
+        valB = b.time || '';
+        break;
+      case 'masterName':
+        const mA = state.masters.find(m => m.id === a.masterId);
+        const mB = state.masters.find(m => m.id === b.masterId);
+        valA = (mA ? mA.name : '').toLowerCase();
+        valB = (mB ? mB.name : '').toLowerCase();
+        break;
+      case 'price':
+        valA = parseFloat(a.price) || 0;
+        valB = parseFloat(b.price) || 0;
+        break;
+      case 'status':
+        valA = getStatusLabel(a.status || '').toLowerCase();
+        valB = getStatusLabel(b.status || '').toLowerCase();
+        break;
+      default:
+        valA = a.date || '';
+        valB = b.date || '';
+    }
+    
+    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   // Вкладки статусов (Desktop + Mobile)
   const statusTabs = [
     { id: '', label: 'ВСЕ ЗАПИСИ' },
@@ -40,7 +107,7 @@ window.renderBookings = function () {
   ];
 
   const statusTabsHtml = `
-    <div style="margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+    <div style="margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
       <div class="segment-tabs-container">
         ${statusTabs.map(tab => {
           const isActive = (filters.status || '') === tab.id;
@@ -62,6 +129,10 @@ window.renderBookings = function () {
   const filterBarHtml = `
     <!-- Mobile Filters Panel -->
     <div class="card p-4 md-hidden animate-scale-in" style="margin-bottom: 16px; display: ${state.ui.showMobileFilters ? 'flex' : 'none'}; flex-direction: column; gap: 12px;">
+      <div style="display: flex; gap: 8px;">
+        <button onclick="setFilters({ dateFrom: '${todayStr}', dateTo: '${todayStr}' })" class="btn" style="flex: 1; padding: 6px 12px; border: none; background: ${isTodayActive ? 'var(--primary)' : 'var(--bg-secondary)'}; color: ${isTodayActive ? '#ffffff' : 'var(--primary)'}; font-size: 12px; font-weight: 700; border-radius: 8px;">Сегодня</button>
+        <button onclick="setFilters({ dateFrom: '', dateTo: '' })" class="btn" style="flex: 1; padding: 6px 12px; border: none; background: ${isAllDatesActive ? 'var(--primary)' : 'var(--bg-secondary)'}; color: ${isAllDatesActive ? '#ffffff' : 'var(--primary)'}; font-size: 12px; font-weight: 700; border-radius: 8px;">Все даты</button>
+      </div>
       <div style="display: flex; gap: 12px;">
         <div style="flex: 1;">
             <label class="form-label" style="font-size: 11px;">С даты</label>
@@ -90,7 +161,7 @@ window.renderBookings = function () {
     </div>
 
     <!-- Desktop Filters Panel -->
-    <div class="card p-3 hidden md-flex" style="align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+    <div class="card p-3 hidden md-flex" style="align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
       <div style="display: flex; align-items: center; flex: 1; min-width: 200px; position: relative;">
         <i data-feather="search" style="position: absolute; left: 16px; color: var(--text-secondary); width: 16px; height: 16px;"></i>
         <input type="text" placeholder="Поиск по клиенту, телефону..." value="${filters.searchQuery || ''}" oninput="debounce(() => setFilters({ searchQuery: this.value }))()" class="form-input" style="padding-left: 40px; border: none; background: var(--bg-secondary); width: 100%; box-shadow: none;">
@@ -99,7 +170,8 @@ window.renderBookings = function () {
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Дата:</span>
         <input type="date" value="${filters.dateFrom || ''}" onchange="setFilters({ dateFrom: this.value })" class="form-input" style="width: auto; padding: 6px 12px; font-size: 13px; border: none; background: var(--bg-secondary); box-shadow: none;">
-        <button onclick="setFilters({ dateFrom: new Date().toISOString().split('T')[0], dateTo: '' })" class="btn btn-secondary" style="padding: 6px 12px; border: none; background: var(--bg-secondary); color: var(--primary);">Сегодня</button>
+        <button onclick="setFilters({ dateFrom: '${todayStr}', dateTo: '${todayStr}' })" class="btn" style="padding: 6px 12px; border: none; background: ${isTodayActive ? 'var(--primary)' : 'var(--bg-secondary)'}; color: ${isTodayActive ? '#ffffff' : 'var(--primary)'}; font-size: 13px; font-weight: 700; border-radius: 8px;">Сегодня</button>
+        <button onclick="setFilters({ dateFrom: '', dateTo: '' })" class="btn" style="padding: 6px 12px; border: none; background: ${isAllDatesActive ? 'var(--primary)' : 'var(--bg-secondary)'}; color: ${isAllDatesActive ? '#ffffff' : 'var(--primary)'}; font-size: 13px; font-weight: 700; border-radius: 8px;">Все даты</button>
       </div>
 
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -176,6 +248,30 @@ window.toggleBookingsView = function (mode) {
 
 // Вспомогательное: Рендеринг таблицы записей (и мобильных карточек)
 function renderBookingsTable(bookings) {
+  const getHeaderHtml = (label, field) => {
+    const currentField = state.ui.sortField || 'date';
+    const currentOrder = state.ui.sortOrder || 'desc';
+    
+    let arrow = '↕';
+    let arrowColor = 'var(--text-secondary)';
+    let opacity = '0.5';
+    
+    if (currentField === field) {
+      arrow = currentOrder === 'asc' ? '▲' : '▼';
+      arrowColor = 'var(--primary)';
+      opacity = '1';
+    }
+    
+    return `
+      <th onclick="setBookingsSort('${field}')" style="cursor: pointer; white-space: nowrap; user-select: none;">
+        <div style="display: inline-flex; align-items: center; gap: 4px;">
+          ${label}
+          <span style="font-size: 10px; color: ${arrowColor}; opacity: ${opacity}; transition: all 0.2s;">${arrow}</span>
+        </div>
+      </th>
+    `;
+  };
+
   if (bookings.length === 0) {
     return `
       <div class="card p-12 text-center" style="color: var(--text-secondary);">
@@ -217,7 +313,7 @@ function renderBookingsTable(bookings) {
       <div id="booking-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
-            <div style="font-weight: 800; font-size: 14px;">${formatRelativeDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
+            <div style="font-weight: 800; font-size: 14px;">${formatDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
             <div style="font-weight: 700; font-size: 15px; color: var(--text); margin-top: 4px; display: flex; align-items: center;">${b.clientName} <a href="tel:${b.clientPhone}" onclick="event.stopPropagation()" style="color: var(--primary); margin-left: 8px; padding: 4px; background: var(--bg-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-feather="phone" style="width: 12px; height: 12px;"></i></a></div>
           </div>
           <div style="text-align: right;">
@@ -277,7 +373,7 @@ function renderBookingsTable(bookings) {
         <td style="font-weight: 700;">${b.clientName}</td>
         <td style="color: var(--text-secondary); font-size: 13px;">${formatClientPhone(b.clientPhone)}</td>
         <td style="font-weight: 600;">${b.serviceName}</td>
-        <td style="color: var(--text-secondary); font-size: 13px;">${formatRelativeDate(b.date)}</td>
+        <td style="color: var(--text-secondary); font-size: 13px;">${formatDate(b.date)}</td>
         <td style="font-weight: 800; color: var(--primary);">${formatTime(b.time)}</td>
         <td>${masterSelect}</td>
         <td style="font-weight: 800; color: var(--text);">${formatPrice(b.price)}</td>
@@ -299,15 +395,15 @@ function renderBookingsTable(bookings) {
           <table class="data-table">
             <thead>
               <tr>
-                <th>Клиент ↕</th>
-                <th>Номер телефона ↕</th>
-                <th>Услуга ↕</th>
-                <th>Дата ↓</th>
-                <th>Время ↕</th>
-                <th>Мастер ↕</th>
-                <th>Сумма ↕</th>
-                <th>Статус ↕</th>
-                <th style="text-align: right;">Действия</th>
+                ${getHeaderHtml('Клиент', 'clientName')}
+                ${getHeaderHtml('Номер телефона', 'clientPhone')}
+                ${getHeaderHtml('Услуга', 'serviceName')}
+                ${getHeaderHtml('Дата', 'date')}
+                ${getHeaderHtml('Время', 'time')}
+                ${getHeaderHtml('Мастер', 'masterName')}
+                ${getHeaderHtml('Сумма', 'price')}
+                ${getHeaderHtml('Статус', 'status')}
+                <th style="text-align: right; padding: 8px 12px; font-size: 13px;">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -341,7 +437,7 @@ function renderBookingsTimeline(bookings) {
     // День: часы
     const hours = generateTimeSlots('09:00', '20:00', 60);
     columns = hours.map(h => ({ id: h, label: h, type: 'hour' }));
-    colTitle = formatRelativeDate(slotDateStr);
+    colTitle = formatDate(slotDateStr);
   } else if (mode === 'week') {
     // Неделя: дни
     const startOfWeek = new Date(slotDate);
@@ -371,8 +467,8 @@ function renderBookingsTimeline(bookings) {
 
   // Заголовки колонок
   const headersHtml = columns.map(col => `
-    <th style="text-align: center; font-weight: 700; width: ${mode === 'day' ? '120px' : '150px'}; min-width: ${mode === 'day' ? '120px' : '150px'};">
-      <div style="color: var(--text-secondary); font-size: 13px;">${col.label}</div>
+    <th style="text-align: center; font-weight: 700; width: ${mode === 'day' ? '80px' : '110px'}; min-width: ${mode === 'day' ? '80px' : '110px'};">
+      <div style="color: var(--text-secondary); font-size: 11px;">${col.label}</div>
     </th>
   `).join('');
 
@@ -404,26 +500,26 @@ function renderBookingsTimeline(bookings) {
         const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
 
         return `
-          <div id="booking-${b.id}" onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 6px 8px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; text-align: left; font-size: 11px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="font-weight: 800; color: ${bdColor}; font-size: 10px;">${formatTime(b.time)}</span>
+          <div id="booking-${b.id}" onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+              <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)}</span>
             </div>
-            <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">${b.clientName}</div>
-            <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px;">${b.serviceName}</div>
+            <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px;">${b.clientName}</div>
+            <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px;">${b.serviceName}</div>
             ${actions}
           </div>
         `;
       }).join('');
-
-      return `<td style="padding: 8px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 80px;">${bookingBlocks}</td>`;
+ 
+      return `<td style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`;
     }).join('');
-
+ 
     return `
       <tr>
         <td style="font-weight: 700; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 10;">
-          <div style="display: flex; flex-direction: column; gap: 2px; padding: 8px; max-width: 90px; overflow: hidden;">
-            <div style="font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700;">${m.name.split(' ')[0]}</div>
-            <div style="font-size: 9px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</div>
+          <div style="display: flex; flex-direction: column; gap: 1px; padding: 4px; max-width: 80px; overflow: hidden;">
+            <div style="font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700;">${m.name.split(' ')[0]}</div>
+            <div style="font-size: 8px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</div>
           </div>
         </td>
         ${colsHtml}
@@ -466,7 +562,7 @@ function renderBookingsTimeline(bookings) {
         <table class="data-table" style="border-collapse: separate; border-spacing: 0;">
           <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
             <tr>
-              <th style="width: 200px; min-width: 200px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 30; padding: 12px;">Мастер</th>
+              <th style="width: 100px; min-width: 100px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 30; padding: 8px; font-size: 12px;">Мастер</th>
               ${headersHtml}
             </tr>
           </thead>

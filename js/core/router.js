@@ -132,6 +132,7 @@ window.renderLayout = function () {
     
     // Передаем отрисовку соответствующего окна
     if (state.ui.modal === 'createBooking' && window.renderBookingModal) modalContent = renderBookingModal();
+    else if (state.ui.modal === 'editBookingFull' && window.renderEditBookingFullModal) modalContent = renderEditBookingFullModal();
     else if (state.ui.modal === 'viewBooking' && window.renderBookingDetailsModal) modalContent = renderBookingDetailsModal();
     else if (state.ui.modal === 'createMaster' && window.renderMasterModal) modalContent = renderMasterModal();
     else if (state.ui.modal === 'createClient' && window.renderClientModal) modalContent = renderClientModal();
@@ -140,12 +141,16 @@ window.renderLayout = function () {
     else if (state.ui.modal === 'categories' || state.ui.modal === 'createCategory') {
       if (window.renderCategoriesModal) modalContent = renderCategoriesModal();
     }
+    else if (state.ui.modal === 'serviceCategories' || state.ui.modal === 'createServiceCategory') {
+      if (window.renderServiceCategoriesModal) modalContent = renderServiceCategoriesModal();
+    }
     else if (state.ui.modal === 'createWallet' && window.renderWalletModal) modalContent = renderWalletModal();
     else if (state.ui.modal === 'createTransaction' && window.renderTransactionModal) modalContent = renderTransactionModal();
     else if (state.ui.modal === 'openShift' && window.renderOpenShiftModal) modalContent = renderOpenShiftModal();
     else if (state.ui.modal === 'closeShift' && window.renderCloseShiftModal) modalContent = renderCloseShiftModal();
     else if (state.ui.modal === 'viewShift' && window.renderShiftDetailsModal) modalContent = renderShiftDetailsModal();
     else if (state.ui.modal === 'bookingMessage' && window.renderBookingMessageModal) modalContent = renderBookingMessageModal();
+    else if (state.ui.modal === 'viewMaster' && window.renderMasterDetailsModal) modalContent = renderMasterDetailsModal();
     else modalContent = `<div class="p-6">Неизвестное модальное окно: ${state.ui.modal}</div>`;
 
     modalHtml = `

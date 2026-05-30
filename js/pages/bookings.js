@@ -252,21 +252,21 @@ function renderBookingsTable(bookings) {
     const currentField = state.ui.sortField || 'date';
     const currentOrder = state.ui.sortOrder || 'desc';
     
-    let arrow = '↕';
+    let arrowIcon = 'chevron-down';
     let arrowColor = 'var(--text-secondary)';
-    let opacity = '0.5';
+    let opacity = '0.3';
     
     if (currentField === field) {
-      arrow = currentOrder === 'asc' ? '▲' : '▼';
+      arrowIcon = currentOrder === 'asc' ? 'chevron-up' : 'chevron-down';
       arrowColor = 'var(--primary)';
       opacity = '1';
     }
     
     return `
-      <th onclick="setBookingsSort('${field}')" style="cursor: pointer; white-space: nowrap; user-select: none;">
-        <div style="display: inline-flex; align-items: center; gap: 4px;">
-          ${label}
-          <span style="font-size: 10px; color: ${arrowColor}; opacity: ${opacity}; transition: all 0.2s;">${arrow}</span>
+      <th onclick="setBookingsSort('${field}')" style="cursor: pointer; white-space: nowrap; user-select: none; padding: 12px 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">${label}</span>
+          <i data-feather="${arrowIcon}" style="width: 14px; height: 14px; color: ${arrowColor}; opacity: ${opacity}; transition: all 0.2s; flex-shrink: 0;"></i>
         </div>
       </th>
     `;
@@ -308,6 +308,9 @@ function renderBookingsTable(bookings) {
 
     // Master Dropdown (styled as text on mobile)
     const masterText = `<span style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>`;
+    
+    const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
+    const statusHtmlMobile = `<span class="badge ${statusColor}" style="font-size: 10px; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px;"><i data-feather="${iconStr}" style="width: 12px; height: 12px;"></i> ${statusLabel}</span>`;
 
     return `
       <div id="booking-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
@@ -316,8 +319,8 @@ function renderBookingsTable(bookings) {
             <div style="font-weight: 800; font-size: 14px;">${formatDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
             <div style="font-weight: 700; font-size: 15px; color: var(--text); margin-top: 4px; display: flex; align-items: center;">${b.clientName} <a href="tel:${b.clientPhone}" onclick="event.stopPropagation()" style="color: var(--primary); margin-left: 8px; padding: 4px; background: var(--bg-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-feather="phone" style="width: 12px; height: 12px;"></i></a></div>
           </div>
-          <div style="text-align: right;">
-            <span class="badge ${statusColor}" style="font-size: 10px;">${statusLabel}</span>
+          <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end;">
+            ${statusHtmlMobile}
             ${paymentIndicator}
           </div>
         </div>
@@ -353,6 +356,13 @@ function renderBookingsTable(bookings) {
     if (b.status === 'pending') {
       actionBtnHtml = `
         <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
+    const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
+    
+    // Quick actions
+    let actionBtnHtml = '';
+    if (b.status === 'pending') {
+      actionBtnHtml = `
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
         <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
       `;
     } else if (b.status === 'confirmed') {
@@ -362,27 +372,31 @@ function renderBookingsTable(bookings) {
       `;
     }
 
-    const masterSelect = `
-      <select onchange="event.stopPropagation();" onclick="event.stopPropagation();" class="form-select" style="padding: 4px 24px 4px 8px; font-size: 12px; border: none; background: var(--bg-secondary); border-radius: 6px;">
-        ${state.masters.map(m => `<option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
-      </select>
-    `;
-
     return `
-      <tr id="booking-${b.id}" onclick="showBookingDetails('${b.id}')" style="cursor: pointer; transition: background 0.2s;">
-        <td style="font-weight: 700;">${b.clientName}</td>
-        <td style="color: var(--text-secondary); font-size: 13px;">${formatClientPhone(b.clientPhone)}</td>
-        <td style="font-weight: 600;">${b.serviceName}</td>
-        <td style="color: var(--text-secondary); font-size: 13px;">${formatDate(b.date)}</td>
-        <td style="font-weight: 800; color: var(--primary);">${formatTime(b.time)}</td>
-        <td>${masterSelect}</td>
-        <td style="font-weight: 800; color: var(--text);">${formatPrice(b.price)}</td>
+      <tr class="table-row-hover" style="cursor: pointer; transition: background 0.2s; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'};" onclick="showBookingDetails('${b.id}')">
+        <td><div style="font-weight: 700; font-size: 14px; color: var(--text);">${b.clientName}</div></td>
+        <td style="font-size: 13px; font-weight: 600;">${formatClientPhone(b.clientPhone)}</td>
         <td>
-          <span class="badge ${statusColor}">${statusLabel}</span>
-          ${paymentIndicator}
+          <div style="font-weight: 600; font-size: 13px; color: var(--text-secondary); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${b.serviceName}</div>
         </td>
+        <td style="font-weight: 600; font-size: 13px;">${formatDate(b.date)}</td>
+        <td style="font-weight: 800; color: var(--primary);">${formatTime(b.time)}</td>
         <td>
-          <div style="display: flex; gap: 4px; justify-content: flex-end;">${actionBtnHtml}</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text);">${getInitials(b.masterName)}</div>
+            <span style="font-size: 13px; font-weight: 600;">${b.masterName}</span>
+          </div>
+        </td>
+        <td style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</td>
+        <td>
+          <span class="badge ${statusColor}" style="display: flex; align-items: center; gap: 6px; width: fit-content;">
+            <i data-feather="${iconStr}" style="width: 14px; height: 14px;"></i> ${statusLabel}
+          </span>
+        </td>
+        <td style="text-align: right;" onclick="event.stopPropagation()">
+          <div style="display: flex; justify-content: flex-end; gap: 6px;">
+            ${actionBtnHtml}
+          </div>
         </td>
       </tr>
     `;
@@ -837,29 +851,186 @@ window.showEditBookingModal = function (id) {
   const b = state.bookings.find(x => x.id === id);
   if (!b) return;
   
-  // Ищем категорию услуги
-  const service = state.services.find(s => s.id === b.serviceId);
-  const categoryId = service ? service.categoryId : '';
-
   setUI({ 
-    modal: 'createBooking', 
+    modal: 'editBookingFull', 
     modalData: {
-      step: 1,
-      isEdit: true,
       bookingId: id,
       draft: {
         clientName: b.clientName,
         clientPhone: formatClientPhone(b.clientPhone),
-        genderCategory: service ? service.genderCategory : '',
         serviceId: b.serviceId,
         masterId: b.masterId,
         date: b.date,
         time: b.time,
         paymentMethod: b.paymentMethod || 'cash',
-        notes: b.notes || ''
+        notes: b.notes || '',
+        status: b.status || 'pending'
       }
     } 
   });
+};
+
+window.renderEditBookingFullModal = function() {
+  const md = state.ui.modalData;
+  const draft = md.draft || {};
+  
+  const selectedServiceIds = draft.serviceId ? draft.serviceId.split(',') : [];
+  let svcsHtml = (state.services || []).map(s => {
+    const isSelected = selectedServiceIds.includes(s.id);
+    return `
+      <div onclick="const el=document.getElementById('edit-svc-${s.id}'); el.checked=!el.checked; el.dispatchEvent(new Event('change'));" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
+        <input type="checkbox" id="edit-svc-${s.id}" value="${s.id}" onchange="event.stopPropagation();" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px;">
+        <div style="flex: 1;">
+          <div style="font-weight: 700; font-size: 13px;">${s.name}</div>
+          <div style="font-size: 11px; color: var(--text-secondary);">${formatPrice(s.price)} (${s.duration} мин)</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Редактировать запись</h3>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+      </div>
+
+      <form id="edit-booking-full-form" onsubmit="event.preventDefault(); handleEditBookingFullSubmit();" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 70vh; padding-right: 4px; overflow-x: hidden;">
+        
+        <div class="form-group">
+          <label class="form-label">Имя клиента</label>
+          <input type="text" id="edit-b-name" class="form-input" value="${draft.clientName}" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Телефон клиента</label>
+          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 ';" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Статус записи</label>
+          <select id="edit-b-status" class="form-select" required>
+            <option value="pending" ${draft.status === 'pending' ? 'selected' : ''}>Записан</option>
+            <option value="confirmed" ${draft.status === 'confirmed' ? 'selected' : ''}>Подтверждён</option>
+            <option value="completed" ${draft.status === 'completed' ? 'selected' : ''}>Выполнен</option>
+            <option value="cancelled" ${draft.status === 'cancelled' ? 'selected' : ''}>Отмена</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Процедуры</label>
+          <div id="edit-b-services" class="scrollbar-hide" style="max-height: 200px; overflow-y: auto; padding: 4px;">
+            ${svcsHtml}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Мастер</label>
+          <select id="edit-b-master" class="form-select">
+            <option value="">👤 Любой мастер</option>
+            ${state.masters.map(m => `<option value="${m.id}" ${draft.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 12px; width: 100%;">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Дата</label>
+            <input type="date" id="edit-b-date" class="form-input" value="${draft.date}" required>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Время</label>
+            <input type="time" id="edit-b-time" class="form-input" value="${draft.time}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Способ оплаты</label>
+          <select id="edit-b-payment" class="form-select">
+            <option value="cash" ${draft.paymentMethod === 'cash' ? 'selected' : ''}>💵 Наличные</option>
+            <option value="card" ${draft.paymentMethod === 'card' ? 'selected' : ''}>💳 Карта</option>
+            <option value="bonus" ${draft.paymentMethod === 'bonus' ? 'selected' : ''}>🌟 Бонусы</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Заметки / Пожелания</label>
+          <textarea id="edit-b-notes" rows="2" class="form-textarea">${draft.notes}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Сохранить изменения ✅</button>
+      </form>
+    </div>
+  `;
+};
+
+window.handleEditBookingFullSubmit = function() {
+  const md = state.ui.modalData;
+  const tempId = md.bookingId;
+  
+  // Получаем выбранные сервисы
+  const serviceCheckboxes = document.querySelectorAll('#edit-b-services input[type="checkbox"]:checked');
+  const serviceIds = Array.from(serviceCheckboxes).map(cb => cb.value).join(',');
+  
+  if (!serviceIds) {
+    return showToast('Выберите хотя бы одну процедуру', 'error');
+  }
+
+  let cleanPhone = document.getElementById('edit-b-phone').value.replace(/\D/g, '');
+  if (cleanPhone.startsWith('996')) cleanPhone = cleanPhone.slice(3);
+
+  const payload = {
+    clientName: document.getElementById('edit-b-name').value.trim(),
+    clientPhone: cleanPhone,
+    serviceId: serviceIds,
+    masterId: document.getElementById('edit-b-master').value,
+    date: document.getElementById('edit-b-date').value,
+    time: document.getElementById('edit-b-time').value,
+    paymentMethod: document.getElementById('edit-b-payment').value,
+    notes: document.getElementById('edit-b-notes').value.trim(),
+    status: document.getElementById('edit-b-status').value
+  };
+
+  const serviceInfo = getServicesInfo(payload.serviceId);
+  const master = state.masters.find(m => m.id === payload.masterId) || { name: 'Любой мастер' };
+  
+  const optimisticBooking = {
+    clientName: payload.clientName,
+    clientPhone: payload.clientPhone,
+    serviceId: payload.serviceId,
+    serviceName: serviceInfo.name,
+    masterId: payload.masterId,
+    masterName: master.name,
+    date: payload.date,
+    time: payload.time,
+    duration: serviceInfo.duration,
+    price: serviceInfo.price,
+    status: payload.status,
+    paymentMethod: payload.paymentMethod,
+    notes: payload.notes
+  };
+
+  const idx = state.bookings.findIndex(b => b.id === tempId);
+  if (idx !== -1) {
+    state.bookings[idx] = { ...state.bookings[idx], ...optimisticBooking };
+  }
+  
+  setUI({ modal: null, modalData: null });
+  showToast('Изменения сохранены (синхронизация...)', 'info');
+
+  api.updateBooking(tempId, payload)
+    .then(() => api.getAll())
+    .then(allData => {
+      setState({
+        bookings: allData.bookings,
+        clients: allData.clients,
+        transactions: allData.transactions,
+        shifts: allData.shifts
+      });
+      showToast('Запись успешно синхронизирована!', 'success');
+    }).catch(e => {
+      showToast('Ошибка обновления записи на сервере', 'error');
+      // Опционально: откат состояния
+    });
 };
 
 // Переход по шагам в модалке
@@ -899,9 +1070,18 @@ window.handleWizardGenderSelect = function(genderCategory) {
 
 window.handleWizardServiceSelect = function(serviceId) {
   const data = { ...state.ui.modalData };
-  data.draft.serviceId = serviceId;
-  data.draft.masterId = ''; // сбрасываем мастера при смене услуги
-  data.step = 4;
+  let currentIds = data.draft.serviceId ? data.draft.serviceId.split(',') : [];
+  
+  if (currentIds.includes(serviceId)) {
+    currentIds = currentIds.filter(id => id !== serviceId);
+  } else {
+    currentIds.push(serviceId);
+  }
+  
+  data.draft.serviceId = currentIds.join(',');
+  // Не сбрасываем мастера при каждом клике по услуге
+  // data.draft.masterId = ''; 
+  // И не переходим на 4 шаг сразу, так как мультиселект
   setUI({ modalData: data });
 };
 
@@ -976,6 +1156,7 @@ window.renderBookingModal = function () {
     `;
   } else if (step === 3) {
     const svcs = (state.services || []).filter(s => s.genderCategory === draft.genderCategory);
+    const selectedServiceIds = draft.serviceId ? draft.serviceId.split(',') : [];
     
     const grouped = {};
     svcs.forEach(s => {
@@ -986,24 +1167,36 @@ window.renderBookingModal = function () {
 
     let svcsHtml = '';
     for (const typeName in grouped) {
-      svcsHtml += `<h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 12px 0 8px 4px; font-weight: 800;">${typeName}</h4>`;
-      svcsHtml += grouped[typeName].map(s => `
-        <button type="button" onclick="handleWizardServiceSelect('${s.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-          <span style="font-weight: 700;">${s.name}</span>
-          <span style="font-size: 11px; color: var(--primary); font-weight: 800;">${formatPrice(s.price)} (${s.duration} мин)</span>
-        </button>
-      `).join('');
+      svcsHtml += `<h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 12px 0 8px 4px; font-weight: 800; grid-column: 1 / -1;">${typeName}</h4>`;
+      svcsHtml += grouped[typeName].map(s => {
+        const isSelected = selectedServiceIds.includes(s.id);
+        return `
+          <button type="button" onclick="handleWizardServiceSelect('${s.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; position: relative; border-color: ${isSelected ? 'var(--primary)' : 'var(--border)'}; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
+            <div style="position: absolute; top: 12px; right: 12px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; background: ${isSelected ? 'var(--primary)' : 'transparent'};">
+              ${isSelected ? '<i data-feather="check" style="width: 12px; height: 12px; color: white;"></i>' : ''}
+            </div>
+            <span style="font-weight: 700; font-size: 13px; color: var(--text); padding-right: 24px; line-height: 1.2;">${s.name}</span>
+            <div style="display: flex; gap: 10px; font-size: 11px; color: var(--text-secondary); align-items: center;">
+              <span style="color: var(--primary); font-weight: 800;">${formatPrice(s.price)}</span>
+              <span style="display: flex; align-items: center; gap: 3px;"><i data-feather="clock" style="width: 10px; height: 10px;"></i> ${s.duration} мин</span>
+            </div>
+          </button>
+        `;
+      }).join('');
     }
 
-    if (!svcsHtml) svcsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 20px;">В этой категории нет услуг</div>`;
+    if (!svcsHtml) svcsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 20px; grid-column: 1 / -1;">В этой категории нет услуг</div>`;
 
     stepContent = `
       <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
-        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600;">Выберите процедуру:</p>
-        <div class="scrollbar-hide" style="max-height: 40vh; overflow-y: auto; padding-right: 4px;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600;">Выберите одну или несколько процедур:</p>
+        <div class="scrollbar-hide" style="max-height: 45vh; overflow-y: auto; padding-right: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
           ${svcsHtml}
         </div>
-        <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
+        <div style="display: flex; gap: 12px; margin-top: auto;">
+          <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-secondary" style="flex: 1; border: none;">⬅ Назад</button>
+          <button type="button" onclick="setBookingWizardStep(4)" class="btn btn-primary" style="flex: 1;" ${selectedServiceIds.length === 0 ? 'disabled style="flex: 1; opacity: 0.5;"' : ''}>Далее ➡</button>
+        </div>
       </div>
     `;
   } else if (step === 4) {
@@ -1114,7 +1307,7 @@ window.handleCreateBookingSubmit = function () {
 
   // Оптимистичное обновление
   const tempId = md.isEdit ? md.bookingId : ('b_temp_' + Date.now());
-  const service = state.services.find(s => s.id === payload.serviceId) || {};
+  const serviceInfo = getServicesInfo(payload.serviceId);
   const master = state.masters.find(m => m.id === payload.masterId) || { name: 'Любой мастер' };
   
   const optimisticBooking = {
@@ -1123,13 +1316,13 @@ window.handleCreateBookingSubmit = function () {
     clientName: payload.clientName,
     clientPhone: payload.clientPhone,
     serviceId: payload.serviceId,
-    serviceName: service.name || 'Неизвестная услуга',
+    serviceName: serviceInfo.name,
     masterId: payload.masterId,
     masterName: master.name,
     date: payload.date,
     time: payload.time,
-    duration: service.duration || 60,
-    price: service.price || 0,
+    duration: serviceInfo.duration,
+    price: serviceInfo.price,
     status: payload.status,
     paymentMethod: payload.paymentMethod,
     notes: payload.notes

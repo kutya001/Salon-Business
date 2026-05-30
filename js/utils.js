@@ -12,10 +12,11 @@ window.formatDate = function (dateStr) {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return dateStr;
   
-  const d = date.getDate().toString().padStart(2, '0');
-  const m = (date.getMonth() + 1).toString().padStart(2, '0');
-  const y = date.getFullYear();
-  return `${d}.${m}.${y}`;
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).replace(' г.', '');
 };
 
 window.formatClientPhone = function(phone) {
@@ -86,6 +87,16 @@ window.getStatusLabel = function (status) {
   return labels[status] || status;
 };
 
+window.getStatusIcon = function (status) {
+  const icons = {
+    'pending': 'clock',
+    'confirmed': 'check-circle',
+    'completed': 'credit-card',
+    'cancelled': 'x-circle'
+  };
+  return icons[status] || 'info';
+};
+
 window.getStatusColor = function (status) {
   const colors = {
     'pending': 'badge-warning',
@@ -147,4 +158,29 @@ window.formatMasterTime = function (val) {
     }
   }
   return val;
+};
+
+// Функция для получения информации по нескольким услугам (разделенным запятой)
+window.getServicesInfo = function (serviceIdsStr) {
+  if (!serviceIdsStr) return { name: 'Неизвестная услуга', price: 0, duration: 60 };
+  
+  const ids = serviceIdsStr.split(',').map(id => id.trim()).filter(Boolean);
+  let totalPrice = 0;
+  let totalDuration = 0;
+  let names = [];
+  
+  ids.forEach(id => {
+    const s = (window.state.services || []).find(x => x.id === id);
+    if (s) {
+      totalPrice += parseFloat(s.price) || 0;
+      totalDuration += parseInt(s.duration, 10) || 0;
+      names.push(s.name);
+    }
+  });
+  
+  return {
+    name: names.length > 0 ? names.join(' + ') : 'Неизвестная услуга',
+    price: totalPrice,
+    duration: totalDuration || 60
+  };
 };

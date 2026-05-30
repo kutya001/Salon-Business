@@ -43,8 +43,8 @@ window.renderClients = function () {
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="users" style="width: 28px; height: 28px;"></i> База клиентов</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Список гостей, история процедур и суммарные траты</p>
         </div>
-        <button onclick="showCreateClientModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-          <i data-feather="user-plus" style="width: 18px; height: 18px;"></i> Новый клиент
+        <button onclick="showCreateClientModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+          <i data-feather="user-plus" style="width: 16px; height: 16px;"></i> Новый клиент
         </button>
       </div>
 

@@ -3,150 +3,199 @@
 // ============================================
 
 window.renderServices = function () {
-  const activeTab = state.ui.selectedGenderCategory || 'all';
+  const activeTab = state.ui.servicesMainTab || 'services'; // 'services' or 'categories'
   const viewMode = state.ui.servicesViewMode || 'cards';
 
-  let filteredServices = [...state.services];
-  if (activeTab !== 'all') {
-    filteredServices = filteredServices.filter(s => s.genderCategory === activeTab);
-  }
-
-  const genderTabs = [
-    { id: 'all', name: 'Все' },
-    { id: 'female', name: 'Женская' },
-    { id: 'male', name: 'Мужская' },
-    { id: 'any', name: 'Любая' }
-  ];
-
-  const tabsHtml = genderTabs.map(cat => {
-    const isActive = activeTab === cat.id;
-    return `
-      <button onclick="setUI({ selectedGenderCategory: '${cat.id}' })" class="category-pill ${isActive ? 'active' : ''}" style="white-space: nowrap; padding: 10px 20px; border-radius: 9999px; font-weight: 700; font-size: 13px; border: 1px solid var(--border); background: ${isActive ? 'linear-gradient(135deg,var(--theme-500),var(--theme-600))' : 'var(--bg-secondary)'}; color: ${isActive ? '#ffffff' : 'var(--text-secondary)'}; cursor: pointer; transition: all 0.2s;">
-        ${cat.name}
+  // Вкладки главные
+  const mainTabsHtml = `
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+      <button onclick="setUI({ servicesMainTab: 'services' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'services' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative;">
+        Услуги
+        ${activeTab === 'services' ? '<div style="position: absolute; bottom: -13px; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;"></div>' : ''}
       </button>
-    `;
-  }).join('');
+      <button onclick="setUI({ servicesMainTab: 'categories' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'categories' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative;">
+        Виды услуг
+        ${activeTab === 'categories' ? '<div style="position: absolute; bottom: -13px; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;"></div>' : ''}
+      </button>
+    </div>
+  `;
 
   let contentHtml = '';
-  if (filteredServices.length === 0) {
-    contentHtml = `
-      <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
-        <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="inbox" style="width: 56px; height: 56px;"></i></span>
-        <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">В этой категории нет услуг</h3>
-        <p style="font-size: 14px; margin-bottom: 16px;">Добавьте новую процедуру, чтобы сделать ее доступной для записи</p>
-        <button onclick="showCreateServiceModal()" class="btn btn-primary" style="width: auto;">Добавить услугу</button>
-      </div>
-    `;
-  } else if (viewMode === 'cards') {
-    contentHtml = `
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        ${filteredServices.map(s => `
-          <div class="card card-hover p-6" style="display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
-            <div>
-              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
-                <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">${s.name}</h3>
-                <span class="badge badge-info" style="font-size: 9px; padding: 2px 8px; text-transform: uppercase;">${s.categoryName}</span>
-              </div>
-              <p style="font-size: 13px; color: var(--text-secondary); min-height: 38px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 12px;">
-                ${s.description || 'Описание услуги отсутствует.'}
-              </p>
-              <span class="badge" style="font-size: 10px; display: inline-flex; align-items: center; gap: 4px;">
-                <i data-feather="${s.genderCategory === 'male' ? 'user' : s.genderCategory === 'female' ? 'user' : 'users'}" style="width: 12px; height: 12px;"></i>
-                ${s.genderCategory === 'male' ? 'Мужская' : s.genderCategory === 'female' ? 'Женская' : 'Любая'}
-              </span>
-            </div>
-            <div>
-              <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 14px;">
-                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> ${s.duration} мин</span>
-                <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
-              </div>
-              <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i></button>
-                <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);"><i data-feather="trash-2" style="width: 14px; height: 14px;"></i></button>
-              </div>
-            </div>
+
+  if (activeTab === 'categories') {
+    // Вкладка "Виды"
+    const catsHtml = state.categories.length === 0 ? '<div style="color: var(--text-secondary); text-align: center; padding: 40px;">Виды услуг пока не добавлены</div>' :
+      state.categories.map(c => `
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 12px; transition: all 0.2s;">
+          <span style="font-weight: 800; font-size: 15px; color: var(--text);">${c.name}</span>
+          <div style="display: flex; gap: 8px;">
+            <button onclick="const n = prompt('Новое название вида:', '${c.name}'); if(n && n.trim()) { api.updateCategory('${c.id}', {name: n.trim()}).then(()=>api.getAll().then(d=>setState(d))); }" class="btn btn-secondary" style="padding: 8px; border-radius: 8px;" title="Редактировать">
+              <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
+            </button>
+            <button onclick="handleDeleteCategory('${c.id}')" class="btn btn-secondary" style="color: #ef4444; background: rgba(239,68,68,0.1); border: none; padding: 8px; border-radius: 8px;" title="Удалить">
+              <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
           </div>
-        `).join('')}
-      </div>
-    `;
-  } else {
-    // Table mode
+        </div>
+      `).join('');
+
     contentHtml = `
-      <div class="card" style="overflow: hidden; border-radius: 16px;">
-        <div class="data-table-container">
-          <table class="data-table" style="min-width: 800px; width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border);">
-                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Услуга</th>
-                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Категория</th>
-                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Длительность</th>
-                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Стоимость</th>
-                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredServices.map(s => `
-                <tr class="table-row-hover" style="border-bottom: 1px solid var(--border); transition: background 0.2s;">
-                  <td style="padding: 16px;">
-                    <div style="font-weight: 700; font-size: 14px; color: var(--text);">${s.name}</div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.description || 'Нет описания'}</div>
-                  </td>
-                  <td style="padding: 16px;">
-                    <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-                      <span class="badge badge-info" style="font-size: 10px; font-weight: 700; padding: 4px 8px;">${s.categoryName}</span>
-                      <span class="badge" style="font-size: 10px; display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border: 1px solid var(--border);">
-                        <i data-feather="${s.genderCategory === 'male' ? 'user' : s.genderCategory === 'female' ? 'user' : 'users'}" style="width: 10px; height: 10px;"></i>
-                        ${s.genderCategory === 'male' ? 'Мужская' : s.genderCategory === 'female' ? 'Женская' : 'Любая'}
-                      </span>
-                    </div>
-                  </td>
-                  <td style="padding: 16px;">
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary);">
-                      <i data-feather="clock" style="width: 14px; height: 14px; color: var(--primary);"></i> ${s.duration} мин
-                    </div>
-                  </td>
-                  <td style="padding: 16px; font-weight: 800; color: var(--primary); font-size: 15px;">
-                    ${formatPrice(s.price)}
-                  </td>
-                  <td style="padding: 16px; text-align: right;">
-                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                      <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto;" title="Редактировать">
-                        <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
-                      </button>
-                      <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); background: rgba(239,68,68,0.05);" title="Удалить">
-                        <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+      <div class="animate-fade-in">
+        <form onsubmit="event.preventDefault(); handleCreateCategory();" style="display: flex; gap: 12px; margin-bottom: 24px; max-width: 600px;">
+          <input type="text" id="cat-name-input" class="form-input" placeholder="Введите название нового вида (например: Стрижки, Массаж)..." required style="flex-grow: 1;">
+          <button type="submit" class="btn btn-primary" style="white-space: nowrap; padding: 0 24px;"><i data-feather="plus" style="width: 16px; height: 16px; margin-right: 8px;"></i> Создать вид</button>
+        </form>
+        <div style="max-width: 600px;">
+          ${catsHtml}
         </div>
       </div>
     `;
+
+  } else {
+    // Вкладка "Услуги"
+    // Группировка услуг по Видам
+    const collapsedCategories = state.ui.collapsedCategories || {};
+    
+    // Подготовка структуры для группировки
+    const grouped = {};
+    state.categories.forEach(c => {
+      grouped[c.id] = { name: c.name, items: [] };
+    });
+    grouped['uncategorized'] = { name: 'Без категории', items: [] };
+
+    state.services.forEach(s => {
+      if (s.categoryId && grouped[s.categoryId]) {
+        grouped[s.categoryId].items.push(s);
+      } else {
+        grouped['uncategorized'].items.push(s);
+      }
+    });
+
+    if (state.services.length === 0) {
+      contentHtml = `
+        <div class="card p-12 text-center" style="color: var(--text-secondary);">
+          <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="inbox" style="width: 56px; height: 56px;"></i></span>
+          <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Список услуг пуст</h3>
+          <p style="font-size: 14px; margin-bottom: 16px;">Добавьте новую процедуру, чтобы сделать ее доступной для записи</p>
+          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="margin: 0 auto;">Добавить услугу</button>
+        </div>
+      `;
+    } else {
+      for (const catId in grouped) {
+        const group = grouped[catId];
+        if (group.items.length === 0) continue; // Не показываем пустые группы
+
+        const isCollapsed = collapsedCategories[catId];
+        
+        let itemsHtml = '';
+        if (!isCollapsed) {
+          if (viewMode === 'cards') {
+            itemsHtml = `
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                ${group.items.map(s => `
+                  <div class="card card-hover p-6" style="display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
+                    <div>
+                      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
+                        <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">${s.name}</h3>
+                      </div>
+                      <p style="font-size: 13px; color: var(--text-secondary); min-height: 38px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 12px;">
+                        ${s.description || 'Описание услуги отсутствует.'}
+                      </p>
+                    </div>
+                    <div>
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 14px;">
+                        <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> ${s.duration} мин</span>
+                        <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
+                      </div>
+                      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);"><i data-feather="trash-2" style="width: 14px; height: 14px;"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          } else {
+            // Table view
+            itemsHtml = `
+              <div class="card mt-4" style="overflow: hidden; border-radius: 16px;">
+                <div class="data-table-container">
+                  <table class="data-table" style="min-width: 800px; width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border);">
+                        <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Услуга</th>
+                        <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Длительность</th>
+                        <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Стоимость</th>
+                        <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${group.items.map(s => `
+                        <tr class="table-row-hover" style="border-bottom: 1px solid var(--border); transition: background 0.2s;">
+                          <td style="padding: 16px;">
+                            <div style="font-weight: 700; font-size: 14px; color: var(--text);">${s.name}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.description || 'Нет описания'}</div>
+                          </td>
+                          <td style="padding: 16px;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary);">
+                              <i data-feather="clock" style="width: 14px; height: 14px; color: var(--primary);"></i> ${s.duration} мин
+                            </div>
+                          </td>
+                          <td style="padding: 16px; font-weight: 800; color: var(--primary); font-size: 15px;">
+                            ${formatPrice(s.price)}
+                          </td>
+                          <td style="padding: 16px; text-align: right;">
+                            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                              <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto;" title="Редактировать">
+                                <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
+                              </button>
+                              <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); background: rgba(239,68,68,0.05);" title="Удалить">
+                                <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        contentHtml += `
+          <div style="margin-bottom: 24px;">
+            <div onclick="setUI({ collapsedCategories: { ...state.ui.collapsedCategories, '${catId}': !${isCollapsed} } })" style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
+              <i data-feather="${isCollapsed ? 'chevron-right' : 'chevron-down'}" style="width: 20px; height: 20px; color: var(--text-secondary);"></i>
+              <h2 style="font-size: 18px; font-weight: 800; margin: 0; color: var(--text);">${group.name} <span style="color: var(--text-secondary); font-size: 14px; font-weight: 600; margin-left: 8px;">(${group.items.length})</span></h2>
+            </div>
+            ${itemsHtml}
+          </div>
+        `;
+      }
+    }
   }
 
   return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px;">
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Услуги и прайс-лист</h1>
-          <p style="color: var(--text-secondary); font-size: 14px;">Каталог процедур салона, цены и продолжительность сеансов</p>
+          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Виды и Услуги</h1>
         </div>
         <div style="display: flex; gap: 12px; align-items: center;">
-          <div style="display: flex; background: var(--bg-secondary); border-radius: 12px; padding: 4px; border: 1px solid var(--border);">
-            <button onclick="setUI({ servicesViewMode: 'cards' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'cards' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'cards' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'cards' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="grid" style="width: 14px; height: 14px;"></i> Карточки</button>
-            <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="list" style="width: 14px; height: 14px;"></i> Таблица</button>
-          </div>
-          <button onclick="showCategoriesModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;"><i data-feather="folder" style="width: 16px; height: 16px;"></i> Виды</button>
-          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;"><i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить</button>
+          ${activeTab === 'services' ? `
+            <div style="display: flex; background: var(--bg-secondary); border-radius: 12px; padding: 4px; border: 1px solid var(--border);">
+              <button onclick="setUI({ servicesViewMode: 'cards' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'cards' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'cards' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'cards' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="grid" style="width: 14px; height: 14px;"></i> Карточки</button>
+              <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="list" style="width: 14px; height: 14px;"></i> Таблица</button>
+            </div>
+          ` : ''}
+          <button onclick="${activeTab === 'services' ? 'showCreateServiceModal()' : 'document.getElementById(\\'cat-name-input\\')?.focus()'}" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;"><i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}</button>
         </div>
       </div>
 
-      <div class="scrollbar-hide" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
-        ${tabsHtml}
-      </div>
+      ${mainTabsHtml}
 
       ${contentHtml}
     </div>
@@ -302,38 +351,6 @@ window.handleDeleteService = function (id) {
 // Модалка Управления Категориями
 // ----------------------------------------------------
 
-window.showCategoriesModal = function() {
-  setUI({ modal: 'categories', modalData: null });
-};
-
-window.renderCategoriesModal = function() {
-  const catsHtml = state.categories.length === 0 ? '<div style="color: var(--text-secondary); text-align: center; padding: 20px;">Категорий пока нет</div>' :
-    state.categories.map(c => `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px;">
-        <span style="font-weight: 700;">${c.name}</span>
-        <button onclick="handleDeleteCategory('${c.id}')" class="btn" style="color: #ef4444; background: rgba(239,68,68,0.1); border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px;">Удалить</button>
-      </div>
-    `).join('');
-
-  return `
-    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Справочник категорий</h3>
-        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
-      </div>
-
-      <div style="max-height: 50vh; overflow-y: auto;">
-        ${catsHtml}
-      </div>
-
-      <form onsubmit="event.preventDefault(); handleCreateCategory();" style="display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 16px;">
-        <input type="text" id="cat-name-input" class="form-input" placeholder="Новая категория..." required style="flex-grow: 1;">
-        <button type="submit" class="btn btn-primary" style="white-space: nowrap;">➕ Добавить</button>
-      </form>
-    </div>
-  `;
-};
-
 window.handleCreateCategory = function() {
   const input = document.getElementById('cat-name-input');
   if (!input) return;
@@ -345,7 +362,7 @@ window.handleCreateCategory = function() {
   
   // Оптимистичное добавление
   state.categories.push(newCat);
-  setUI({ modal: 'categories' }); // перерисовка модалки
+  setState({ categories: state.categories }); // перерисовка UI
 
   api.createCategory({ name }).then(result => {
     const idx = state.categories.findIndex(c => c.id === tempId);

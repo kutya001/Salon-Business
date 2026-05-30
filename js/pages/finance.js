@@ -60,8 +60,10 @@ window.renderFinance = function () {
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 16px;">
+        <div>
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Финансы</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
           ${topButtonHtml}
         </div>
       </div>

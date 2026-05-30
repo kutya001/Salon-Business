@@ -29,7 +29,7 @@ window.renderMasters = function () {
         const commission = Math.round(revenue * (parseFloat(m.percentage || 40) / 100));
 
         return `
-          <div class="card card-hover p-6" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card card-hover p-6" onclick="showMasterDetailsModal('${m.id}')" style="cursor: pointer; display: flex; flex-direction: column; gap: 16px;">
             <div style="display: flex; align-items: center; gap: 16px;">
               <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
                 ${initials}
@@ -64,10 +64,10 @@ window.renderMasters = function () {
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button onclick="showEditMasterModal('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; display: flex; align-items: center; gap: 4px;">
+                <button onclick="event.stopPropagation(); showEditMasterModal('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; display: flex; align-items: center; gap: 4px;">
                   <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Изменить
                 </button>
-                <button onclick="handleDeleteMaster('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); display: flex; align-items: center; gap: 4px;">
+                <button onclick="event.stopPropagation(); handleDeleteMaster('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); display: flex; align-items: center; gap: 4px;">
                   <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Удалить
                 </button>
             </div>
@@ -84,8 +84,8 @@ window.renderMasters = function () {
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="star" style="width: 28px; height: 28px;"></i> Мастера и расписание</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Управление командой профессионалов и расчетом заработных плат</p>
         </div>
-        <button onclick="showCreateMasterModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-          <i data-feather="user-plus" style="width: 18px; height: 18px;"></i> Добавить мастера
+        <button onclick="showCreateMasterModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+          <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить
         </button>
       </div>
 
@@ -103,11 +103,16 @@ window.showCreateMasterModal = function () {
   setUI({ modal: 'createMaster', modalData: null });
 };
 
-// Открытие модалки редактирования мастера
 window.showEditMasterModal = function (id) {
   const master = state.masters.find(m => m.id === id);
   if (!master) return;
   setUI({ modal: 'createMaster', modalData: master });
+};
+
+window.showMasterDetailsModal = function(id) {
+  const master = state.masters.find(m => m.id === id);
+  if (!master) return;
+  setUI({ modal: 'viewMaster', modalData: master });
 };
 
 window.renderMasterModal = function () {
@@ -134,7 +139,7 @@ window.renderMasterModal = function () {
           <label class="form-label">Специализация (категория)</label>
           <select id="m-specialization" class="form-select" required>
             <option value="">Выберите специализацию...</option>
-            ${state.categories.map(c => `<option value="${c}" ${(isEdit && m.specialization === c) ? 'selected' : ''}>${c}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.name}" ${(isEdit && m.specialization === c.name) ? 'selected' : ''}>${c.name}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
@@ -198,17 +203,87 @@ window.handleMasterSubmit = async function (id) {
 
 // Мягкое удаление мастера
 window.handleDeleteMaster = async function (id) {
-  if (!confirm('Вы действительно хотите удалить этого мастера из команды?')) return;
+  if (!confirm('Вы уверены, что хотите удалить этого мастера? Это действие нельзя отменить.')) return;
   
   setUI({ loading: true });
   try {
     await api.deleteMaster(id);
     const masters = state.masters.filter(m => m.id !== id);
     setState({ masters });
-    showToast('Мастер удален из списка', 'success');
+    showToast('Мастер удален', 'success');
   } catch(e) {
-    showToast('Не удалось удалить мастера', 'error');
+    showToast('Ошибка при удалении', 'error');
   } finally {
     setUI({ loading: false });
   }
+};
+
+window.renderMasterDetailsModal = function() {
+  const m = state.ui.modalData;
+  if (!m) return '';
+
+  const currentMonthStr = new Date().toISOString().substring(0, 7);
+  const completedBookings = state.bookings.filter(b => 
+    b.masterId === m.id && 
+    b.status === 'completed' &&
+    b.date.startsWith(currentMonthStr)
+  );
+  
+  const count = completedBookings.length;
+  const revenue = completedBookings.reduce((sum, b) => sum + (parseFloat(b.price) || 0), 0);
+  const commission = Math.round(revenue * (parseFloat(m.percentage || 40) / 100));
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            ${getInitials(m.name)}
+          </div>
+          <div>
+            <h3 style="font-weight: 800; font-size: 20px; color: var(--text); margin: 0;">${m.name}</h3>
+            <p style="font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">${m.specialization}</p>
+          </div>
+        </div>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
+      </div>
+
+      <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Телефон</div>
+          <a href="tel:${m.phone}" style="font-size: 14px; font-weight: 600; color: var(--primary); text-decoration: none;">${m.phone}</a>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Рабочие часы</div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--text);">${formatMasterTime(m.workHoursStart)} - ${formatMasterTime(m.workHoursEnd)}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Доля мастера</div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--text);">${m.percentage}%</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Выполнено записей</div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--text);">${count} за месяц</div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <h4 style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px;">Финансовая сводка (${new Date().toLocaleString('ru-RU', { month: 'long' })})</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border);">
+          <span style="color: var(--text-secondary); font-size: 13px;">Общая выручка:</span>
+          <span style="font-weight: 800; color: #10b981; font-size: 15px;">${formatPrice(revenue)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
+          <span style="color: var(--text-secondary); font-size: 13px; font-weight: 600;">К выплате мастеру:</span>
+          <span style="font-weight: 800; color: var(--text); font-size: 18px;">${formatPrice(commission)}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 8px;">
+        <button onclick="showEditMasterModal('${m.id}')" class="btn btn-primary" style="flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px;">
+          <i data-feather="edit-2" style="width: 16px; height: 16px;"></i> Редактировать профиль
+        </button>
+      </div>
+    </div>
+  `;
 };

@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           clients: allData.clients || [],
           transactions: allData.transactions || [],
           shifts: allData.shifts || [],
+          wallets: allData.wallets || [],
+          transactionCategories: allData.transactionCategories || [],
           currentPage: 'dashboard'
         });
       } catch (err) {
@@ -68,7 +70,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           bookings: allData.bookings || [],
           clients: allData.clients || [],
           transactions: allData.transactions || [],
-          shifts: allData.shifts || []
+          shifts: allData.shifts || [],
+          wallets: allData.wallets || [],
+          transactionCategories: allData.transactionCategories || []
         });
       } catch (err) {
         console.error('Ошибка фоновой синхронизации:', err);
@@ -91,7 +95,9 @@ window.forceSync = async function () {
       bookings: allData.bookings || [],
       clients: allData.clients || [],
       transactions: allData.transactions || [],
-      shifts: allData.shifts || []
+      shifts: allData.shifts || [],
+      wallets: allData.wallets || [],
+      transactionCategories: allData.transactionCategories || []
     });
     showToast('Синхронизация завершена', 'success');
   } catch (err) {

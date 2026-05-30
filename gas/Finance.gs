@@ -169,3 +169,45 @@ function handleReopenShift(id) {
   
   return updateRow("Shifts", id, updates);
 }
+
+// ==========================================
+// КОШЕЛЬКИ (Wallets)
+// ==========================================
+
+function handleGetWallets() {
+  return getSheetData("Wallets");
+}
+
+function handleCreateWallet(data) {
+  if (!data.name || !data.type) throw new Error("Название и тип кошелька обязательны");
+  return appendRow("Wallets", data);
+}
+
+function handleUpdateWallet(id, data) {
+  return updateRow("Wallets", id, data);
+}
+
+function handleDeleteWallet(id) {
+  return deleteRow("Wallets", id);
+}
+
+// ==========================================
+// СТАТЬИ РАСХОДА/ПРИХОДА (TransactionCategories)
+// ==========================================
+
+function handleGetTransactionCategories() {
+  return getSheetData("TransactionCategories");
+}
+
+function handleCreateTransactionCategory(data) {
+  if (!data.name || !data.type) throw new Error("Название и тип статьи обязательны");
+  return appendRow("TransactionCategories", data);
+}
+
+function handleUpdateTransactionCategory(id, data) {
+  return updateRow("TransactionCategories", id, data);
+}
+
+function handleDeleteTransactionCategory(id) {
+  return deleteRow("TransactionCategories", id);
+}

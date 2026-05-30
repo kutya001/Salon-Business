@@ -222,6 +222,40 @@ class GASClient {
   async reopenShift(id, options = {}) {
     return await this.request('reopenShift', { id }, options);
   }
+
+  // Кошельки
+  async getWallets() {
+    return await this.request('getWallets');
+  }
+
+  async createWallet(data) {
+    return await this.request('createWallet', data);
+  }
+
+  async updateWallet(id, data) {
+    return await this.request('updateWallet', { id, ...data });
+  }
+
+  async deleteWallet(id) {
+    return await this.request('deleteWallet', { id });
+  }
+
+  // Статьи транзакций
+  async getTransactionCategories() {
+    return await this.request('getTransactionCategories');
+  }
+
+  async createTransactionCategory(data) {
+    return await this.request('createTransactionCategory', data);
+  }
+
+  async updateTransactionCategory(id, data) {
+    return await this.request('updateTransactionCategory', { id, ...data });
+  }
+
+  async deleteTransactionCategory(id) {
+    return await this.request('deleteTransactionCategory', { id });
+  }
 }
 
 window.api = new GASClient();

@@ -236,15 +236,12 @@ window.renderFinanceTransactions = function () {
         const sign = isIncome ? '+' : '—';
         
         // Find category name
-        const cats = state.business?.categories || [];
+        const cats = state.transactionCategories || [];
         const cat = cats.find(c => c.id === t.categoryId);
         const catName = cat ? cat.name : (isIncome ? 'Приход' : 'Расход');
         
         // Find wallet name
-        const wallets = state.business?.wallets || [
-          {id: 'cash', name: 'Сейф (Наличные)', icon: '💵', type: 'cash'},
-          {id: 'card', name: 'Расчетный счет (Карта)', icon: '💳', type: 'card'}
-        ];
+        const wallets = state.wallets || [];
         const wallet = wallets.find(w => w.id === t.paymentMethod) || {name: t.paymentMethod, icon: '💰'};
 
         return `
@@ -286,10 +283,7 @@ window.renderFinanceTransactions = function () {
 // Вкладка: Кошельки
 // ============================================
 window.renderFinanceWallets = function () {
-  const wallets = state.business?.wallets || [
-    { id: 'cash', name: 'Сейф (Наличные)', icon: '💵', type: 'cash' },
-    { id: 'card', name: 'Расчетный счет (Карта)', icon: '💳', type: 'card' }
-  ];
+  const wallets = state.wallets || [];
 
   // Высчитываем балансы (упрощенно)
   const balances = {};
@@ -326,11 +320,7 @@ window.renderFinanceWallets = function () {
 // Вкладка: Статьи (Категории)
 // ============================================
 window.renderFinanceCategories = function () {
-  const categories = state.business?.categories || [
-    { id: 'cat_inc_1', name: 'Оплата услуг', type: 'income' },
-    { id: 'cat_exp_1', name: 'Закупка материалов', type: 'expense' },
-    { id: 'cat_exp_2', name: 'Зарплата', type: 'expense' }
-  ];
+  const categories = state.transactionCategories || [];
 
   const incomeCats = categories.filter(c => c.type === 'income');
   const expenseCats = categories.filter(c => c.type === 'expense');
@@ -372,16 +362,8 @@ window.showCreateTransactionModal = function () {
 window.renderTransactionModal = function () {
   const md = state.ui.modalData || { type: 'income', paymentMethod: 'cash', categoryId: '', amount: '', description: '' };
   
-  const wallets = state.business?.wallets || [
-    { id: 'cash', name: 'Сейф (Наличные)', icon: '💵', type: 'cash' },
-    { id: 'card', name: 'Расчетный счет (Карта)', icon: '💳', type: 'card' }
-  ];
-  
-  const categories = state.business?.categories || [
-    { id: 'cat_inc_1', name: 'Оплата услуг', type: 'income' },
-    { id: 'cat_exp_1', name: 'Закупка материалов', type: 'expense' },
-    { id: 'cat_exp_2', name: 'Зарплата', type: 'expense' }
-  ];
+  const wallets = state.wallets || [];
+  const categories = state.transactionCategories || [];
   
   const filteredCats = categories.filter(c => c.type === md.type);
 
@@ -631,12 +613,16 @@ window.renderCategoriesModal = function() {
 window.handleCategorySubmit = function() {
   const name = state.ui.modalData.name ? state.ui.modalData.name.trim() : '';
   const md = state.ui.modalData;
-  const cats = [...(state.business.categories || [])];
+  const cats = [...(state.transactionCategories || [])];
   
   if (!name) {
     showToast('Введите название статьи', 'error');
     return;
   }
+
+  const apiCall = md.id
+    ? api.updateTransactionCategory(md.id, { name, type: md.type })
+    : api.createTransactionCategory({ name, type: md.type });
 
   if (md.id) {
     const idx = cats.findIndex(c => c.id === md.id);
@@ -645,16 +631,18 @@ window.handleCategorySubmit = function() {
       cats[idx].type = md.type;
     }
   } else {
-    cats.push({ id: 'cat_' + Date.now(), name, type: md.type });
+    cats.push({ id: 'cat_tmp_' + Date.now(), name, type: md.type });
   }
 
-  const updatedBusiness = { ...state.business, categories: cats };
-  setState({ business: updatedBusiness });
+  setState({ transactionCategories: cats });
   setUI({ modal: null });
   showToast('Сохранение статьи (синхронизация...)', 'info');
 
-  api.updateSettings({ categories: cats }).then(updated => {
-    setState({ business: updated });
+  apiCall.then(savedCat => {
+    if (!md.id) {
+      const updatedCats = state.transactionCategories.map(c => c.id.startsWith('cat_tmp_') && c.name === savedCat.name ? savedCat : c);
+      setState({ transactionCategories: updatedCats });
+    }
     showToast('Статья успешно сохранена', 'success');
   }).catch(e => {
     showToast('Не удалось сохранить', 'error');
@@ -662,7 +650,7 @@ window.handleCategorySubmit = function() {
 };
 
 window.showEditCategoryModal = function(id) {
-  const cats = state.business.categories || [];
+  const cats = state.transactionCategories || [];
   const cat = cats.find(c => c.id === id);
   if (cat) {
     setUI({ modal: 'categories', modalData: { ...cat } });
@@ -708,12 +696,16 @@ window.handleWalletSubmit = function() {
   const name = state.ui.modalData.name ? state.ui.modalData.name.trim() : '';
   const icon = state.ui.modalData.icon ? state.ui.modalData.icon.trim() : '💰';
   const md = state.ui.modalData;
-  const wallets = [...(state.business.wallets || [])];
+  const wallets = [...(state.wallets || [])];
   
   if (!name) {
     showToast('Введите название кошелька', 'error');
     return;
   }
+
+  const apiCall = md.id
+    ? api.updateWallet(md.id, { name, icon, type: md.type })
+    : api.createWallet({ name, icon, type: md.type });
 
   if (md.id) {
     const idx = wallets.findIndex(w => w.id === md.id);
@@ -722,16 +714,18 @@ window.handleWalletSubmit = function() {
       wallets[idx].icon = icon;
     }
   } else {
-    wallets.push({ id: 'wallet_' + Date.now(), name, icon: icon, type: 'card' });
+    wallets.push({ id: 'wallet_tmp_' + Date.now(), name, icon: icon, type: md.type });
   }
 
-  const updatedBusiness = { ...state.business, wallets: wallets };
-  setState({ business: updatedBusiness });
+  setState({ wallets: wallets });
   setUI({ modal: null });
   showToast('Сохранение кошелька (синхронизация...)', 'info');
 
-  api.updateSettings({ wallets }).then(updated => {
-    setState({ business: updated });
+  apiCall.then(savedWallet => {
+    if (!md.id) {
+      const updatedWallets = state.wallets.map(w => w.id.startsWith('wallet_tmp_') && w.name === savedWallet.name ? savedWallet : w);
+      setState({ wallets: updatedWallets });
+    }
     showToast('Кошелек успешно сохранен', 'success');
   }).catch(e => {
     showToast('Не удалось сохранить', 'error');
@@ -739,7 +733,7 @@ window.handleWalletSubmit = function() {
 };
 
 window.showEditWalletModal = function(id) {
-  const wallets = state.business.wallets || [];
+  const wallets = state.wallets || [];
   const w = wallets.find(w => w.id === id);
   if (w) {
     setUI({ modal: 'createWallet', modalData: { ...w } });

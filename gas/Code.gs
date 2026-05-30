@@ -173,6 +173,34 @@ function doPost(e) {
         result = handleReopenShift(data.id);
         break;
         
+      // Кошельки
+      case "getWallets":
+        result = handleGetWallets();
+        break;
+      case "createWallet":
+        result = handleCreateWallet(data);
+        break;
+      case "updateWallet":
+        result = handleUpdateWallet(data.id, data);
+        break;
+      case "deleteWallet":
+        result = handleDeleteWallet(data.id);
+        break;
+        
+      // Статьи транзакций
+      case "getTransactionCategories":
+        result = handleGetTransactionCategories();
+        break;
+      case "createTransactionCategory":
+        result = handleCreateTransactionCategory(data);
+        break;
+      case "updateTransactionCategory":
+        result = handleUpdateTransactionCategory(data.id, data);
+        break;
+      case "deleteTransactionCategory":
+        result = handleDeleteTransactionCategory(data.id);
+        break;
+        
       // Неизвестное действие
       default:
         return createErrorResponse("Unknown action: " + action, 404);
@@ -222,6 +250,8 @@ function handleGetAll() {
   var clients = handleGetClients();
   var transactions = handleGetTransactions({});
   var shifts = handleGetShifts();
+  var wallets = handleGetWallets();
+  var transactionCategories = handleGetTransactionCategories();
   
   return {
     business: settings,
@@ -231,6 +261,8 @@ function handleGetAll() {
     bookings: bookings,
     clients: clients,
     transactions: transactions,
-    shifts: shifts
+    shifts: shifts,
+    wallets: wallets,
+    transactionCategories: transactionCategories
   };
 }

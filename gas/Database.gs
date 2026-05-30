@@ -33,7 +33,9 @@ function initializeDatabase() {
     "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
     "Transactions": ["id", "type", "amount", "description", "paymentMethod", "bookingId", "shiftId", "createdAt"],
     "Shifts": ["id", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
-    "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"]
+    "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
+    "Wallets": ["id", "name", "icon", "type", "createdAt"],
+    "TransactionCategories": ["id", "name", "type", "createdAt"]
   };
 
   for (var sheetName in schema) {
@@ -57,16 +59,7 @@ function initializeDatabase() {
         "fri": { "start": "09:00", "end": "20:00", "enabled": true },
         "sat": { "start": "10:00", "end": "18:00", "enabled": true },
         "sun": { "enabled": false }
-      }),
-      "wallets": JSON.stringify([
-        { "id": "cash", "name": "Сейф (Наличные)", "icon": "💵", "type": "cash" },
-        { "id": "card", "name": "Расчетный счет (Карта)", "icon": "💳", "type": "card" }
-      ]),
-      "categories": JSON.stringify([
-        { "id": "cat_inc_1", "name": "Оплата услуг", "type": "income" },
-        { "id": "cat_exp_1", "name": "Закупка материалов", "type": "expense" },
-        { "id": "cat_exp_2", "name": "Зарплата", "type": "expense" }
-      ])
+      })
     };
     
     for (var key in defaultSettings) {
@@ -136,6 +129,33 @@ function initializeDatabase() {
     var svcHeaders = schema["Services"];
     defaultServices.forEach(function(svc) {
       appendRow("Services", svc);
+    });
+  }
+
+  // Заполняем кошельки по умолчанию
+  var walletsSheet = getSheet("Wallets");
+  if (walletsSheet.getLastRow() <= 1) {
+    var defaultWallets = [
+      { id: "cash", name: "Сейф (Наличные)", icon: "💵", type: "cash", createdAt: new Date().toISOString() },
+      { id: "card", name: "Расчетный счет (Карта)", icon: "💳", type: "card", createdAt: new Date().toISOString() }
+    ];
+    var walletHeaders = schema["Wallets"];
+    defaultWallets.forEach(function(wallet) {
+      walletsSheet.appendRow(walletHeaders.map(function(h) { return wallet[h] || ""; }));
+    });
+  }
+
+  // Заполняем статьи транзакций по умолчанию
+  var txCategoriesSheet = getSheet("TransactionCategories");
+  if (txCategoriesSheet.getLastRow() <= 1) {
+    var defaultTxCategories = [
+      { id: "cat_inc_1", name: "Оплата услуг", type: "income", createdAt: new Date().toISOString() },
+      { id: "cat_exp_1", name: "Закупка материалов", type: "expense", createdAt: new Date().toISOString() },
+      { id: "cat_exp_2", name: "Зарплата", type: "expense", createdAt: new Date().toISOString() }
+    ];
+    var txCatHeaders = schema["TransactionCategories"];
+    defaultTxCategories.forEach(function(cat) {
+      txCategoriesSheet.appendRow(txCatHeaders.map(function(h) { return cat[h] || ""; }));
     });
   }
 }

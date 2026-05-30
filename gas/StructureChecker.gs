@@ -15,7 +15,9 @@ var REQUIRED_SCHEMA = {
   "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
   "Transactions": ["id", "type", "amount", "description", "paymentMethod", "categoryId", "bookingId", "shiftId", "createdAt"],
   "Shifts": ["id", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
-  "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"]
+  "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
+  "Wallets": ["id", "name", "icon", "type", "createdAt"],
+  "TransactionCategories": ["id", "name", "type", "createdAt"]
 };
 
 /**
@@ -129,7 +131,7 @@ function checkDatabaseStructure() {
   if (settingsSheet) {
     var settingsData = getSheetData("Settings");
     var keys = settingsData.map(function(s) { return s.key; });
-    var requiredKeys = ["businessName", "workSchedule", "wallets", "categories"];
+    var requiredKeys = ["businessName", "workSchedule"];
     
     requiredKeys.forEach(function(rk) {
       if (keys.indexOf(rk) === -1) {

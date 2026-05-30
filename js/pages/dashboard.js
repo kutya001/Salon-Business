@@ -129,30 +129,39 @@ window.renderDashboard = function () {
         }
 
         return `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;">
-            <!-- Левая часть: Время, Аватар, Клиент и Услуга -->
-            <div style="display: flex; align-items: center; gap: 14px; flex-grow: 1; min-width: 200px;">
-              <div style="font-weight: 800; font-size: 14px; color: var(--primary); min-width: 48px; background: rgba(99, 102, 241, 0.1); padding: 4px 8px; border-radius: 8px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 8px;">
+            <!-- Левая часть: Время, Клиент и Услуга в одну строку -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0;">
+              <!-- Время -->
+              <div style="font-weight: 800; font-size: 12px; color: var(--primary); min-width: 42px; background: rgba(99, 102, 241, 0.1); padding: 3px 6px; border-radius: 6px; text-align: center; flex-shrink: 0;">
                 ${time}
               </div>
-              <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);">
+              
+              <!-- Аватар (только на десктопе) -->
+              <div class="hidden md-flex" style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; font-weight: 700; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2); flex-shrink: 0;">
                 ${initials}
               </div>
-              <div>
-                <h4 style="font-weight: 700; font-size: 14px; color: var(--text);">${b.clientName}</h4>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                  ${b.serviceName} • <span style="color: var(--primary-light); font-weight: 600;">${b.masterName}</span>
+              
+              <!-- Клиент + Услуга (в одну строку на мобильном, с обрезкой текста) -->
+              <div style="display: flex; flex-direction: column; md:flex-direction: row; md:align-items: center; gap: 2px; md:gap: 8px; min-width: 0; flex-grow: 1;">
+                <h4 style="font-weight: 700; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; md:max-width: 180px;">${b.clientName}</h4>
+                <span class="hidden md-inline" style="color: var(--border);">|</span>
+                <p style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; md:max-width: 250px; margin: 0;">
+                  ${b.serviceName} • <span style="color: var(--primary-light); font-weight: 600;">${b.masterName.split(' ')[0]}</span>
                 </p>
               </div>
             </div>
 
-            <!-- Правая часть: Сумма, Статус и Действия -->
-            <div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end; flex-wrap: wrap;">
-              <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                <span style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</span>
-                <span class="badge ${statusColor}">${statusLabel}</span>
+            <!-- Правая часть: Цена, статус и действие в одну компактную строку -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              <!-- Цена и статус в одну линию на мобильном, колонкой на десктопе -->
+              <div style="display: flex; flex-direction: row; align-items: center; gap: 6px; md:flex-direction: column; md:align-items: flex-end; md:gap: 2px;">
+                <span style="font-weight: 800; font-size: 13px; color: var(--text);">${formatPrice(b.price)}</span>
+                <span class="badge ${statusColor}" style="font-size: 9px; padding: 2px 6px; height: auto;">${statusLabel}</span>
               </div>
-              ${actionBtnHtml ? `<div style="display: flex; align-items: center;">${actionBtnHtml}</div>` : ''}
+              
+              <!-- Кнопка действия -->
+              ${actionBtnHtml ? `<div style="display: flex; align-items: center; flex-shrink: 0;">${actionBtnHtml.replace('padding: 6px 12px;', 'padding: 4px 8px; font-size: 11px;')}</div>` : ''}
             </div>
           </div>
         `;
@@ -250,29 +259,29 @@ window.renderDashboard = function () {
       </div>
 
       <!-- Строка основных показателей -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
         <div class="stat-card">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Выручка сегодня</div>
-          <div style="font-size: 26px; font-weight: 800; color: var(--text);">${formatPrice(todayRevenue)}</div>
-          <div style="font-size: 12px; color: #10b981; font-weight: 600;">💰 По кассе транзакций</div>
+          <div class="text-[10px] md:text-[12px] lg:text-[13px]" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">Выручка сегодня</div>
+          <div class="text-[18px] md:text-[22px] lg:text-[26px]" style="font-weight: 800; color: var(--text); margin-top: 2px;">${formatPrice(todayRevenue)}</div>
+          <div class="text-[10px] md:text-[11px] lg:text-[12px]" style="color: #10b981; font-weight: 600; margin-top: 1px;">💰 По кассе</div>
         </div>
         
         <div class="stat-card">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Записи на сегодня</div>
-          <div style="font-size: 26px; font-weight: 800; color: var(--text);">${activeTodayBookings.length}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">Всего запланировано: ${todayBookings.length}</div>
+          <div class="text-[10px] md:text-[12px] lg:text-[13px]" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">Записи сегодня</div>
+          <div class="text-[18px] md:text-[22px] lg:text-[26px]" style="font-weight: 800; color: var(--text); margin-top: 2px;">${activeTodayBookings.length}</div>
+          <div class="text-[10px] md:text-[11px] lg:text-[12px]" style="color: var(--text-secondary); font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Всего: ${todayBookings.length}</div>
         </div>
         
         <div class="stat-card">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Клиентов в базе</div>
-          <div style="font-size: 26px; font-weight: 800; color: var(--text);">${totalClients}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">Постоянных гостей</div>
+          <div class="text-[10px] md:text-[12px] lg:text-[13px]" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">Клиентов в базе</div>
+          <div class="text-[18px] md:text-[22px] lg:text-[26px]" style="font-weight: 800; color: var(--text); margin-top: 2px;">${totalClients}</div>
+          <div class="text-[10px] md:text-[11px] lg:text-[12px]" style="color: var(--text-secondary); font-weight: 600; margin-top: 1px;">👤 Гостей</div>
         </div>
         
         <div class="stat-card">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Средний чек</div>
-          <div style="font-size: 26px; font-weight: 800; color: var(--text);">${formatPrice(avgCheck)}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">По выполненным записям</div>
+          <div class="text-[10px] md:text-[12px] lg:text-[13px]" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">Средний чек</div>
+          <div class="text-[18px] md:text-[22px] lg:text-[26px]" style="font-weight: 800; color: var(--text); margin-top: 2px;">${formatPrice(avgCheck)}</div>
+          <div class="text-[10px] md:text-[11px] lg:text-[12px]" style="color: var(--text-secondary); font-weight: 600; margin-top: 1px;">💳 За сеанс</div>
         </div>
       </div>
 

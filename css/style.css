@@ -727,3 +727,12 @@ select option, option {
   }
 }
 
+/* Compact adjustments for Mobile Stat Cards */
+@media (max-width: 767px) {
+  .stat-card {
+    padding: 12px 14px !important;
+    gap: 4px !important;
+    border-radius: 16px !important;
+  }
+}
+

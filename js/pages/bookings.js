@@ -920,7 +920,8 @@ window.showCreateBookingModal = function () {
         date: '',
         time: '',
         paymentMethod: 'cash',
-        notes: ''
+        notes: '',
+        status: (state.ui.filters && state.ui.filters.status) ? state.ui.filters.status : 'pending'
       }
     } 
   });
@@ -1441,7 +1442,7 @@ window.handleCreateBookingSubmit = function () {
     time: timeInput.value,
     paymentMethod: draft.paymentMethod,
     notes: notesInput.value.trim(),
-    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : 'pending'
+    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : (draft.status || 'pending')
   };
 
   // Оптимистичное обновление

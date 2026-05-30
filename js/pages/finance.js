@@ -236,14 +236,14 @@ window.renderFinanceTransactions = function () {
         const sign = isIncome ? '+' : '—';
         
         // Find category name
-        const cats = state.settings?.categories || [];
+        const cats = state.business?.categories || [];
         const cat = cats.find(c => c.id === t.categoryId);
         const catName = cat ? cat.name : (isIncome ? 'Приход' : 'Расход');
         
         // Find wallet name
-        const wallets = state.settings?.wallets || [
-          {id: 'cash', name: 'Наличные', icon: '💵'},
-          {id: 'card', name: 'Карта', icon: '💳'}
+        const wallets = state.business?.wallets || [
+          {id: 'cash', name: 'Сейф (Наличные)', icon: '💵', type: 'cash'},
+          {id: 'card', name: 'Расчетный счет (Карта)', icon: '💳', type: 'card'}
         ];
         const wallet = wallets.find(w => w.id === t.paymentMethod) || {name: t.paymentMethod, icon: '💰'};
 
@@ -286,7 +286,7 @@ window.renderFinanceTransactions = function () {
 // Вкладка: Кошельки
 // ============================================
 window.renderFinanceWallets = function () {
-  const wallets = state.settings?.wallets || [
+  const wallets = state.business?.wallets || [
     { id: 'cash', name: 'Сейф (Наличные)', icon: '💵', type: 'cash' },
     { id: 'card', name: 'Расчетный счет (Карта)', icon: '💳', type: 'card' }
   ];
@@ -326,10 +326,10 @@ window.renderFinanceWallets = function () {
 // Вкладка: Статьи (Категории)
 // ============================================
 window.renderFinanceCategories = function () {
-  const categories = state.settings?.categories || [
-    { id: 'cat1', name: 'Оплата услуг', type: 'income' },
-    { id: 'cat2', name: 'Закупка материалов', type: 'expense' },
-    { id: 'cat3', name: 'Зарплата', type: 'expense' }
+  const categories = state.business?.categories || [
+    { id: 'cat_inc_1', name: 'Оплата услуг', type: 'income' },
+    { id: 'cat_exp_1', name: 'Закупка материалов', type: 'expense' },
+    { id: 'cat_exp_2', name: 'Зарплата', type: 'expense' }
   ];
 
   const incomeCats = categories.filter(c => c.type === 'income');
@@ -366,20 +366,21 @@ window.renderFinanceCategories = function () {
 // ============================================
 
 window.showCreateTransactionModal = function () {
-  setUI({ modal: 'createTransaction', modalData: { type: 'income', paymentMethod: 'cash', categoryId: '' } });
+  setUI({ modal: 'createTransaction', modalData: { type: 'income', paymentMethod: 'cash', categoryId: '', amount: '', description: '' } });
 };
 
 window.renderTransactionModal = function () {
-  const md = state.ui.modalData || { type: 'income', paymentMethod: 'cash' };
+  const md = state.ui.modalData || { type: 'income', paymentMethod: 'cash', categoryId: '', amount: '', description: '' };
   
-  const wallets = state.settings?.wallets || [
-    { id: 'cash', name: 'Наличные', icon: '💵' },
-    { id: 'card', name: 'Карта', icon: '💳' }
+  const wallets = state.business?.wallets || [
+    { id: 'cash', name: 'Сейф (Наличные)', icon: '💵', type: 'cash' },
+    { id: 'card', name: 'Расчетный счет (Карта)', icon: '💳', type: 'card' }
   ];
   
-  const categories = state.settings?.categories || [
-    { id: 'income_general', name: 'Общий приход', type: 'income' },
-    { id: 'expense_general', name: 'Общий расход', type: 'expense' }
+  const categories = state.business?.categories || [
+    { id: 'cat_inc_1', name: 'Оплата услуг', type: 'income' },
+    { id: 'cat_exp_1', name: 'Закупка материалов', type: 'expense' },
+    { id: 'cat_exp_2', name: 'Зарплата', type: 'expense' }
   ];
   
   const filteredCats = categories.filter(c => c.type === md.type);
@@ -395,22 +396,22 @@ window.renderTransactionModal = function () {
         <div class="form-group">
           <label class="form-label">Тип транзакции</label>
           <div style="display: flex; gap: 8px; margin-top: 4px;">
-            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, type: 'income' } })" class="btn ${md.type === 'income' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">📈 Приход</button>
-            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, type: 'expense' } })" class="btn ${md.type === 'expense' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">📉 Расход</button>
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, type: 'income', categoryId: '' } })" class="btn ${md.type === 'income' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">📈 Приход</button>
+            <button type="button" onclick="setUI({ modalData: { ...state.ui.modalData, type: 'expense', categoryId: '' } })" class="btn ${md.type === 'expense' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">📉 Расход</button>
           </div>
         </div>
         
         <div class="form-group">
           <label class="form-label">Статья</label>
-          <select id="tx-category" class="form-select" required>
-            <option value="" disabled selected>Выберите статью...</option>
+          <select id="tx-category" class="form-select" onchange="state.ui.modalData.categoryId = this.value" required>
+            <option value="" disabled ${!md.categoryId ? 'selected' : ''}>Выберите статью...</option>
             ${filteredCats.map(c => `<option value="${c.id}" ${md.categoryId === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
           </select>
         </div>
 
         <div class="form-group">
           <label class="form-label">Сумма (сом)</label>
-          <input type="number" id="tx-amount" class="form-input" placeholder="1000" min="1" required>
+          <input type="number" id="tx-amount" class="form-input" placeholder="1000" min="1" value="${md.amount || ''}" oninput="state.ui.modalData.amount = this.value" required>
         </div>
         
         <div class="form-group">
@@ -424,7 +425,7 @@ window.renderTransactionModal = function () {
         
         <div class="form-group">
           <label class="form-label">Назначение / Описание</label>
-          <input type="text" id="tx-desc" class="form-input" placeholder="Комментарий к операции..." required>
+          <input type="text" id="tx-desc" class="form-input" placeholder="Комментарий к операции..." value="${md.description || ''}" oninput="state.ui.modalData.description = this.value" required>
         </div>
 
         <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
@@ -437,10 +438,52 @@ window.renderTransactionModal = function () {
 
 window.handleTransactionSubmit = async function () {
   const type = state.ui.modalData.type;
-  const amount = parseFloat(document.getElementById('tx-amount').value) || 0;
+  const amount = parseFloat(state.ui.modalData.amount) || 0;
   const paymentMethod = state.ui.modalData.paymentMethod;
-  const categoryId = document.getElementById('tx-category').value;
-  const description = document.getElementById('tx-desc').value.trim();
+  const categoryId = state.ui.modalData.categoryId;
+  const description = state.ui.modalData.description ? state.ui.modalData.description.trim() : '';
+
+  if (!categoryId) {
+    showToast('Выберите статью расходов/доходов', 'error');
+    return;
+  }
+  if (amount <= 0) {
+    showToast('Введите корректную сумму', 'error');
+    return;
+  }
+  if (!description) {
+    showToast('Введите описание транзакции', 'error');
+    return;
+  }
+
+  const activeShift = state.shifts.find(s => s.status === 'open');
+  const shiftId = activeShift ? activeShift.id : '';
+
+  const optimisticTx = {
+    id: 'tx_tmp_' + Date.now(),
+    type,
+    amount,
+    description,
+    paymentMethod,
+    categoryId,
+    shiftId,
+    createdAt: new Date().toISOString()
+  };
+
+  // Мгновенное обновление UI (Optimistic Update)
+  state.transactions.unshift(optimisticTx);
+  setUI({ modal: null });
+  showToast('Транзакция успешно зафиксирована', 'success');
+
+  // Запрос в фоне
+  api.createTransaction({ type, amount, description, paymentMethod, categoryId }, { background: true })
+    .catch(e => {
+      showToast('Не удалось сохранить транзакцию', 'error');
+      // Откат при ошибке
+      state.transactions = state.transactions.filter(t => t.id !== optimisticTx.id);
+      if (window.render) window.render();
+    });
+};
 
   const activeShift = state.shifts.find(s => s.status === 'open');
   const shiftId = activeShift ? activeShift.id : '';
@@ -472,8 +515,9 @@ window.handleTransactionSubmit = async function () {
 };
 
 // Смены (Modal functions)
-window.showOpenShiftModal = function () { setUI({ modal: 'openShift' }); };
+window.showOpenShiftModal = function () { setUI({ modal: 'openShift', modalData: { openingCash: '0' } }); };
 window.renderOpenShiftModal = function () {
+  const md = state.ui.modalData || { openingCash: '0' };
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
@@ -483,7 +527,7 @@ window.renderOpenShiftModal = function () {
       <form onsubmit="event.preventDefault(); handleOpenShiftSubmit();" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="form-group">
           <label class="form-label">Входящий остаток в кассе (наличные)</label>
-          <input type="number" id="shift-opening-cash" class="form-input" placeholder="0" value="0" min="0" required>
+          <input type="number" id="shift-opening-cash" class="form-input" placeholder="0" value="${md.openingCash}" min="0" oninput="state.ui.modalData.openingCash = this.value" required>
         </div>
         <button type="submit" class="btn btn-primary" style="background: #10b981; margin-top: 10px;">
           🚀 Запустить смену
@@ -494,7 +538,7 @@ window.renderOpenShiftModal = function () {
 };
 
 window.handleOpenShiftSubmit = async function () {
-  const openingCash = parseFloat(document.getElementById('shift-opening-cash').value) || 0;
+  const openingCash = parseFloat(state.ui.modalData.openingCash) || 0;
   
   const optimisticShift = {
     id: 'shift_tmp_' + Date.now(),
@@ -516,19 +560,19 @@ window.handleOpenShiftSubmit = async function () {
     });
 };
 
-window.showCloseShiftModal = function (id) { setUI({ modal: 'closeShift', modalData: id }); };
+window.showCloseShiftModal = function (id) { setUI({ modal: 'closeShift', modalData: { id: id, closingCash: '' } }); };
 window.renderCloseShiftModal = function () {
-  const id = state.ui.modalData;
+  const md = state.ui.modalData || {};
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Закрытие кассовой смены</h3>
         <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
       </div>
-      <form onsubmit="event.preventDefault(); handleCloseShiftSubmit('${id}');" style="display: flex; flex-direction: column; gap: 16px;">
+      <form onsubmit="event.preventDefault(); handleCloseShiftSubmit('${md.id}');" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="form-group">
           <label class="form-label">Фактический остаток наличных в кассе (инкассация)</label>
-          <input type="number" id="shift-closing-cash" class="form-input" placeholder="Сумма в сом" min="0" required>
+          <input type="number" id="shift-closing-cash" class="form-input" placeholder="Сумма в сом" min="0" value="${md.closingCash || ''}" oninput="state.ui.modalData.closingCash = this.value" required>
         </div>
         <p style="font-size: 12px; color: var(--text-secondary);">Система автоматически сверит эту сумму с расчетной и покажет расхождения в случае их наличия.</p>
         <button type="submit" class="btn btn-primary" style="background: #dc2626; margin-top: 10px;">
@@ -550,7 +594,7 @@ window.handleCloseShiftSubmit = async function (id) {
     return showToast('Нельзя закрыть смену: на сегодня есть необработанные записи (в статусе "Записан" или "Подтверждён")', 'error', 5000);
   }
 
-  const closingCash = parseFloat(document.getElementById('shift-closing-cash').value) || 0;
+  const closingCash = parseFloat(state.ui.modalData.closingCash) || 0;
   
   const idx = state.shifts.findIndex(s => s.id === id);
   if (idx !== -1) {
@@ -602,7 +646,7 @@ window.renderCategoriesModal = function() {
         
         <div class="form-group">
           <label class="form-label">Название статьи</label>
-          <input type="text" id="cat-name" class="form-input" placeholder="Например: Закупка материалов" value="${md.name}" required>
+          <input type="text" id="cat-name" class="form-input" placeholder="Например: Закупка материалов" value="${md.name}" oninput="state.ui.modalData.name = this.value" required>
         </div>
 
         <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
@@ -614,10 +658,15 @@ window.renderCategoriesModal = function() {
 };
 
 window.handleCategorySubmit = function() {
-  const name = document.getElementById('cat-name').value.trim();
+  const name = state.ui.modalData.name ? state.ui.modalData.name.trim() : '';
   const md = state.ui.modalData;
   const cats = [...(state.business.categories || [])];
   
+  if (!name) {
+    showToast('Введите название статьи', 'error');
+    return;
+  }
+
   if (md.id) {
     const idx = cats.findIndex(c => c.id === md.id);
     if (idx !== -1) {
@@ -668,12 +717,12 @@ window.renderWalletModal = function() {
       <form onsubmit="event.preventDefault(); handleWalletSubmit();" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="form-group">
           <label class="form-label">Название кошелька</label>
-          <input type="text" id="wallet-name" class="form-input" placeholder="Например: Карта Optima" value="${md.name}" required>
+          <input type="text" id="wallet-name" class="form-input" placeholder="Например: Карта Optima" value="${md.name}" oninput="state.ui.modalData.name = this.value" required>
         </div>
         
         <div class="form-group">
           <label class="form-label">Иконка (Emoji)</label>
-          <input type="text" id="wallet-icon" class="form-input" placeholder="💳" value="${md.icon}" required maxlength="2">
+          <input type="text" id="wallet-icon" class="form-input" placeholder="💳" value="${md.icon}" oninput="state.ui.modalData.icon = this.value" required maxlength="2">
         </div>
 
         <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
@@ -685,19 +734,24 @@ window.renderWalletModal = function() {
 };
 
 window.handleWalletSubmit = function() {
-  const name = document.getElementById('wallet-name').value.trim();
-  const icon = document.getElementById('wallet-icon').value.trim();
+  const name = state.ui.modalData.name ? state.ui.modalData.name.trim() : '';
+  const icon = state.ui.modalData.icon ? state.ui.modalData.icon.trim() : '💰';
   const md = state.ui.modalData;
   const wallets = [...(state.business.wallets || [])];
   
+  if (!name) {
+    showToast('Введите название кошелька', 'error');
+    return;
+  }
+
   if (md.id) {
     const idx = wallets.findIndex(w => w.id === md.id);
     if (idx !== -1) {
       wallets[idx].name = name;
-      wallets[idx].icon = icon || '💰';
+      wallets[idx].icon = icon;
     }
   } else {
-    wallets.push({ id: 'wallet_' + Date.now(), name, icon: icon || '💰', type: 'card' });
+    wallets.push({ id: 'wallet_' + Date.now(), name, icon: icon, type: 'card' });
   }
 
   const updatedBusiness = { ...state.business, wallets: wallets };

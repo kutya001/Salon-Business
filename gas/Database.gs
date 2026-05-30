@@ -26,7 +26,7 @@ function getSheet(name) {
 function initializeDatabase() {
   var schema = {
     "Settings": ["key", "value"],
-    "Categories": ["id", "name", "description", "status", "createdAt"],
+    "ServiceCategories": ["id", "name", "description", "status", "createdAt"],
     "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt", "services"],
     "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt"],
     "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
@@ -35,7 +35,7 @@ function initializeDatabase() {
     "Shifts": ["id", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
     "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
     "Wallets": ["id", "name", "icon", "type", "createdAt"],
-    "TransactionCategories": ["id", "name", "type", "createdAt"]
+    "Articles": ["id", "name", "type", "createdAt"]
   };
 
   for (var sheetName in schema) {
@@ -67,8 +67,17 @@ function initializeDatabase() {
     }
   }
 
+  // Удаляем wallets и categories из Settings, если они там есть (чтобы не было путаницы)
+  var settingsData = settingsSheet.getDataRange().getValues();
+  for (var i = settingsData.length - 1; i >= 1; i--) {
+    var key = settingsData[i][0];
+    if (key === "wallets" || key === "categories") {
+      settingsSheet.deleteRow(i + 1);
+    }
+  }
+
   // Заполняем справочник видов (ранее категорий) по умолчанию
-  var categoriesSheet = getSheet("Categories");
+  var categoriesSheet = getSheet("ServiceCategories");
   if (categoriesSheet.getLastRow() <= 1) {
     var defaultCategories = [
       { id: "type_1", name: "Стрижка", description: "Стрижки любой сложности", status: "active", createdAt: new Date().toISOString() },
@@ -80,7 +89,7 @@ function initializeDatabase() {
       { id: "type_7", name: "Массаж", description: "Расслабляющий, лечебный массаж", status: "active", createdAt: new Date().toISOString() },
       { id: "type_8", name: "Уход за лицом", description: "Косметология, чистка, пилинг", status: "active", createdAt: new Date().toISOString() }
     ];
-    var catHeaders = schema["Categories"];
+    var catHeaders = schema["ServiceCategories"];
     defaultCategories.forEach(function(cat) {
       categoriesSheet.appendRow(catHeaders.map(function(h) { return cat[h] || ""; }));
     });
@@ -146,14 +155,14 @@ function initializeDatabase() {
   }
 
   // Заполняем статьи транзакций по умолчанию
-  var txCategoriesSheet = getSheet("TransactionCategories");
+  var txCategoriesSheet = getSheet("Articles");
   if (txCategoriesSheet.getLastRow() <= 1) {
     var defaultTxCategories = [
       { id: "cat_inc_1", name: "Оплата услуг", type: "income", createdAt: new Date().toISOString() },
       { id: "cat_exp_1", name: "Закупка материалов", type: "expense", createdAt: new Date().toISOString() },
       { id: "cat_exp_2", name: "Зарплата", type: "expense", createdAt: new Date().toISOString() }
     ];
-    var txCatHeaders = schema["TransactionCategories"];
+    var txCatHeaders = schema["Articles"];
     defaultTxCategories.forEach(function(cat) {
       txCategoriesSheet.appendRow(txCatHeaders.map(function(h) { return cat[h] || ""; }));
     });

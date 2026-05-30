@@ -8,7 +8,7 @@
 // Ожидаемая структура таблиц (Схема метаданных)
 var REQUIRED_SCHEMA = {
   "Settings": ["key", "value"],
-  "Categories": ["id", "name", "description", "status", "createdAt"],
+  "ServiceCategories": ["id", "name", "description", "status", "createdAt"],
   "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt", "services"],
   "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt"],
   "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
@@ -17,7 +17,7 @@ var REQUIRED_SCHEMA = {
   "Shifts": ["id", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
   "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
   "Wallets": ["id", "name", "icon", "type", "createdAt"],
-  "TransactionCategories": ["id", "name", "type", "createdAt"]
+  "Articles": ["id", "name", "type", "createdAt"]
 };
 
 /**

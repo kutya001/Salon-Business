@@ -192,22 +192,30 @@ function handleDeleteWallet(id) {
 }
 
 // ==========================================
-// СТАТЬИ РАСХОДА/ПРИХОДА (TransactionCategories)
+// СТАТЬИ РАСХОДА/ПРИХОДА (Articles)
 // ==========================================
 
 function handleGetTransactionCategories() {
-  return getSheetData("TransactionCategories");
+  try {
+    return getSheetData("Articles");
+  } catch (e) {
+    return [];
+  }
 }
 
 function handleCreateTransactionCategory(data) {
-  if (!data.name || !data.type) throw new Error("Название и тип статьи обязательны");
-  return appendRow("TransactionCategories", data);
+  if (!data.name) throw new Error("Укажите название статьи");
+  data.createdAt = new Date().toISOString();
+  return appendRow("Articles", data);
 }
 
 function handleUpdateTransactionCategory(id, data) {
-  return updateRow("TransactionCategories", id, data);
+  var updated = updateRow("Articles", id, data);
+  if (!updated) throw new Error("Статья не найдена");
+  return updated;
 }
 
 function handleDeleteTransactionCategory(id) {
-  return deleteRow("TransactionCategories", id);
+  var deleted = deleteRow("Articles", id);
+  return { success: deleted };
 }

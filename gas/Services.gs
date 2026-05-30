@@ -8,7 +8,7 @@
  */
 function handleGetCategories() {
   try {
-    var categories = getSheetData("Categories");
+    var categories = getSheetData("ServiceCategories");
     return categories.filter(function(c) { return c.status !== "inactive"; });
   } catch (e) {
     return []; // Если таблицы нет, вернем пустой массив
@@ -21,14 +21,14 @@ function handleGetCategories() {
 function handleCreateCategory(data) {
   if (!data.name) throw new Error("Укажите название категории");
   data.status = "active";
-  return appendRow("Categories", data);
+  return appendRow("ServiceCategories", data);
 }
 
 /**
  * Обновляет категорию
  */
 function handleUpdateCategory(id, data) {
-  var updated = updateRow("Categories", id, data);
+  var updated = updateRow("ServiceCategories", id, data);
   if (!updated) throw new Error("Категория не найдена");
   
   // При обновлении категории также желательно обновить название категории в услугах
@@ -40,7 +40,7 @@ function handleUpdateCategory(id, data) {
  * Удаляет категорию (мягкое удаление)
  */
 function handleDeleteCategory(id) {
-  var updated = updateRow("Categories", id, { status: "inactive" });
+  var updated = updateRow("ServiceCategories", id, { status: "inactive" });
   return { success: !!updated };
 }
 

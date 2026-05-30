@@ -47,7 +47,7 @@ function initializeDatabase() {
       "businessName": "Мой салон красоты",
       "description": "Автономный кабинет Suluu Business",
       "address": "ул. Токтогула, 125",
-      "phone": "+996 555 123 456",
+      "phone": "996555123456",
       "email": "info@mybeauty.kg",
       "theme": "hair",
       "workSchedule": JSON.stringify({

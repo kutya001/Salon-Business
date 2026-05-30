@@ -78,11 +78,10 @@ window.showToast = function (message, type = 'info', duration = 3000) {
 
 window.getStatusLabel = function (status) {
   const labels = {
-    'pending': 'Новая',
-    'confirmed': 'Подтверждена',
-    'completed': 'Завершена',
-    'cancelled': 'Отменена',
-    'no-show': 'Не пришел'
+    'pending': 'Записан',
+    'confirmed': 'Подтверждён',
+    'completed': 'Выполнен',
+    'cancelled': 'Отмена'
   };
   return labels[status] || status;
 };
@@ -92,8 +91,7 @@ window.getStatusColor = function (status) {
     'pending': 'badge-warning',
     'confirmed': 'badge-info',
     'completed': 'badge-success',
-    'cancelled': 'badge-danger',
-    'no-show': 'badge-secondary'
+    'cancelled': 'badge-danger'
   };
   return colors[status] || 'badge-info';
 };

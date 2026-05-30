@@ -33,11 +33,10 @@ window.renderBookings = function () {
   // Вкладки статусов (Desktop + Mobile)
   const statusTabs = [
     { id: '', label: 'ВСЕ ЗАПИСИ' },
-    { id: 'pending', label: 'НОВЫЕ' },
-    { id: 'confirmed', label: 'ПОДТВЕРЖДЕННЫЕ' },
-    { id: 'completed', label: 'ЗАВЕРШЕННЫЕ' },
-    { id: 'cancelled', label: 'ОТМЕНЕННЫЕ' },
-    { id: 'no-show', label: 'НЕ ПРИШЛИ' }
+    { id: 'pending', label: 'ЗАПИСАН' },
+    { id: 'confirmed', label: 'ПОДТВЕРЖДЁН' },
+    { id: 'completed', label: 'ВЫПОЛНЕН' },
+    { id: 'cancelled', label: 'ОТМЕНА' }
   ];
 
   const statusTabsHtml = `
@@ -160,6 +159,11 @@ window.renderBookings = function () {
 
       <!-- Область контента -->
       ${viewHtml}
+      
+      <!-- Плавающая кнопка добавления записи (FAB) -->
+      <button onclick="showCreateBookingModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 110px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;">
+        <i data-feather="plus" style="width: 28px; height: 28px;"></i>
+      </button>
     </div>
   `;
 };

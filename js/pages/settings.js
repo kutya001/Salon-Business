@@ -4,28 +4,6 @@
 
 window.renderSettings = function () {
   const biz = state.business || {};
-  const currentTheme = state.business?.theme || 'hair';
-
-  const themes = [
-    { id: 'hair', name: '💜 Лаванда (Дефолт)', color: '#8b5cf6' },
-    { id: 'barber', name: '🖤 Барбершоп (Dark)', color: '#d48b59' },
-    { id: 'beauty', name: '💗 Розовый Бьюти', color: '#e58b9b' },
-    { id: 'eco', name: '🌿 Эко Шалфей', color: '#7b9e87' },
-    { id: 'medical', name: '💎 Медицинский Аква', color: '#6b9eb3' },
-    { id: 'graphite', name: '⚫ Тёмный Графит', color: '#7d8899' }
-  ];
-
-  const themesHtml = themes.map(t => {
-    const isSelected = currentTheme === t.id;
-    return `
-      <div onclick="handleChangeTheme('${t.id}')" style="cursor: pointer; border: 2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; background: var(--bg-secondary); padding: 14px; border-radius: 16px; display: flex; align-items: center; gap: 12px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary-light)'" onmouseout="this.style.borderColor='${isSelected ? 'var(--primary)' : 'var(--border)'}'">
-        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${t.color}; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.15);"></div>
-        <div style="flex-grow: 1; font-weight: 700; font-size: 13px; color: var(--text);">${t.name}</div>
-        <input type="radio" name="theme-select" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary);">
-      </div>
-    `;
-  }).join('');
-
   const schedule = biz.workSchedule || {};
   const daysTranslation = {
     mon: 'Понедельник',
@@ -96,15 +74,6 @@ window.renderSettings = function () {
               <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить изменения
             </button>
           </form>
-        </div>
-
-        <!-- Секция: Темы оформления -->
-        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="pen-tool" style="width: 18px; height: 18px;"></i> Тема оформления</h3>
-          <p style="font-size: 12px; color: var(--text-secondary);">Выберите одну из тщательно подобранных цветовых палитр, соответствующих концепции вашего салона красоты</p>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-            ${themesHtml}
-          </div>
         </div>
 
       </div>

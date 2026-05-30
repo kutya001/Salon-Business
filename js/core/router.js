@@ -103,35 +103,15 @@ window.renderLayout = function () {
     `;
   }).join('');
 
-  let ctaAction = 'if(window.showCreateBookingModal) showCreateBookingModal()';
-  if (page === 'clients') ctaAction = 'if(window.showClientModal) showClientModal()';
-  else if (page === 'masters') ctaAction = 'if(window.showMasterModal) showMasterModal()';
-  else if (page === 'services') ctaAction = 'if(window.showServiceModal) showServiceModal()';
-  else if (page === 'finance') ctaAction = 'if(window.showTransactionModal) showTransactionModal()';
-
-  const mobileTabs = ['dashboard', 'bookings', 'masters', 'finance'].map((id, index) => {
+  const mobileTabs = ['dashboard', 'bookings', 'masters', 'finance'].map(id => {
     const item = menuItems.find(m => m.id === id);
     const activeClass = page === item.id ? 'active' : '';
-    const tabHtml = `
-      <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}" style="flex: 1; min-width: 64px;">
+    return `
+      <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}">
         <span class="tab-icon" style="display: flex; align-items: center; justify-content: center; height: 24px;"><i data-feather="${item.icon}" style="width: 20px; height: 20px;"></i></span>
-        <span class="tab-label" style="font-size: 10px; font-weight: ${activeClass ? '700' : '500'}; margin-top: 4px;">${item.label}</span>
+        <span class="tab-label" style="font-size: 10px;">${item.label}</span>
       </a>
     `;
-    
-    // Вставляем Floating CTA ровно посередине (после 'bookings')
-    if (index === 1) {
-      const ctaHtml = `
-        <div style="flex: 0 0 64px; display: flex; justify-content: center; position: relative;">
-          <button onclick="${ctaAction}" style="position: absolute; top: -24px; width: 64px; height: 64px; border-radius: 24px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; z-index: 50;">
-            <i data-feather="plus" style="width: 28px; height: 28px;"></i>
-          </button>
-        </div>
-      `;
-      return tabHtml + ctaHtml;
-    }
-    
-    return tabHtml;
   }).join('');
 
   // Рендерим тосты
@@ -157,7 +137,10 @@ window.renderLayout = function () {
     else if (state.ui.modal === 'createClient' && window.renderClientModal) modalContent = renderClientModal();
     else if (state.ui.modal === 'viewClient' && window.renderClientDetailsModal) modalContent = renderClientDetailsModal();
     else if (state.ui.modal === 'createService' && window.renderServiceModal) modalContent = renderServiceModal();
-    else if (state.ui.modal === 'categories' && window.renderCategoriesModal) modalContent = renderCategoriesModal();
+    else if (state.ui.modal === 'categories' || state.ui.modal === 'createCategory') {
+      if (window.renderCategoriesModal) modalContent = renderCategoriesModal();
+    }
+    else if (state.ui.modal === 'createWallet' && window.renderWalletModal) modalContent = renderWalletModal();
     else if (state.ui.modal === 'createTransaction' && window.renderTransactionModal) modalContent = renderTransactionModal();
     else if (state.ui.modal === 'openShift' && window.renderOpenShiftModal) modalContent = renderOpenShiftModal();
     else if (state.ui.modal === 'closeShift' && window.renderCloseShiftModal) modalContent = renderCloseShiftModal();

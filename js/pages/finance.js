@@ -59,6 +59,9 @@ window.renderFinance = function () {
                 `;
               }).join('')}
             </div>
+            <span class="md-hidden animate-fade-in" style="font-size: 12px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.05em; margin-left: 10px; white-space: nowrap; text-transform: uppercase;">
+              ${tabs.find(t => t.id === activeTab)?.label || ''}
+            </span>
           </div>
           <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
             ${topButtonHtml}

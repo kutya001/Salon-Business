@@ -200,8 +200,8 @@ window.renderBookings = function () {
       </div>
 
       <!-- Вкладки статусов и переключатель видов (Единый блок) -->
-      <div style="display: flex; justify-content: center; margin-bottom: 16px; width: 100%; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
-        <div class="segment-tabs-container" style="display: inline-flex; align-items: center; flex-wrap: nowrap;">
+      <div style="display: flex; justify-content: flex-start; align-items: center; gap: 10px; margin-bottom: 16px; width: 100%; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 0 4px;">
+        <div class="segment-tabs-container" style="display: inline-flex; align-items: center; flex-wrap: nowrap; flex-shrink: 0;">
           ${statusTabs.map(tab => {
             const isActive = (filters.status || '') === tab.id;
             return `
@@ -223,6 +223,9 @@ window.renderBookings = function () {
             <span class="hidden md-inline">Таймлайн</span>
           </button>
         </div>
+        <span class="md-hidden animate-fade-in" style="font-size: 12px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.05em; white-space: nowrap; text-transform: uppercase; flex-shrink: 0;">
+          ${statusTabs.find(t => (filters.status || '') === t.id)?.label || 'ВСЕ ЗАПИСИ'}
+        </span>
       </div>
 
       <!-- Панель фильтров -->

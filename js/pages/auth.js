@@ -87,7 +87,7 @@ window.renderAuth = function () {
                 </div>
                 ${state.ui.showSetupInline ? `
                 <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; border-top: 1px dashed rgba(118, 75, 162, 0.2); padding-top: 8px;">
-                    <input type="url" id="inline-gas-url" value="${api.gasUrl || ''}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:10px; font-family:monospace; outline:none;" onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#cbd5e1'">
+                    <input type="url" id="inline-gas-url" value="${api.gasUrl || ''}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:10px; font-family:monospace; outline:none; color:#1a1a2e; background-color:#ffffff;" onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#cbd5e1'">
                     <div style="display:flex; gap:8px;">
                         <button onclick="handleInlineUrlSave()" style="flex:1; background:#764ba2; color:white; border:none; border-radius:8px; padding:8px; font-weight:700; cursor:pointer;">Сохранить</button>
                         <button onclick="handleHardReset()" style="flex:1; background:#fee2e2; color:#dc2626; border:none; border-radius:8px; padding:8px; font-weight:700; cursor:pointer;">Сброс PWA</button>
@@ -274,7 +274,7 @@ window.renderSetup = function () {
             <div class="form-group" style="margin-bottom:24px;text-align:left;">
                 <label class="form-label" style="font-weight:700;font-size:12px;margin-bottom:6px;display:block;color:#4a5568;">URL Google Apps Script</label>
                 <input type="url" id="setup-gas-url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec" 
-                    value="${currentUrl}" style="width:100%;padding:14px 16px;border-radius:14px;border:2px solid #e2e8f0;font-size:13px;box-sizing:border-box;outline:none;font-family:monospace;transition:all 0.3s;"
+                    value="${currentUrl}" style="width:100%;padding:14px 16px;border-radius:14px;border:2px solid #e2e8f0;font-size:13px;box-sizing:border-box;outline:none;font-family:monospace;transition:all 0.3s; color:#1a1a2e; background-color:#ffffff;"
                     onfocus="this.style.borderColor='#764ba2';this.style.boxShadow='0 0 0 3px rgba(118,75,162,0.1)'"
                     onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">
             </div>

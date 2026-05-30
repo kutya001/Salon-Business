@@ -30,42 +30,88 @@ window.renderBookings = function () {
     );
   }
 
+  // Вкладки статусов (Desktop + Mobile)
+  const statusTabs = [
+    { id: '', label: 'ВСЕ ЗАПИСИ' },
+    { id: 'pending', label: 'ОЖИДАЮТ' },
+    { id: 'confirmed', label: 'ПОДТВЕРЖДЕННЫЕ' },
+    { id: 'completed', label: 'ЗАВЕРШЕННЫЕ' },
+    { id: 'cancelled', label: 'ОТМЕНЕННЫЕ' }
+  ];
+
+  const statusTabsHtml = `
+    <div style="display: flex; gap: 24px; border-bottom: 1px solid var(--border); overflow-x: auto; padding-bottom: 8px; margin-bottom: 24px; scrollbar-width: none; -ms-overflow-style: none;">
+      ${statusTabs.map(tab => {
+        const isActive = (filters.status || '') === tab.id;
+        return `
+          <div onclick="setFilters({ status: '${tab.id}' })" style="font-size: 13px; font-weight: 700; color: ${isActive ? 'var(--primary)' : 'var(--text-secondary)'}; cursor: pointer; position: relative; white-space: nowrap; transition: color 0.2s;">
+            ${tab.label}
+            ${isActive ? '<div style="position: absolute; bottom: -9px; left: 0; right: 0; height: 2px; background: var(--primary); border-radius: 2px;"></div>' : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
   // Отрисовка фильтров
   const masterOptions = state.masters.map(m => `
     <option value="${m.id}" ${filters.masterId === m.id ? 'selected' : ''}>${m.name}</option>
   `).join('');
 
   const filterBarHtml = `
-    <div class="card p-5" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 24px;">
-      <div class="form-group" style="flex: 1 1 180px;">
-        <label class="form-label">С даты</label>
-        <input type="date" value="${filters.dateFrom || ''}" onchange="setFilters({ dateFrom: this.value })" class="form-input">
+    <!-- Mobile Filters Panel -->
+    <div class="card p-4 md-hidden animate-scale-in" style="margin-bottom: 16px; display: ${state.ui.showMobileFilters ? 'flex' : 'none'}; flex-direction: column; gap: 12px;">
+      <div style="display: flex; gap: 12px;">
+        <div style="flex: 1;">
+            <label class="form-label" style="font-size: 11px;">С даты</label>
+            <input type="date" value="${filters.dateFrom || ''}" onchange="setFilters({ dateFrom: this.value })" class="form-input" style="padding: 8px 12px;">
+        </div>
+        <div style="flex: 1;">
+            <label class="form-label" style="font-size: 11px;">По дату</label>
+            <input type="date" value="${filters.dateTo || ''}" onchange="setFilters({ dateTo: this.value })" class="form-input" style="padding: 8px 12px;">
+        </div>
       </div>
-      <div class="form-group" style="flex: 1 1 180px;">
-        <label class="form-label">По дату</label>
-        <input type="date" value="${filters.dateTo || ''}" onchange="setFilters({ dateTo: this.value })" class="form-input">
-      </div>
-      <div class="form-group" style="flex: 1 1 180px;">
-        <label class="form-label">Мастер</label>
-        <select onchange="setFilters({ masterId: this.value })" class="form-select">
-          <option value="">Все мастера</option>
+      <div style="display: flex; gap: 12px;">
+        <select onchange="setFilters({ masterId: this.value })" class="form-select" style="flex: 1;">
+          <option value="">👤 Мастера Все</option>
           ${masterOptions}
         </select>
-      </div>
-      <div class="form-group" style="flex: 1 1 180px;">
-        <label class="form-label">Статус</label>
-        <select onchange="setFilters({ status: this.value })" class="form-select">
-          <option value="">Все статусы</option>
-          <option value="pending" ${filters.status === 'pending' ? 'selected' : ''}>Ожидает</option>
-          <option value="confirmed" ${filters.status === 'confirmed' ? 'selected' : ''}>Подтверждена</option>
-          <option value="completed" ${filters.status === 'completed' ? 'selected' : ''}>Завершена</option>
-          <option value="cancelled" ${filters.status === 'cancelled' ? 'selected' : ''}>Отменена</option>
-          <option value="no-show" ${filters.status === 'no-show' ? 'selected' : ''}>Не пришел</option>
+        <select onchange="setFilters({ categoryId: this.value })" class="form-select" style="flex: 1;">
+          <option value="">💅 Услуги Все</option>
         </select>
       </div>
-      <div class="form-group" style="flex: 2 1 240px;">
-        <label class="form-label">Поиск</label>
-        <input type="text" placeholder="Имя клиента, телефон, услуга..." value="${filters.searchQuery || ''}" oninput="debounce(() => setFilters({ searchQuery: this.value }))()" class="form-input">
+    </div>
+    
+    <!-- Mobile Search Panel -->
+    <div class="card p-3 md-hidden animate-scale-in" style="margin-bottom: 16px; display: ${state.ui.showMobileSearch ? 'flex' : 'none'}; align-items: center; position: relative;">
+      <i data-feather="search" style="position: absolute; left: 24px; color: var(--text-secondary); width: 16px; height: 16px;"></i>
+      <input type="text" placeholder="Поиск по клиенту, телефону..." value="${filters.searchQuery || ''}" oninput="debounce(() => setFilters({ searchQuery: this.value }))()" class="form-input" style="width: 100%; padding-left: 36px; border: none; background: var(--bg-secondary); box-shadow: none;">
+    </div>
+
+    <!-- Desktop Filters Panel -->
+    <div class="card p-3 hidden md-flex" style="align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+      <div style="display: flex; align-items: center; flex: 1; min-width: 200px; position: relative;">
+        <i data-feather="search" style="position: absolute; left: 16px; color: var(--text-secondary); width: 16px; height: 16px;"></i>
+        <input type="text" placeholder="Поиск по клиенту, телефону..." value="${filters.searchQuery || ''}" oninput="debounce(() => setFilters({ searchQuery: this.value }))()" class="form-input" style="padding-left: 40px; border: none; background: var(--bg-secondary); width: 100%; box-shadow: none;">
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Дата:</span>
+        <input type="date" value="${filters.dateFrom || ''}" onchange="setFilters({ dateFrom: this.value })" class="form-input" style="width: auto; padding: 6px 12px; font-size: 13px; border: none; background: var(--bg-secondary); box-shadow: none;">
+        <button onclick="setFilters({ dateFrom: new Date().toISOString().split('T')[0], dateTo: '' })" class="btn btn-secondary" style="padding: 6px 12px; border: none; background: var(--bg-secondary); color: var(--primary);">Сегодня</button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <select onchange="setFilters({ masterId: this.value })" class="form-select" style="width: auto; padding: 6px 12px; font-size: 13px; border: none; background: var(--bg-secondary); box-shadow: none;">
+          <option value="">👤 Мастера Все</option>
+          ${masterOptions}
+        </select>
+        <select class="form-select" style="width: auto; padding: 6px 12px; font-size: 13px; border: none; background: var(--bg-secondary); box-shadow: none;">
+          <option value="">💅 Услуги Все</option>
+        </select>
+        <button class="btn btn-secondary" style="padding: 6px 12px; border: none; background: var(--bg-secondary); color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+          <i data-feather="columns" style="width: 14px; height: 14px;"></i> Столбцы
+        </button>
       </div>
     </div>
   `;
@@ -78,38 +124,47 @@ window.renderBookings = function () {
     viewHtml = renderBookingsTimeline(filteredBookings);
   }
 
+  // FAB button for mobile
+  const fabHtml = `
+    <button onclick="showCreateBookingModal()" class="md-hidden btn btn-primary animate-scale-in" style="position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 28px; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(99,102,241,0.4); z-index: 50;">
+      <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+    </button>
+  `;
+
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column;">
       
-      <!-- Заголовок страницы -->
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Записи клиентов</h1>
-          <p style="color: var(--text-secondary); font-size: 14px;">Календарь, сетка и список записей на процедуры</p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          
-          <!-- Переключатель видов -->
-          <div style="display: flex; background: var(--theme-50); border: 1px solid var(--border); padding: 4px; border-radius: 12px; gap: 4px;">
-            <button onclick="toggleBookingsView('table')" class="btn" style="padding: 8px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'table' ? 'var(--bg-secondary)' : 'none'}; box-shadow: ${viewMode === 'table' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'table' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
-              <i data-feather="list" style="width: 14px; height: 14px;"></i> Список
-            </button>
-            <button onclick="toggleBookingsView('timeline')" class="btn" style="padding: 8px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'timeline' ? 'var(--bg-secondary)' : 'none'}; box-shadow: ${viewMode === 'timeline' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'timeline' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
-              <i data-feather="calendar" style="width: 14px; height: 14px;"></i> Сетка (Таймлайн)
-            </button>
-          </div>
-
-          <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-            <i data-feather="plus" style="width: 16px; height: 16px;"></i> Новая запись
+      <!-- Заголовок страницы и переключатель видов -->
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+        <div class="hidden md-flex" style="align-items: center; gap: 16px;">
+          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Записи салона</h1>
+          <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+            <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить запись
           </button>
         </div>
+        
+        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+          <!-- Переключатель видов -->
+          <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; gap: 4px;">
+            <button onclick="toggleBookingsView('table')" class="btn" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'table' ? 'var(--bg)' : 'none'}; box-shadow: ${viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
+              <i data-feather="list" style="width: 14px; height: 14px;"></i> <span class="hidden md-block">Таблица</span>
+            </button>
+            <button onclick="toggleBookingsView('timeline')" class="btn" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'timeline' ? 'var(--bg)' : 'none'}; box-shadow: ${viewMode === 'timeline' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'timeline' ? 'var(--text)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
+              <i data-feather="calendar" style="width: 14px; height: 14px;"></i> <span class="hidden md-block">Timeline</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      <!-- Вкладки статусов -->
+      ${statusTabsHtml}
 
       <!-- Панель фильтров -->
       ${filterBarHtml}
 
       <!-- Область контента -->
       ${viewHtml}
+      ${fabHtml}
     </div>
   `;
 };
@@ -119,7 +174,7 @@ window.toggleBookingsView = function (mode) {
   setUI({ viewMode: mode });
 };
 
-// Вспомогательное: Рендеринг таблицы записей
+// Вспомогательное: Рендеринг таблицы записей (и мобильных карточек)
 function renderBookingsTable(bookings) {
   if (bookings.length === 0) {
     return `
@@ -135,153 +190,102 @@ function renderBookingsTable(bookings) {
     const statusColor = getStatusColor(b.status);
     const statusLabel = getStatusLabel(b.status);
     
+    // Payment status indicator
+    const isPaid = b.status === 'completed';
+    const paymentIndicator = isPaid 
+      ? `<div style="font-size: 10px; color: #10b981; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #10b981;"></div> Оплачено</div>`
+      : `<div style="font-size: 10px; color: #ef4444; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #ef4444;"></div> Не оплачено</div>`;
+
+    // Quick actions
     let actionBtnHtml = '';
     if (b.status === 'pending') {
       actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; display: flex; align-items: center; gap: 4px;">
-          <i data-feather="thumbs-up" style="width: 14px; height: 14px;"></i> Подтвердить
-        </button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
       `;
     } else if (b.status === 'confirmed') {
       actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #10b981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); display: flex; align-items: center; gap: 4px;">
-          <i data-feather="check-circle" style="width: 14px; height: 14px;"></i> Завершить
-        </button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
       `;
     }
 
-    return `
-      <tr onclick="showBookingDetails('${b.id}')" style="cursor: pointer;">
-        <td data-label="Дата и время" style="font-weight: 600;">
-          <div style="font-size: 14px;">${formatRelativeDate(b.date)}</div>
-          <div style="font-size: 12px; color: var(--primary); font-weight: 700;">${formatTime(b.time)}</div>
-        </td>
-        <td data-label="Клиент">
-          <div style="font-weight: 700;">${b.clientName}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">${formatClientPhone(b.clientPhone)}</div>
-        </td>
-        <td data-label="Процедура">
-          <div style="font-weight: 600;">${b.serviceName}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">${b.duration} мин</div>
-        </td>
-        <td data-label="Мастер" style="font-weight: 600; color: var(--text-secondary);">${b.masterName}</td>
-        <td data-label="Статус">
-          <span class="badge ${statusColor}">${statusLabel}</span>
-        </td>
-        <td data-label="Стоимость" style="font-weight: 800; color: var(--text);">${formatPrice(b.price)}</td>
-        <td data-label="Действия" style="display: flex; gap: 8px; justify-content: flex-end;">
-          ${actionBtnHtml}
-        </td>
-      </tr>
+    // Master Dropdown (styled as text on mobile, select on desktop)
+    const masterSelect = `
+      <select onchange="event.stopPropagation();" onclick="event.stopPropagation();" class="form-select hidden md-block" style="padding: 4px 24px 4px 8px; font-size: 12px; border: none; background: var(--bg-secondary); border-radius: 6px;">
+        ${state.masters.map(m => `<option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+      </select>
+      <span class="md-hidden" style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>
     `;
-  }).join('');
 
-  return `
-    <div class="card p-2" style="overflow: hidden;">
-      <div class="data-table-container">
-        <table class="data-table mobile-table-card">
-          <thead>
-            <tr>
-              <th>Дата и время</th>
-              <th>Клиент</th>
-              <th>Процедура</th>
-              <th>Мастер</th>
-              <th>Статус</th>
-              <th>Стоимость</th>
-              <th style="text-align: right;">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-// Вспомогательное: Рендеринг таймлайна по мастерам
-function renderBookingsTimeline(bookings) {
-  if (state.masters.length === 0) {
-    return `<div class="card p-8 text-center">Создайте сначала мастеров в разделе "Мастера"</div>`;
-  }
-
-  const hours = generateTimeSlots('09:00', '20:00', 60);
-  
-  // Заголовки мастеров
-  const masterHeaders = state.masters.map(m => `
-    <th style="text-align: center; font-weight: 700; width: 220px; min-width: 220px;">
-      ${m.name}
-      <div style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">${m.specialization}</div>
-    </th>
-  `).join('');
-
-  const slotDate = state.ui.timelineDate || new Date().toISOString().split('T')[0];
-  
-  // Строки по часам
-  const rows = hours.map(hour => {
-    const cols = state.masters.map(m => {
-      // Ищем записи этого мастера на этот час на выбранную дату (slotDate)
-      // ВНИМАНИЕ: state.bookings здесь не отфильтровано глобальным фильтром по датам, чтобы таймлайн работал независимо
-      const matchBookings = state.bookings.filter(b => 
-        b.masterId === m.id && 
-        b.date === slotDate &&
-        b.time.split(':')[0] === hour.split(':')[0]
-      );
-
-      const bookingBlocks = matchBookings.map(b => {
-        const statusColor = getStatusColor(b.status);
-        const statusLabel = getStatusLabel(b.status);
-        return `
-          <div onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: var(--bg); border: 2px solid var(--border); border-left-color: var(--primary); padding: 8px 12px; border-radius: 12px; margin-bottom: 6px; cursor: pointer; text-align: left; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.02);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-              <span style="font-weight: 800; font-size: 12px; color: var(--primary);">${formatTime(b.time)}</span>
-              <span class="badge ${statusColor}" style="font-size: 9px; padding: 2px 6px;">${statusLabel}</span>
-            </div>
-            <div style="font-weight: 700; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${b.clientName}</div>
-            <div style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${b.serviceName} (${b.duration} мин)</div>
+    // Mobile Card View
+    const mobileCard = `
+      <div class="card p-4 md-hidden" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-weight: 800; font-size: 14px;">${formatRelativeDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
+            <div style="font-weight: 700; font-size: 15px; color: var(--text); margin-top: 4px; display: flex; align-items: center;">${b.clientName} <a href="tel:${b.clientPhone}" onclick="event.stopPropagation()" style="color: var(--primary); margin-left: 8px; padding: 4px; background: var(--bg-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-feather="phone" style="width: 12px; height: 12px;"></i></a></div>
           </div>
-        `;
-      }).join('');
-
-      return `
-        <td style="padding: 10px; border-right: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary);">
-          ${bookingBlocks}
-        </td>
-      `;
-    }).join('');
-
-    return `
-      <tr>
-        <td style="font-weight: 800; color: var(--primary); text-align: center; width: 70px; background: var(--theme-50); border-right: 1px solid var(--border);">${hour}</td>
-        ${cols}
-      </tr>
-    `;
-  }).join('');
-
-  return `
-    <div class="card p-4">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 0 8px; flex-wrap: wrap; gap: 12px;">
-        <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">Расписание на <span style="color: var(--primary);">${formatDate(slotDate)}</span></h3>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button onclick="
-            const d = new Date('${slotDate}'); d.setDate(d.getDate() - 1); setUI({ timelineDate: d.toISOString().split('T')[0] });
-          " class="btn btn-secondary" style="padding: 6px; width: auto;"><i data-feather="chevron-left" style="width: 16px; height: 16px;"></i></button>
-          
-          <input type="date" class="form-input" value="${slotDate}" onchange="setUI({ timelineDate: this.value })" style="width: auto; padding: 6px 12px; font-size: 13px;">
-          
-          <button onclick="
-            const d = new Date('${slotDate}'); d.setDate(d.getDate() + 1); setUI({ timelineDate: d.toISOString().split('T')[0] });
-          " class="btn btn-secondary" style="padding: 6px; width: auto;"><i data-feather="chevron-right" style="width: 16px; height: 16px;"></i></button>
+          <div style="text-align: right;">
+            <span class="badge ${statusColor}" style="font-size: 10px;">${statusLabel}</span>
+            ${paymentIndicator}
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--border);">
+          <div>
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">${b.serviceName}</div>
+            <div style="margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              <i data-feather="user" style="width: 12px; height: 12px; color: var(--text-secondary);"></i>
+              ${masterSelect}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</div>
+            <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px;">${actionBtnHtml}</div>
+          </div>
         </div>
       </div>
-      <div style="overflow-x: auto;">
-        <div style="min-width: 700px;">
-          <table class="data-table" style="border: 1px solid var(--border); border-collapse: separate; border-spacing: 0;">
+    `;
+
+    // Desktop Table Row
+    const desktopRow = `
+      <tr class="hidden md-table-row" onclick="showBookingDetails('${b.id}')" style="cursor: pointer; transition: background 0.2s;">
+        <td style="font-weight: 700;">${b.clientName}</td>
+        <td style="color: var(--text-secondary); font-size: 13px;">${formatClientPhone(b.clientPhone)}</td>
+        <td style="font-weight: 600;">${b.serviceName}</td>
+        <td style="color: var(--text-secondary); font-size: 13px;">${formatRelativeDate(b.date)}</td>
+        <td style="font-weight: 800; color: var(--primary);">${formatTime(b.time)}</td>
+        <td>${masterSelect}</td>
+        <td style="font-weight: 800; color: var(--text);">${formatPrice(b.price)}</td>
+        <td>
+          <span class="badge ${statusColor}">${statusLabel}</span>
+          ${paymentIndicator}
+        </td>
+        <td>
+          <div style="display: flex; gap: 4px; justify-content: flex-end;">${actionBtnHtml}</div>
+        </td>
+      </tr>
+    `;
+
+    return mobileCard + desktopRow;
+  }).join('');
+
+  return `
+    <div>
+      <div class="card p-0 hidden md-block" style="overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+        <div class="data-table-container">
+          <table class="data-table">
             <thead>
               <tr>
-                <th style="width: 70px; background: var(--theme-50); border-right: 1px solid var(--border);">Время</th>
-                ${masterHeaders}
+                <th>Клиент ↕</th>
+                <th>Номер телефона ↕</th>
+                <th>Услуга ↕</th>
+                <th>Дата ↓</th>
+                <th>Время ↕</th>
+                <th>Мастер ↕</th>
+                <th>Сумма ↕</th>
+                <th>Статус ↕</th>
+                <th style="text-align: right;">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -289,6 +293,167 @@ function renderBookingsTimeline(bookings) {
             </tbody>
           </table>
         </div>
+      </div>
+      <div class="md-hidden">
+        ${rows}
+      </div>
+    </div>
+  `;
+}
+
+// Вспомогательное: Рендеринг таймлайна по мастерам (День / Неделя / Месяц)
+function renderBookingsTimeline(bookings) {
+  if (state.masters.length === 0) {
+    return `<div class="card p-8 text-center">Создайте сначала мастеров в разделе "Мастера"</div>`;
+  }
+
+  const mode = state.ui.timelineMode || 'day';
+  const slotDateStr = state.ui.timelineDate || new Date().toISOString().split('T')[0];
+  const slotDate = new Date(slotDateStr);
+
+  let columns = [];
+  let colTitle = '';
+  
+  if (mode === 'day') {
+    // День: часы
+    const hours = generateTimeSlots('09:00', '20:00', 60);
+    columns = hours.map(h => ({ id: h, label: h, type: 'hour' }));
+    colTitle = formatRelativeDate(slotDateStr);
+  } else if (mode === 'week') {
+    // Неделя: дни
+    const startOfWeek = new Date(slotDate);
+    startOfWeek.setDate(slotDate.getDate() - (slotDate.getDay() || 7) + 1); // Понедельник
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      const dStr = d.toISOString().split('T')[0];
+      const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      columns.push({ id: dStr, label: `${dayNames[d.getDay()]} ${('0'+d.getDate()).slice(-2)}.${('0'+(d.getMonth()+1)).slice(-2)}`, type: 'day' });
+    }
+    colTitle = 'Неделя';
+  } else if (mode === 'month') {
+    // Месяц: дни
+    const y = slotDate.getFullYear();
+    const m = slotDate.getMonth();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(y, m, i);
+      const dStr = d.toISOString().split('T')[0];
+      const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      columns.push({ id: dStr, label: `${i} ${dayNames[d.getDay()]}`, type: 'day' });
+    }
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    colTitle = `${monthNames[m]} ${y}`;
+  }
+
+  // Заголовки колонок
+  const headersHtml = columns.map(col => `
+    <th style="text-align: center; font-weight: 700; width: ${mode === 'day' ? '120px' : '150px'}; min-width: ${mode === 'day' ? '120px' : '150px'};">
+      <div style="color: var(--text-secondary); font-size: 13px;">${col.label}</div>
+    </th>
+  `).join('');
+
+  // Строки по мастерам
+  const rowsHtml = state.masters.map(m => {
+    const colsHtml = columns.map(col => {
+      // Поиск записей
+      let matchBookings = [];
+      if (mode === 'day') {
+        matchBookings = state.bookings.filter(b => b.masterId === m.id && b.date === slotDateStr && b.time.startsWith(col.id.split(':')[0]));
+      } else {
+        matchBookings = state.bookings.filter(b => b.masterId === m.id && b.date === col.id);
+      }
+
+      const bookingBlocks = matchBookings.map(b => {
+        let actions = '';
+        if (b.status === 'pending' || b.status === 'confirmed') {
+          const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
+          const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
+          actions = `
+            <div style="display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 4px;">
+              <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', '${nextAction}')" style="background: #10b981; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i data-feather="${nextIcon}" style="width: 12px; height: 12px;"></i></button>
+              <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.2);"><i data-feather="x" style="width: 12px; height: 12px;"></i></button>
+            </div>
+          `;
+        }
+
+        const bgColor = b.status === 'completed' ? '#f0fdf4' : b.status === 'confirmed' ? 'var(--theme-50)' : b.status === 'pending' ? '#fffbeb' : '#f8fafc';
+        const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
+
+        return `
+          <div onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 6px 8px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; text-align: left; font-size: 11px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-weight: 800; color: ${bdColor}; font-size: 10px;">${formatTime(b.time)}</span>
+            </div>
+            <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">${b.clientName}</div>
+            <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px;">${b.serviceName}</div>
+            ${actions}
+          </div>
+        `;
+      }).join('');
+
+      return `<td style="padding: 8px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 80px;">${bookingBlocks}</td>`;
+    }).join('');
+
+    return `
+      <tr>
+        <td style="font-weight: 700; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 10;">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px;">
+            <img src="${m.avatarUrl || 'https://ui-avatars.com/api/?name=' + m.name + '&background=random'}" style="width: 36px; height: 36px; border-radius: 18px; object-fit: cover;">
+            <div>
+              <div style="font-size: 13px; color: var(--text); white-space: nowrap; font-weight: 700;">${m.name}</div>
+              <div style="font-size: 10px; color: var(--text-secondary);">${m.specialization}</div>
+            </div>
+          </div>
+        </td>
+        ${colsHtml}
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="card p-0" style="box-shadow: 0 4px 12px rgba(0,0,0,0.02); overflow: hidden;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 16px;">
+        
+        <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 4px; border-radius: 10px;">
+          <button onclick="setUI({ timelineMode: 'day' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'day' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'day' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'day' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'day' ? '700' : '500'}; transition: all 0.2s;">День</button>
+          <button onclick="setUI({ timelineMode: 'week' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'week' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'week' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'week' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'week' ? '700' : '500'}; transition: all 0.2s;">Неделя</button>
+          <button onclick="setUI({ timelineMode: 'month' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'month' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'month' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'month' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'month' ? '700' : '500'}; transition: all 0.2s;">Месяц</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px; background: var(--bg-secondary); padding: 4px 12px; border-radius: 12px;">
+          <button onclick="
+            const d = new Date('${slotDateStr}');
+            if (state.ui.timelineMode === 'week') d.setDate(d.getDate() - 7);
+            else if (state.ui.timelineMode === 'month') d.setMonth(d.getMonth() - 1);
+            else d.setDate(d.getDate() - 1);
+            setUI({ timelineDate: d.toISOString().split('T')[0] });
+          " class="btn" style="padding: 4px; background: none; border: none; color: var(--text-secondary);"><i data-feather="chevron-left" style="width: 18px; height: 18px;"></i></button>
+          
+          <h3 style="font-weight: 800; font-size: 14px; color: var(--text); min-width: 100px; text-align: center; margin: 0;">${colTitle}</h3>
+          
+          <button onclick="
+            const d = new Date('${slotDateStr}');
+            if (state.ui.timelineMode === 'week') d.setDate(d.getDate() + 7);
+            else if (state.ui.timelineMode === 'month') d.setMonth(d.getMonth() + 1);
+            else d.setDate(d.getDate() + 1);
+            setUI({ timelineDate: d.toISOString().split('T')[0] });
+          " class="btn" style="padding: 4px; background: none; border: none; color: var(--text-secondary);"><i data-feather="chevron-right" style="width: 18px; height: 18px;"></i></button>
+        </div>
+
+      </div>
+      <div style="overflow-x: auto; max-height: calc(100vh - 200px);">
+        <table class="data-table" style="border-collapse: separate; border-spacing: 0;">
+          <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
+            <tr>
+              <th style="width: 200px; min-width: 200px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 30; padding: 12px;">Мастер</th>
+              ${headersHtml}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
       </div>
     </div>
   `;

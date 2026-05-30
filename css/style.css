@@ -643,3 +643,13 @@ body {
     text-align: left;
   }
 }
+
+
+/* Responsive Utilities */
+.hidden { display: none !important; }
+@media (min-width: 768px) {
+  .md-block { display: block !important; }
+  .md-flex { display: flex !important; }
+  .md-table-row { display: table-row !important; }
+  .md-hidden { display: none !important; }
+}

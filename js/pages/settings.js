@@ -195,8 +195,14 @@ window.handleSaveProfile = async function () {
   const businessName = document.getElementById('set-name').value.trim();
   const description = document.getElementById('set-desc').value.trim();
   const address = document.getElementById('set-address').value.trim();
-  const phone = document.getElementById('set-phone').value.trim();
+  let phone = document.getElementById('set-phone').value.trim();
   const email = document.getElementById('set-email').value.trim();
+
+  // Очистка номера перед сохранением
+  phone = phone.replace(/\D/g, '');
+  if (phone.startsWith('996')) {
+    phone = phone.slice(3);
+  }
 
   setUI({ loading: true });
   try {

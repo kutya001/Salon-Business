@@ -174,7 +174,7 @@ window.renderClientModal = function () {
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">${isEdit ? 'Редактировать клиента' : 'Добавить клиента'}</h3>
-        <button onclick="setUI({ modal: ${isEdit ? "'viewClient'" : "null"}, modalData: ${isEdit ? "state.ui.modalData" : "null"} })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
+        <button onclick="setUI({ modal: ${isEdit ? "'viewClient'" : "null"} })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
       </div>
 
       <form id="client-form" onsubmit="event.preventDefault(); handleClientSubmit('${isEdit ? c.id : ''}');" style="display: flex; flex-direction: column; gap: 16px;">

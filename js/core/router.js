@@ -145,7 +145,7 @@ window.renderLayout = function () {
     else modalContent = `<div class="p-6">Неизвестное модальное окно: ${state.ui.modal}</div>`;
 
     modalHtml = `
-      <div class="modal-overlay" onmousedown="if(event.target===this) this.dataset.overlayClick = 'true';" onmouseup="if(event.target===this && this.dataset.overlayClick === 'true') { setUI({modal: null, modalData: null}); } this.dataset.overlayClick = 'false';">
+      <div class="modal-overlay" onmousedown="if(event.target===this) { setUI({modal: null, modalData: null}); }">
         <div class="modal animate-scale-in">
           ${modalContent}
         </div>
@@ -197,9 +197,14 @@ window.renderLayout = function () {
           <i data-feather="menu"></i>
         </button>
         <div style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 6px;">
-          <i data-feather="hexagon" style="width: 20px; height: 20px; color: var(--primary);"></i> ${businessName} ${syncingIcon}
+          <i data-feather="hexagon" style="width: 20px; height: 20px; color: var(--primary);"></i> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${businessName}</span> ${syncingIcon}
         </div>
-        <div style="width: 32px;"></div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          ${page === 'bookings' ? `
+            <button onclick="setUI({ showMobileSearch: !state.ui.showMobileSearch, showMobileFilters: false })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px;"><i data-feather="search" style="width: 20px; height: 20px;"></i></button>
+            <button onclick="setUI({ showMobileFilters: !state.ui.showMobileFilters, showMobileSearch: false })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px;"><i data-feather="sliders" style="width: 20px; height: 20px;"></i></button>
+          ` : '<div style="width: 32px;"></div>'}
+        </div>
       </header>
 
       <!-- Выпадающий оверлей-сайдбар для мобильных -->

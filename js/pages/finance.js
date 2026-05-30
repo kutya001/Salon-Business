@@ -485,35 +485,6 @@ window.handleTransactionSubmit = async function () {
     });
 };
 
-  const activeShift = state.shifts.find(s => s.status === 'open');
-  const shiftId = activeShift ? activeShift.id : '';
-
-  const optimisticTx = {
-    id: 'tx_tmp_' + Date.now(),
-    type,
-    amount,
-    description,
-    paymentMethod,
-    categoryId,
-    shiftId,
-    createdAt: new Date().toISOString()
-  };
-
-  // Мгновенное обновление UI (Optimistic Update)
-  state.transactions.unshift(optimisticTx);
-  setUI({ modal: null });
-  showToast('Транзакция успешно зафиксирована', 'success');
-
-  // Запрос в фоне
-  api.createTransaction({ type, amount, description, paymentMethod, categoryId }, { background: true })
-    .catch(e => {
-      showToast('Не удалось сохранить транзакцию', 'error');
-      // Откат при ошибке
-      state.transactions = state.transactions.filter(t => t.id !== optimisticTx.id);
-      if (window.render) window.render();
-    });
-};
-
 // Смены (Modal functions)
 window.showOpenShiftModal = function () { setUI({ modal: 'openShift', modalData: { openingCash: '0' } }); };
 window.renderOpenShiftModal = function () {

@@ -794,7 +794,7 @@ window.renderBookingMessageModal = function () {
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="message-circle" style="width: 20px; height: 20px; color: var(--primary);"></i> Отправить сообщение</h3>
-        <button onclick="setUI({ modal: 'viewBooking', modalData: md.booking })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="arrow-left"></i></button>
+        <button onclick="showBookingDetails('${md.booking.id}')" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="arrow-left"></i></button>
       </div>
       
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">

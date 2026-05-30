@@ -971,7 +971,21 @@ window.renderEditBookingFullModal = function() {
           <label class="form-label">Мастер</label>
           <select id="edit-b-master" class="form-select" onchange="state.ui.modalData.draft.masterId = this.value">
             <option value="">👤 Любой мастер</option>
-            ${state.masters.map(m => `<option value="${m.id}" ${draft.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+            ${(() => {
+              const selIds = draft.serviceId ? draft.serviceId.split(',') : [];
+              let filteredMasters = state.masters;
+              if (selIds.length > 0) {
+                filteredMasters = filteredMasters.filter(m => {
+                  let mServices = [];
+                  try { mServices = typeof m.services === 'string' ? JSON.parse(m.services) : (m.services || []); } catch(e) {}
+                  return selIds.every(sid => mServices.includes(sid));
+                });
+              }
+              if (filteredMasters.length === 0) {
+                return '<option value="" disabled>Нет мастеров для этих услуг</option>';
+              }
+              return filteredMasters.map(m => `<option value="${m.id}" ${draft.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('');
+            })()}
           </select>
         </div>
 
@@ -1243,18 +1257,33 @@ window.renderBookingModal = function () {
       </div>
     `;
   } else if (step === 4) {
-    const masters = state.masters || [];
+    const selectedServiceIds = draft.serviceId ? draft.serviceId.split(',') : [];
+    
+    let availableMasters = state.masters || [];
+    if (selectedServiceIds.length > 0) {
+      availableMasters = availableMasters.filter(m => {
+        let mServices = [];
+        try { mServices = typeof m.services === 'string' ? JSON.parse(m.services) : (m.services || []); } catch(e) {}
+        return selectedServiceIds.every(sid => mServices.includes(sid));
+      });
+    }
+
     let mastersHtml = `
       <button type="button" onclick="handleWizardMasterSelect('')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; border-color: var(--primary);">
         <span style="font-weight: 800; color: var(--primary);">👤 Любой мастер</span>
       </button>
     `;
-    mastersHtml += masters.map(m => `
-      <button type="button" onclick="handleWizardMasterSelect('${m.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-        <span style="font-weight: 700;">${m.name}</span>
-        <span style="font-size: 11px; color: var(--text-secondary);">${m.specialization}</span>
-      </button>
-    `).join('');
+    
+    if (availableMasters.length === 0) {
+      mastersHtml += `<div style="text-align: center; color: var(--text-secondary); padding: 16px; font-size: 13px;">Нет мастеров, выполняющих все выбранные услуги</div>`;
+    } else {
+      mastersHtml += availableMasters.map(m => `
+        <button type="button" onclick="handleWizardMasterSelect('${m.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span style="font-weight: 700;">${m.name}</span>
+          <span style="font-size: 11px; color: var(--text-secondary);">${m.specialization}</span>
+        </button>
+      `).join('');
+    }
 
     stepContent = `
       <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">

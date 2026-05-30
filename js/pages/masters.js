@@ -100,13 +100,25 @@ window.renderMasters = function () {
 
 // Открытие модалки создания мастера
 window.showCreateMasterModal = function () {
-  setUI({ modal: 'createMaster', modalData: null });
+  setUI({ modal: 'createMaster', modalData: { services: [] } });
 };
 
 window.showEditMasterModal = function (id) {
   const master = state.masters.find(m => m.id === id);
   if (!master) return;
-  setUI({ modal: 'createMaster', modalData: master });
+  const mCopy = { ...master };
+  try { mCopy.services = typeof mCopy.services === 'string' ? JSON.parse(mCopy.services) : (mCopy.services || []); } catch(e) { mCopy.services = []; }
+  setUI({ modal: 'createMaster', modalData: mCopy });
+};
+
+window.toggleMasterService = function(id) {
+  const current = state.ui.modalData.services || [];
+  if (current.includes(id)) {
+    state.ui.modalData.services = current.filter(x => x !== id);
+  } else {
+    state.ui.modalData.services = [...current, id];
+  }
+  setUI({ modalData: state.ui.modalData });
 };
 
 window.showMasterDetailsModal = function(id) {
@@ -116,8 +128,33 @@ window.showMasterDetailsModal = function(id) {
 };
 
 window.renderMasterModal = function () {
-  const m = state.ui.modalData; // если передан мастер, значит режим редактирования
-  const isEdit = !!m;
+  const m = state.ui.modalData || { services: [] }; // если передан мастер, значит режим редактирования
+  const isEdit = !!m.id;
+  const selectedServices = m.services || [];
+
+  // Группировка услуг по категориям (видам)
+  const svcs = state.services || [];
+  const grouped = {};
+  svcs.forEach(s => {
+    const t = s.categoryName || 'Другое';
+    if (!grouped[t]) grouped[t] = [];
+    grouped[t].push(s);
+  });
+
+  let svcsHtml = '';
+  for (const typeName in grouped) {
+    svcsHtml += `<h4 style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 8px;">${typeName}</h4>`;
+    svcsHtml += grouped[typeName].map(s => {
+      const isSelected = selectedServices.includes(s.id);
+      return `
+        <div onclick="toggleMasterService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
+          <input type="checkbox" onchange="event.stopPropagation(); toggleMasterService('${s.id}');" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer;">
+          <div style="flex: 1; font-weight: 600; font-size: 13px;">${s.name}</div>
+        </div>
+      `;
+    }).join('');
+  }
+  if (!svcsHtml) svcsHtml = `<div style="text-align:center; color: var(--text-secondary); padding: 10px;">Нет доступных услуг для выбора</div>`;
 
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
@@ -141,6 +178,13 @@ window.renderMasterModal = function () {
             <option value="">Выберите специализацию...</option>
             ${state.categories.map(c => `<option value="${c.name}" ${(isEdit && m.specialization === c.name) ? 'selected' : ''}>${c.name}</option>`).join('')}
           </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Оказываемые услуги</label>
+          <div class="scrollbar-hide" style="max-height: 250px; overflow-y: auto; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-secondary);">
+            ${svcsHtml}
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Процентная ставка от стоимости услуг (%)</label>
@@ -174,13 +218,14 @@ window.handleMasterSubmit = async function (id) {
   const percentage = parseFloat(document.getElementById('m-percentage').value) || 40;
   const workHoursStart = document.getElementById('m-hours-start').value;
   const workHoursEnd = document.getElementById('m-hours-end').value;
+  const services = JSON.stringify(state.ui.modalData.services || []);
 
   setUI({ loading: true });
   try {
     let result;
     if (id) {
       // Редактирование
-      result = await api.updateMaster(id, { name, phone, specialization, percentage, workHoursStart, workHoursEnd });
+      result = await api.updateMaster(id, { name, phone, specialization, percentage, workHoursStart, workHoursEnd, services });
       const idx = state.masters.findIndex(m => m.id === id);
       if (idx !== -1) {
         state.masters[idx] = result;
@@ -188,7 +233,7 @@ window.handleMasterSubmit = async function (id) {
       showToast('Мастер успешно обновлен', 'success');
     } else {
       // Создание нового
-      result = await api.createMaster({ name, phone, specialization, percentage, workHoursStart, workHoursEnd });
+      result = await api.createMaster({ name, phone, specialization, percentage, workHoursStart, workHoursEnd, services });
       state.masters.push(result);
       showToast('Мастер успешно добавлен!', 'success');
     }
@@ -264,6 +309,20 @@ window.renderMasterDetailsModal = function() {
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Выполнено записей</div>
           <div style="font-size: 14px; font-weight: 600; color: var(--text);">${count} за месяц</div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <h4 style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px;">Оказываемые услуги</h4>
+        <div style="padding: 12px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
+          ${(() => {
+            let mServicesArray = [];
+            try { mServicesArray = typeof m.services === 'string' ? JSON.parse(m.services) : (m.services || []); } catch(e) {}
+            const providedServices = (state.services || []).filter(s => mServicesArray.includes(s.id));
+            return providedServices.length > 0 
+              ? providedServices.map(s => `<span style="display: inline-block; padding: 4px 8px; background: rgba(99,102,241,0.1); color: var(--primary); font-size: 11px; font-weight: 700; border-radius: 6px; margin: 0 4px 4px 0;">${s.name}</span>`).join('')
+              : '<span style="color: var(--text-secondary); font-size: 12px;">Услуги не назначены</span>';
+          })()}
         </div>
       </div>
 

@@ -191,7 +191,7 @@ window.renderServices = function () {
               <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="list" style="width: 14px; height: 14px;"></i> Таблица</button>
             </div>
           ` : ''}
-          <button onclick="${activeTab === 'services' ? 'showCreateServiceModal()' : 'document.getElementById(\\'cat-name-input\\')?.focus()'}" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;"><i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}</button>
+          <button onclick="${activeTab === 'services' ? 'showCreateServiceModal()' : `document.getElementById('cat-name-input')?.focus()`}" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;"><i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}</button>
         </div>
       </div>
 

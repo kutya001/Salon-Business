@@ -352,13 +352,8 @@ function renderBookingsTable(bookings) {
       : `<div style="font-size: 10px; color: #ef4444; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #ef4444;"></div> Не оплачено</div>`;
 
     // Quick actions
-    let actionBtnHtml = '';
-    if (b.status === 'pending') {
-      actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
     const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
     
-    // Quick actions
     let actionBtnHtml = '';
     if (b.status === 'pending') {
       actionBtnHtml = `

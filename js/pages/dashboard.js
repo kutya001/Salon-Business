@@ -43,13 +43,68 @@ window.renderDashboard = function () {
 
   const maxRevenue = Math.max(...chartRevenues, 1000);
 
-  // 3. Записи на сегодня
+  // 3. Записи на сегодня - расчет статистики по статусам
+  const statusStats = {
+    pending: { count: 0, sum: 0 },
+    confirmed: { count: 0, sum: 0 },
+    completed: { count: 0, sum: 0 },
+    cancelled: { count: 0, sum: 0 }
+  };
+  
+  todayBookings.forEach(b => {
+    const status = b.status || 'pending';
+    if (statusStats[status]) {
+      statusStats[status].count += 1;
+      statusStats[status].sum += parseFloat(b.price) || 0;
+    }
+  });
+
+  const statsBarHtml = todayBookings.length === 0 ? '' : `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; border-bottom: 1px dashed var(--border); padding-bottom: 16px;">
+      <!-- Pending (Записан) -->
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></span> Записан
+        </div>
+        <div style="font-size: 16px; font-weight: 800; color: var(--text);">${statusStats.pending.count} <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">зап.</span></div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">${formatPrice(statusStats.pending.sum)}</div>
+      </div>
+      
+      <!-- Confirmed (Подтвержден) -->
+      <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></span> Подтвержден
+        </div>
+        <div style="font-size: 16px; font-weight: 800; color: var(--text);">${statusStats.confirmed.count} <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">зап.</span></div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">${formatPrice(statusStats.confirmed.sum)}</div>
+      </div>
+
+      <!-- Completed (Выполнен) -->
+      <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span> Выполнен
+        </div>
+        <div style="font-size: 16px; font-weight: 800; color: var(--text);">${statusStats.completed.count} <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">зап.</span></div>
+        <div style="font-size: 12px; font-weight: 700; color: #10b981;">${formatPrice(statusStats.completed.sum)}</div>
+      </div>
+
+      <!-- Cancelled (Отмена) -->
+      <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444;"></span> Отмена
+        </div>
+        <div style="font-size: 16px; font-weight: 800; color: var(--text);">${statusStats.cancelled.count} <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">зап.</span></div>
+        <div style="font-size: 12px; font-weight: 700; color: #ef4444;">${formatPrice(statusStats.cancelled.sum)}</div>
+      </div>
+    </div>
+  `;
+
   const todayBookingsListHtml = todayBookings.length === 0 
     ? `
-      <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
+      <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1; background: transparent; border: none;">
         <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="activity" style="width: 56px; height: 56px;"></i></span>
-        <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Нет данных</h3>
-        <p style="font-size: 14px;">Пока нет записей для отображения статистики</p>
+        <h3 style="font-weight: 700; font-size: 16px; margin-bottom: 8px;">Нет записей на сегодня</h3>
+        <p style="font-size: 13px;">Создайте новую запись или перейдите в раздел всех записей</p>
       </div>
     `
     : todayBookings.map(b => {
@@ -61,36 +116,44 @@ window.renderDashboard = function () {
         let actionBtnHtml = '';
         if (b.status === 'pending') {
           actionBtnHtml = `
-            <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto;">
+            <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; font-weight: 700; white-space: nowrap;">
               Подтвердить
             </button>
           `;
         } else if (b.status === 'confirmed') {
           actionBtnHtml = `
-            <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: #10b981;">
+            <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: #10b981; border-color: #10b981; font-weight: 700; white-space: nowrap;">
               Завершить
             </button>
           `;
         }
 
         return `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 14px;">
-              <div style="font-weight: 700; font-size: 15px; color: var(--primary); min-width: 45px;">${time}</div>
-              <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--theme-100); color: var(--primary-dark); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;">
+            <!-- Левая часть: Время, Аватар, Клиент и Услуга -->
+            <div style="display: flex; align-items: center; gap: 14px; flex-grow: 1; min-width: 200px;">
+              <div style="font-weight: 800; font-size: 14px; color: var(--primary); min-width: 48px; background: rgba(99, 102, 241, 0.1); padding: 4px 8px; border-radius: 8px; text-align: center;">
+                ${time}
+              </div>
+              <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);">
                 ${initials}
               </div>
               <div>
                 <h4 style="font-weight: 700; font-size: 14px; color: var(--text);">${b.clientName}</h4>
-                <p style="font-size: 12px; color: var(--text-secondary);">${b.serviceName} • ${b.masterName}</p>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                  ${b.serviceName} • <span style="color: var(--primary-light); font-weight: 600;">${b.masterName}</span>
+                </p>
               </div>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(59,130,246,0.1); border-radius: 12px; color: #3b82f6;">
-              <i data-feather="dollar-sign" style="width: 24px; height: 24px;"></i>
+
+            <!-- Правая часть: Сумма, Статус и Действия -->
+            <div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end; flex-wrap: wrap;">
+              <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <span style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</span>
+                <span class="badge ${statusColor}">${statusLabel}</span>
+              </div>
+              ${actionBtnHtml ? `<div style="display: flex; align-items: center;">${actionBtnHtml}</div>` : ''}
             </div>
-            <span class="badge ${statusColor}">${statusLabel}</span>
-            ${actionBtnHtml}
           </div>
         `;
       }).join('');
@@ -149,7 +212,7 @@ window.renderDashboard = function () {
         </div>
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
           <div>
-            <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Аналитика и дашборд</h1>
+            <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Главное</h1>
             <p style="color: var(--text-secondary); font-size: 14px;">Обзор показателей вашего салона на сегодня</p>
           </div>
           <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
@@ -222,6 +285,7 @@ window.renderDashboard = function () {
           <h3 style="font-weight: 800; font-size: 17px; color: var(--text);">Записи на сегодня</h3>
           <a href="#" onclick="event.preventDefault(); navigate('bookings')" style="font-size: 13px; font-weight: 700; color: var(--primary);">Все записи →</a>
         </div>
+        ${statsBarHtml}
         <div style="display: flex; flex-direction: column;">
           ${todayBookingsListHtml}
         </div>

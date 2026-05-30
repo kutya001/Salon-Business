@@ -42,7 +42,7 @@ window.renderLayout = function () {
   const businessName = state.business?.name || 'Мой Салон';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Дашборд', icon: 'grid' },
+    { id: 'dashboard', label: 'Главное', icon: 'grid' },
     { id: 'bookings', label: 'Записи', icon: 'calendar' },
     { id: 'masters', label: 'Мастера', icon: 'users' },
     { id: 'clients', label: 'Клиенты', icon: 'user' },

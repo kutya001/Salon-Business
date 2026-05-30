@@ -542,7 +542,7 @@ window.renderCategoriesModal = function() {
   `;
 };
 
-window.handleCategorySubmit = async function() {
+window.handleCategorySubmit = function() {
   const name = document.getElementById('cat-name').value.trim();
   const md = state.ui.modalData;
   const cats = [...(state.business.categories || [])];
@@ -557,17 +557,17 @@ window.handleCategorySubmit = async function() {
     cats.push({ id: 'cat_' + Date.now(), name, type: md.type });
   }
 
-  setUI({ loading: true });
-  try {
-    const updated = await api.updateSettings({ categories: cats });
+  const updatedBusiness = { ...state.business, categories: cats };
+  setState({ business: updatedBusiness });
+  setUI({ modal: null });
+  showToast('Сохранение статьи (синхронизация...)', 'info');
+
+  api.updateSettings({ categories: cats }).then(updated => {
     setState({ business: updated });
-    setUI({ modal: null });
     showToast('Статья успешно сохранена', 'success');
-  } catch (e) {
+  }).catch(e => {
     showToast('Не удалось сохранить', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  });
 };
 
 window.showEditCategoryModal = function(id) {
@@ -613,7 +613,7 @@ window.renderWalletModal = function() {
   `;
 };
 
-window.handleWalletSubmit = async function() {
+window.handleWalletSubmit = function() {
   const name = document.getElementById('wallet-name').value.trim();
   const icon = document.getElementById('wallet-icon').value.trim();
   const md = state.ui.modalData;
@@ -629,17 +629,17 @@ window.handleWalletSubmit = async function() {
     wallets.push({ id: 'wallet_' + Date.now(), name, icon: icon || '💰', type: 'card' });
   }
 
-  setUI({ loading: true });
-  try {
-    const updated = await api.updateSettings({ wallets });
+  const updatedBusiness = { ...state.business, wallets: wallets };
+  setState({ business: updatedBusiness });
+  setUI({ modal: null });
+  showToast('Сохранение кошелька (синхронизация...)', 'info');
+
+  api.updateSettings({ wallets }).then(updated => {
     setState({ business: updated });
-    setUI({ modal: null });
     showToast('Кошелек успешно сохранен', 'success');
-  } catch (e) {
+  }).catch(e => {
     showToast('Не удалось сохранить', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  });
 };
 
 window.showEditWalletModal = function(id) {

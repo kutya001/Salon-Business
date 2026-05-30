@@ -188,7 +188,7 @@ window.renderSettings = function () {
 };
 
 // Сохранение общей информации о бизнесе
-window.handleSaveProfile = async function () {
+window.handleSaveProfile = function () {
   const businessName = document.getElementById('set-name').value.trim();
   const description = document.getElementById('set-desc').value.trim();
   const address = document.getElementById('set-address').value.trim();
@@ -198,40 +198,38 @@ window.handleSaveProfile = async function () {
   // Очистка номера перед сохранением (оставляем только красивый формат)
   phone = window.formatClientPhone(phone);
 
-  setUI({ loading: true });
-  try {
-    const updated = await api.updateSettings({ businessName, description, address, phone, email });
+  const updatedBusiness = { ...state.business, businessName, description, address, phone, email };
+  setState({ business: updatedBusiness });
+  showToast('Сохранение профиля (синхронизация...)', 'info');
+
+  api.updateSettings({ businessName, description, address, phone, email }).then(updated => {
     setState({ business: updated });
     showToast('Профиль успешно обновлен', 'success');
-  } catch(e) {
+  }).catch(e => {
     showToast('Не удалось сохранить изменения', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  });
 };
 
 // Переключение темы оформления
-window.handleChangeTheme = async function (themeId) {
-  setUI({ loading: true });
-  try {
-    const updated = await api.updateSettings({ theme: themeId });
-    setState({ business: updated });
-    
-    // Мгновенное применение темы во всем приложении
-    if (window.ThemeManager) {
-      window.ThemeManager.setTheme(themeId);
-    }
-    
-    showToast('Тема оформления успешно изменена', 'success');
-  } catch(e) {
-    showToast('Не удалось обновить тему', 'error');
-  } finally {
-    setUI({ loading: false });
+window.handleChangeTheme = function (themeId) {
+  const updatedBusiness = { ...state.business, theme: themeId };
+  setState({ business: updatedBusiness });
+  
+  if (window.ThemeManager) {
+    window.ThemeManager.setTheme(themeId);
   }
+  showToast('Изменение темы (синхронизация...)', 'info');
+  
+  api.updateSettings({ theme: themeId }).then(updated => {
+    setState({ business: updated });
+    showToast('Тема оформления успешно изменена', 'success');
+  }).catch(e => {
+    showToast('Не удалось обновить тему', 'error');
+  });
 };
 
 // Сохранение графика работы
-window.handleSaveSchedule = async function () {
+window.handleSaveSchedule = function () {
   const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   const newSchedule = {};
 
@@ -243,20 +241,20 @@ window.handleSaveSchedule = async function () {
     };
   });
 
-  setUI({ loading: true });
-  try {
-    const updated = await api.updateSettings({ workSchedule: newSchedule });
+  const updatedBusiness = { ...state.business, workSchedule: newSchedule };
+  setState({ business: updatedBusiness });
+  showToast('Сохранение расписания (синхронизация...)', 'info');
+
+  api.updateSettings({ workSchedule: newSchedule }).then(updated => {
     setState({ business: updated });
     showToast('График работы успешно обновлен', 'success');
-  } catch(e) {
+  }).catch(e => {
     showToast('Не удалось сохранить расписание', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  });
 };
 
 // Изменение PIN-кода
-window.handlePinChangeSubmit = async function () {
+window.handlePinChangeSubmit = function () {
   const oldPin = document.getElementById('pin-old').value.trim();
   const newPin = document.getElementById('pin-new').value.trim();
   const confirmPin = document.getElementById('pin-confirm').value.trim();
@@ -271,18 +269,16 @@ window.handlePinChangeSubmit = async function () {
     return;
   }
 
-  setUI({ loading: true });
-  try {
-    await api.changePassword(oldPin, newPin);
+  showToast('Изменение PIN-кода (синхронизация...)', 'info');
+
+  api.changePassword(oldPin, newPin).then(() => {
     document.getElementById('pin-old').value = '';
     document.getElementById('pin-new').value = '';
     document.getElementById('pin-confirm').value = '';
     showToast('PIN-код доступа успешно изменен!', 'success');
-  } catch(e) {
-    showToast(e.message || 'Ошибка смены PIN-кода', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  }).catch(e => {
+    showToast(e.message || 'Ошибка изменения PIN-кода. Возможно, старый PIN неверен.', 'error');
+  });
 };
 
 // Отключение бэкенда (сброс)

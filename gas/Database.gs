@@ -223,6 +223,9 @@ function appendRow(sheetName, data) {
       if (/^([01]?\d|2[0-3]):([0-5]\d):([0-5]\d)$/.test(val)) {
         return "'" + val;
       }
+      if (val.charAt(0) === '+') {
+        return "'" + val;
+      }
     }
     return val;
   });
@@ -263,6 +266,9 @@ function updateRow(sheetName, id, data) {
           return "'" + val + ":00";
         }
         if (/^([01]?\d|2[0-3]):([0-5]\d):([0-5]\d)$/.test(val)) {
+          return "'" + val;
+        }
+        if (val.charAt(0) === '+') {
           return "'" + val;
         }
       }

@@ -716,21 +716,19 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
 };
 
 // Функция удаления записи
-window.handleDeleteBooking = async function (id) {
+window.handleDeleteBooking = function (id) {
   if (!confirm('Вы уверены, что хотите удалить эту запись? Действие необратимо.')) return;
   
-  setUI({ loading: true });
-  try {
-    await api.deleteBooking(id);
-    const bookings = state.bookings.filter(b => b.id !== id);
-    setState({ bookings });
-    setUI({ modal: null, modalData: null });
+  const bookings = state.bookings.filter(b => b.id !== id);
+  setState({ bookings });
+  setUI({ modal: null, modalData: null });
+  showToast('Удаление записи (синхронизация...)', 'info');
+
+  api.deleteBooking(id).then(() => {
     showToast('Запись удалена', 'success');
-  } catch(e) {
+  }).catch(e => {
     showToast('Не удалось удалить запись', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  });
 };
 
 // Модалка просмотра деталей записи
@@ -1154,18 +1152,11 @@ window.handleEditBookingFullSubmit = function() {
   showToast('Изменения сохранены (синхронизация...)', 'info');
 
   api.updateBooking(tempId, payload)
-    .then(() => api.getAll())
-    .then(allData => {
-      setState({
-        bookings: allData.bookings,
-        clients: allData.clients,
-        transactions: allData.transactions,
-        shifts: allData.shifts
-      });
+    .then(result => {
+      // Игнорируем ответ, оптимистичный UI уже обновлен. При желании можно обновить ID.
       showToast('Запись успешно синхронизирована!', 'success');
     }).catch(e => {
       showToast('Ошибка обновления записи на сервере', 'error');
-      // Опционально: откат состояния
     });
 };
 
@@ -1494,18 +1485,19 @@ window.handleCreateBookingSubmit = function () {
   // Фоновая синхронизация
   const apiCall = md.isEdit ? api.updateBooking(tempId, payload) : api.createBooking(payload);
   
-  apiCall.then(() => {
-    return api.getAll(); // перезапрашиваем все данные для точности (клиенты, транзакции и т.д.)
-  }).then(allData => {
-    setState({
-      bookings: allData.bookings,
-      clients: allData.clients,
-      transactions: allData.transactions,
-      shifts: allData.shifts
-    });
+  apiCall.then(result => {
+    // В случае создания записи обновляем временный ID на серверный
+    if (!md.isEdit && result && result.id) {
+      const idx = state.bookings.findIndex(b => b.id === tempId);
+      if (idx !== -1) {
+        state.bookings[idx] = { ...state.bookings[idx], ...result };
+      }
+    }
     showToast('Запись успешно синхронизирована!', 'success');
   }).catch(e => {
     showToast(e.message || 'Ошибка создания записи на сервере', 'error');
-    setState({ bookings: state.bookings.filter(b => b.id !== tempId) });
+    if (!md.isEdit) {
+      setState({ bookings: state.bookings.filter(b => b.id !== tempId) });
+    }
   });
 };

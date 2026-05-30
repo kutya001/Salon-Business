@@ -43,7 +43,7 @@ window.renderServices = function () {
         <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 12px; transition: all 0.2s;">
           <span style="font-weight: 800; font-size: 15px; color: var(--text);">${c.name}</span>
           <div style="display: flex; gap: 8px;">
-            <button onclick="const n = prompt('Новое название вида:', '${c.name}'); if(n && n.trim()) { api.updateCategory('${c.id}', {name: n.trim()}).then(()=>api.getAll().then(d=>setState(d))); }" class="btn btn-secondary" style="padding: 8px; border-radius: 8px;" title="Редактировать">
+            <button onclick="const n = prompt('Новое название:', '${c.name}'); if(n && n.trim()) { const idx = state.categories.findIndex(x=>x.id==='${c.id}'); if(idx!==-1) { state.categories[idx].name=n.trim(); setState({categories: state.categories}); showToast('Синхронизация...', 'info'); } api.updateCategory('${c.id}', {name: n.trim()}).then(()=>showToast('Сохранено', 'success')).catch(()=>showToast('Ошибка', 'error')); }" class="btn btn-secondary" style="padding: 8px; border-radius: 8px;" title="Редактировать">
               <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
             </button>
             <button onclick="handleDeleteCategory('${c.id}')" class="btn btn-secondary" style="color: #ef4444; background: rgba(239,68,68,0.1); border: none; padding: 8px; border-radius: 8px;" title="Удалить">

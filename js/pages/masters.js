@@ -211,7 +211,7 @@ window.renderMasterModal = function () {
 };
 
 // Отправка данных мастера на сервер
-window.handleMasterSubmit = async function (id) {
+window.handleMasterSubmit = function (id) {
   const name = document.getElementById('m-name').value.trim();
   const phone = window.formatClientPhone(document.getElementById('m-phone').value.trim());
   const specialization = document.getElementById('m-specialization').value;
@@ -220,47 +220,45 @@ window.handleMasterSubmit = async function (id) {
   const workHoursEnd = document.getElementById('m-hours-end').value;
   const services = JSON.stringify(state.ui.modalData.services || []);
 
-  setUI({ loading: true });
-  try {
-    let result;
-    if (id) {
-      // Редактирование
-      result = await api.updateMaster(id, { name, phone, specialization, percentage, workHoursStart, workHoursEnd, services });
-      const idx = state.masters.findIndex(m => m.id === id);
-      if (idx !== -1) {
-        state.masters[idx] = result;
-      }
-      showToast('Мастер успешно обновлен', 'success');
-    } else {
-      // Создание нового
-      result = await api.createMaster({ name, phone, specialization, percentage, workHoursStart, workHoursEnd, services });
-      state.masters.push(result);
-      showToast('Мастер успешно добавлен!', 'success');
+  if (id) {
+    const idx = state.masters.findIndex(m => m.id === id);
+    if (idx !== -1) {
+      state.masters[idx] = { ...state.masters[idx], name, phone, specialization, percentage, workHoursStart, workHoursEnd, services };
     }
-
     setUI({ modal: null, modalData: null });
-  } catch(e) {
-    showToast('Ошибка при сохранении', 'error');
-  } finally {
-    setUI({ loading: false });
+    showToast('Сохранение мастера (синхронизация...)', 'info');
+    
+    api.updateMaster(id, { name, phone, specialization, percentage, workHoursStart, workHoursEnd, services }).then(result => {
+      const currentIdx = state.masters.findIndex(m => m.id === id);
+      if (currentIdx !== -1) state.masters[currentIdx] = result;
+      showToast('Мастер успешно обновлен', 'success');
+    }).catch(e => showToast('Ошибка при сохранении', 'error'));
+  } else {
+    const tempId = 'temp_' + Date.now();
+    const tempMaster = { id: tempId, name, phone, specialization, percentage, workHoursStart, workHoursEnd, services, status: 'active' };
+    state.masters.push(tempMaster);
+    setUI({ modal: null, modalData: null });
+    showToast('Добавление мастера (синхронизация...)', 'info');
+
+    api.createMaster({ name, phone, specialization, percentage, workHoursStart, workHoursEnd, services }).then(result => {
+      const idx = state.masters.findIndex(m => m.id === tempId);
+      if (idx !== -1) state.masters[idx] = result;
+      showToast('Мастер успешно добавлен!', 'success');
+    }).catch(e => showToast('Ошибка при сохранении', 'error'));
   }
 };
 
 // Мягкое удаление мастера
-window.handleDeleteMaster = async function (id) {
+window.handleDeleteMaster = function (id) {
   if (!confirm('Вы уверены, что хотите удалить этого мастера? Это действие нельзя отменить.')) return;
   
-  setUI({ loading: true });
-  try {
-    await api.deleteMaster(id);
-    const masters = state.masters.filter(m => m.id !== id);
-    setState({ masters });
+  const masters = state.masters.filter(m => m.id !== id);
+  setState({ masters });
+  showToast('Удаление мастера (синхронизация...)', 'info');
+  
+  api.deleteMaster(id).then(() => {
     showToast('Мастер удален', 'success');
-  } catch(e) {
-    showToast('Ошибка при удалении', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  }).catch(e => showToast('Ошибка при удалении', 'error'));
 };
 
 window.renderMasterDetailsModal = function() {

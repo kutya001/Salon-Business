@@ -203,36 +203,45 @@ window.renderClientModal = function () {
   `;
 };
 
-// Отправка данных клиента
-window.handleClientSubmit = async function (id) {
+window.handleClientSubmit = function (id) {
   const name = document.getElementById('c-name').value.trim();
   let phone = document.getElementById('c-phone').value.trim();
   const email = document.getElementById('c-email').value.trim();
   const notes = document.getElementById('c-notes').value.trim();
 
-  // Очистка номера перед сохранением (используем единый формат)
   phone = window.formatClientPhone(phone);
 
-  setUI({ loading: true });
-  try {
-    let result;
-    if (id) {
-      result = await api.updateClient(id, { name, phone, email, notes });
-      const idx = state.clients.findIndex(c => c.id === id);
-      if (idx !== -1) {
-        state.clients[idx] = result;
-      }
-      showToast('Карточка клиента обновлена', 'success');
-      setUI({ modal: 'viewClient', modalData: result });
-    } else {
-      result = await api.createClient({ name, phone, email, notes });
-      state.clients.push(result);
-      showToast('Клиент успешно добавлен в базу!', 'success');
-      setUI({ modal: null, modalData: null });
+  if (id) {
+    const idx = state.clients.findIndex(c => c.id === id);
+    let tempClient = { name, phone, email, notes };
+    if (idx !== -1) {
+      tempClient = { ...state.clients[idx], ...tempClient };
+      state.clients[idx] = tempClient;
     }
-  } catch(e) {
-    showToast('Ошибка сохранения клиента', 'error');
-  } finally {
-    setUI({ loading: false });
+    setUI({ modal: 'viewClient', modalData: tempClient });
+    showToast('Сохранение изменений (синхронизация...)', 'info');
+    
+    api.updateClient(id, { name, phone, email, notes }).then(result => {
+      const currentIdx = state.clients.findIndex(c => c.id === id);
+      if (currentIdx !== -1) state.clients[currentIdx] = result;
+      showToast('Карточка клиента обновлена', 'success');
+    }).catch(e => {
+      showToast('Ошибка сохранения клиента', 'error');
+    });
+  } else {
+    const tempId = 'temp_' + Date.now();
+    const tempClient = { id: tempId, name, phone, email, notes, totalBookings: 0, totalSpent: 0 };
+    state.clients.push(tempClient);
+    setUI({ modal: null, modalData: null });
+    showToast('Добавление клиента (синхронизация...)', 'info');
+    
+    api.createClient({ name, phone, email, notes }).then(result => {
+      const idx = state.clients.findIndex(c => c.id === tempId);
+      if (idx !== -1) state.clients[idx] = result;
+      showToast('Клиент успешно добавлен в базу!', 'success');
+    }).catch(e => {
+      showToast('Ошибка добавления клиента', 'error');
+      // Опционально: откат
+    });
   }
 };

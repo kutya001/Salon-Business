@@ -116,6 +116,19 @@ window.getInitials = function (name) {
   return parts[0].substring(0, 2).toUpperCase();
 };
 
+window.durationToMinutes = function(durationStr) {
+  if (!durationStr || typeof durationStr !== 'string') return parseInt(durationStr, 10) || 60;
+  if (!durationStr.includes(':')) return parseInt(durationStr, 10) || 60; // fallback for old integer data
+  const parts = durationStr.split(':');
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+};
+
+window.minutesToDuration = function(mins) {
+  const h = Math.floor(mins / 60).toString().padStart(2, '0');
+  const m = (mins % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+};
+
 window.generateTimeSlots = function (start, end, step = 30) {
   const slots = [];
   let current = parseTimeToMinutes(start);
@@ -162,18 +175,18 @@ window.formatMasterTime = function (val) {
 
 // Функция для получения информации по нескольким услугам (разделенным запятой)
 window.getServicesInfo = function (serviceIdsStr) {
-  if (!serviceIdsStr) return { name: 'Неизвестная услуга', price: 0, duration: 60 };
+  if (!serviceIdsStr) return { name: 'Неизвестная услуга', price: 0, duration: '01:00', durationMins: 60 };
   
   const ids = serviceIdsStr.split(',').map(id => id.trim()).filter(Boolean);
   let totalPrice = 0;
-  let totalDuration = 0;
+  let totalDurationMins = 0;
   let names = [];
   
   ids.forEach(id => {
     const s = (window.state.services || []).find(x => x.id === id);
     if (s) {
       totalPrice += parseFloat(s.price) || 0;
-      totalDuration += parseInt(s.duration, 10) || 0;
+      totalDurationMins += window.durationToMinutes(s.duration);
       names.push(s.name);
     }
   });
@@ -181,6 +194,7 @@ window.getServicesInfo = function (serviceIdsStr) {
   return {
     name: names.length > 0 ? names.join(' + ') : 'Неизвестная услуга',
     price: totalPrice,
-    duration: totalDuration || 60
+    duration: window.minutesToDuration(totalDurationMins || 60),
+    durationMins: totalDurationMins || 60
   };
 };

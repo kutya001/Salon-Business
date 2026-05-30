@@ -118,7 +118,7 @@ window.renderServices = function () {
                     </div>
                     <div>
                       <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 14px;">
-                        <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> ${s.duration} мин</span>
+                        <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> ${s.duration}</span>
                         <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
                       </div>
                       <div style="display: flex; gap: 8px; justify-content: flex-end;">
@@ -153,7 +153,7 @@ window.renderServices = function () {
                           </td>
                           <td style="padding: 16px;">
                             <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary);">
-                              <i data-feather="clock" style="width: 14px; height: 14px; color: var(--primary);"></i> ${s.duration} мин
+                              <i data-feather="clock" style="width: 14px; height: 14px; color: var(--primary);"></i> ${s.duration}
                             </div>
                           </td>
                           <td style="padding: 16px; font-weight: 800; color: var(--primary); font-size: 15px;">
@@ -238,9 +238,7 @@ window.renderServiceModal = function () {
   const s = state.ui.modalData;
   const isEdit = !!s;
 
-  const durationOptions = [15, 30, 45, 60, 90, 120, 150, 180].map(mins => `
-    <option value="${mins}" ${(isEdit && parseInt(s.duration, 10) === mins) ? 'selected' : ''}>${mins} мин</option>
-  `).join('');
+  // Duration options removed since we use type="time"
 
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
@@ -281,10 +279,7 @@ window.renderServiceModal = function () {
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Длительность</label>
-            <select id="s-duration" class="form-select" required>
-              <option value="">Выберите...</option>
-              ${durationOptions}
-            </select>
+            <input type="time" id="s-duration" class="form-input" value="${isEdit ? s.duration : '01:00'}" required>
           </div>
         </div>
         <div class="form-group">
@@ -307,7 +302,7 @@ window.handleServiceSubmit = function (id) {
   const categoryId = document.getElementById('s-category').value;
   const categoryName = state.categories.find(c => c.id === categoryId)?.name || '';
   const price = parseFloat(document.getElementById('s-price').value) || 0;
-  const duration = parseInt(document.getElementById('s-duration').value, 10) || 60;
+  const duration = document.getElementById('s-duration').value || '01:00';
   const description = document.getElementById('s-description').value.trim();
 
   // Оптимистичное обновление

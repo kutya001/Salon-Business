@@ -496,9 +496,9 @@ function renderBookingsTimeline(bookings) {
       // Поиск записей
       let matchBookings = [];
       if (mode === 'day') {
-        matchBookings = state.bookings.filter(b => b.masterId === m.id && b.date === slotDateStr && b.time.startsWith(col.id.split(':')[0]));
+        matchBookings = bookings.filter(b => b.masterId === m.id && b.date === slotDateStr && b.time.startsWith(col.id.split(':')[0]));
       } else {
-        matchBookings = state.bookings.filter(b => b.masterId === m.id && b.date === col.id);
+        matchBookings = bookings.filter(b => b.masterId === m.id && b.date === col.id);
       }
 
       const bookingBlocks = matchBookings.map(b => {
@@ -518,7 +518,7 @@ function renderBookingsTimeline(bookings) {
         const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
 
         return `
-          <div id="booking-${b.id}" onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
               <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)}</span>
             </div>
@@ -529,7 +529,7 @@ function renderBookingsTimeline(bookings) {
         `;
       }).join('');
  
-      return `<td style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`;
+      return `<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`;
     }).join('');
  
     return `
@@ -592,6 +592,56 @@ function renderBookingsTimeline(bookings) {
     </div>
   `;
 }
+// Drag and drop handlers for Timeline
+window.handleBookingDragStart = function(event, bookingId) {
+  event.dataTransfer.setData('text/plain', bookingId);
+};
+
+window.handleBookingDrop = function(event, colId, masterId) {
+  event.preventDefault();
+  const bookingId = event.dataTransfer.getData('text/plain');
+  if (!bookingId) return;
+
+  const booking = state.bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+
+  let newDate = booking.date;
+  let newTime = booking.time;
+
+  const mode = state.ui.timelineMode || 'day';
+  if (mode === 'day') {
+    newTime = colId; // Hour e.g. "10:00"
+  } else {
+    newDate = colId; // Date e.g. "2026-05-30"
+  }
+
+  const durationMins = window.durationToMinutes(booking.duration || '01:00');
+
+  if (!window.isMasterAvailable(masterId, newDate, newTime, durationMins, bookingId)) {
+    return showToast('Невозможно перенести: Мастер занят', 'error');
+  }
+
+  const payload = {
+    masterId: masterId,
+    date: newDate,
+    time: newTime
+  };
+
+  const idx = state.bookings.findIndex(b => b.id === bookingId);
+  if (idx !== -1) {
+    state.bookings[idx] = { 
+      ...state.bookings[idx], 
+      ...payload, 
+      masterName: state.masters.find(m => m.id === masterId)?.name || 'Любой мастер' 
+    };
+    setState({ bookings: state.bookings });
+    showToast('Запись перенесена', 'info');
+
+    api.updateBooking(bookingId, payload).catch(e => {
+      showToast('Ошибка при сохранении переноса', 'error');
+    });
+  }
+};
 
 // Быстрое изменение мастера записи (Optimistic UI)
 window.handleQuickUpdateBookingMaster = async function (id, newMasterId) {
@@ -1020,6 +1070,31 @@ window.renderEditBookingFullModal = function() {
   `;
 };
 
+window.isMasterAvailable = function(masterId, dateStr, timeStr, durationMins, excludeBookingId = null) {
+  if (!masterId) return true;
+  
+  const newStart = window.durationToMinutes(timeStr);
+  const newEnd = newStart + durationMins;
+
+  const masterBookings = state.bookings.filter(b => 
+    b.masterId === masterId && 
+    b.date === dateStr && 
+    b.status !== 'cancelled' &&
+    b.id !== excludeBookingId
+  );
+
+  for (const b of masterBookings) {
+    const bStart = window.durationToMinutes(b.time);
+    // Для старых записей b.duration может быть числом, для новых - строкой HH:MM
+    const bEnd = bStart + window.durationToMinutes(b.duration || '01:00'); 
+    
+    if (newStart < bEnd && newEnd > bStart) {
+      return false;
+    }
+  }
+  return true;
+};
+
 window.handleEditBookingFullSubmit = function() {
   const md = state.ui.modalData;
   const tempId = md.bookingId;
@@ -1048,6 +1123,11 @@ window.handleEditBookingFullSubmit = function() {
   };
 
   const serviceInfo = getServicesInfo(payload.serviceId);
+  
+  if (!window.isMasterAvailable(payload.masterId, payload.date, payload.time, serviceInfo.durationMins, tempId)) {
+    return showToast('Выбранный мастер занят в указанное время', 'error');
+  }
+
   const master = state.masters.find(m => m.id === payload.masterId) || { name: 'Любой мастер' };
   
   const optimisticBooking = {
@@ -1380,6 +1460,11 @@ window.handleCreateBookingSubmit = function () {
   // Оптимистичное обновление
   const tempId = md.isEdit ? md.bookingId : ('b_temp_' + Date.now());
   const serviceInfo = getServicesInfo(payload.serviceId);
+
+  if (!window.isMasterAvailable(payload.masterId, payload.date, payload.time, serviceInfo.durationMins, md.isEdit ? tempId : null)) {
+    return showToast('Выбранный мастер занят в указанное время', 'error');
+  }
+
   const master = state.masters.find(m => m.id === payload.masterId) || { name: 'Любой мастер' };
   
   const optimisticBooking = {

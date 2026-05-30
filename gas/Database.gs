@@ -331,6 +331,7 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('💎 Suluu Business')
       .addItem('🔄 Инициализировать базу данных', 'menuInitializeDatabase')
+      .addItem('🔍 Проверить структуру метаданных', 'menuCheckDatabaseStructure')
       .addToUi();
 }
 

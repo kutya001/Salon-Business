@@ -418,8 +418,9 @@ window.showBookingMessageModal = function (id) {
   const booking = state.bookings.find(b => b.id === id);
   if (!booking) return;
   
+  const bizName = state.business ? (state.business.businessName || state.business.name || 'Салон') : 'Салон';
   // Устанавливаем дефолтный шаблон
-  const defaultText = `Здравствуйте, ${booking.clientName}!\nНапоминаем о вашей записи на ${booking.serviceName}\nДата: ${formatDate(booking.date)}\nВремя: ${formatTime(booking.time)}\nЖдем вас!`;
+  const defaultText = `Здравствуйте, ${booking.clientName}!\nНапоминаем о вашей записи на ${booking.serviceName} в ${bizName}.\nДата: ${formatDate(booking.date)}\nВремя: ${formatTime(booking.time)}\nЖдем вас!`;
   
   setUI({ modal: 'bookingMessage', modalData: { booking, messageText: defaultText } });
 };
@@ -429,12 +430,14 @@ window.handleMessageTemplateSelect = function (templateType) {
   const b = md.booking;
   let text = '';
   
+  const bizName = state.business ? (state.business.businessName || state.business.name || 'Салон') : 'Салон';
+  
   if (templateType === 'reminder') {
-    text = `Здравствуйте, ${b.clientName}!\nНапоминаем о вашей записи на ${b.serviceName}\nДата: ${formatDate(b.date)}\nВремя: ${formatTime(b.time)}\nЖдем вас!`;
+    text = `Здравствуйте, ${b.clientName}!\nНапоминаем о вашей записи на ${b.serviceName} в ${bizName}.\nДата: ${formatDate(b.date)}\nВремя: ${formatTime(b.time)}\nЖдем вас!`;
   } else if (templateType === 'thanks') {
-    text = `Здравствуйте, ${b.clientName}!\nСпасибо, что выбрали наш салон. Будем рады видеть вас снова!`;
+    text = `Здравствуйте, ${b.clientName}!\nСпасибо, что выбрали ${bizName}. Будем рады видеть вас снова!`;
   } else if (templateType === 'confirmation') {
-    text = `Здравствуйте, ${b.clientName}!\nВаша запись на ${b.serviceName} успешно подтверждена.\nДата: ${formatDate(b.date)}\nВремя: ${formatTime(b.time)}.`;
+    text = `Здравствуйте, ${b.clientName}!\nВаша запись на ${b.serviceName} в ${bizName} успешно подтверждена.\nДата: ${formatDate(b.date)}\nВремя: ${formatTime(b.time)}.`;
   }
   
   setUI({ modalData: { ...md, messageText: text } });
@@ -589,7 +592,28 @@ window.handleWizardServiceSelect = function(serviceId) {
 window.handleWizardMasterSelect = function(masterId) {
   const data = { ...state.ui.modalData };
   data.draft.masterId = masterId; // если '', то 'Любой'
+  
+  if (!data.draft.date) {
+    data.draft.date = new Date().toISOString().split('T')[0];
+  }
+  if (!data.draft.time) {
+    data.draft.time = new Date().toTimeString().substring(0, 5);
+  }
+  
   data.step = 5;
+  setUI({ modalData: data });
+};
+
+window.handleWizardPaymentSelect = function(method) {
+  const data = { ...state.ui.modalData };
+  const d = document.getElementById('b-date');
+  const t = document.getElementById('b-time');
+  const n = document.getElementById('b-notes');
+  if (d) data.draft.date = d.value;
+  if (t) data.draft.time = t.value;
+  if (n) data.draft.notes = n.value;
+  
+  data.draft.paymentMethod = method;
   setUI({ modalData: data });
 };
 
@@ -703,9 +727,9 @@ window.renderBookingModal = function () {
         <div class="form-group">
           <label class="form-label">Способ оплаты</label>
           <div style="display: flex; gap: 8px; margin-top: 4px;">
-            <button type="button" onclick="state.ui.modalData.draft.paymentMethod='cash'; setUI({ modalData: state.ui.modalData })" class="btn ${draft.paymentMethod === 'cash' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💵 Наличные</button>
-            <button type="button" onclick="state.ui.modalData.draft.paymentMethod='card'; setUI({ modalData: state.ui.modalData })" class="btn ${draft.paymentMethod === 'card' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💳 Карта</button>
-            <button type="button" onclick="state.ui.modalData.draft.paymentMethod='bonus'; setUI({ modalData: state.ui.modalData })" class="btn ${draft.paymentMethod === 'bonus' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">🌟 Бонусы</button>
+            <button type="button" onclick="handleWizardPaymentSelect('cash')" class="btn ${draft.paymentMethod === 'cash' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💵 Наличные</button>
+            <button type="button" onclick="handleWizardPaymentSelect('card')" class="btn ${draft.paymentMethod === 'card' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">💳 Карта</button>
+            <button type="button" onclick="handleWizardPaymentSelect('bonus')" class="btn ${draft.paymentMethod === 'bonus' ? 'btn-primary' : 'btn-secondary'}" style="flex: 1; padding: 10px; font-size: 13px;">🌟 Бонусы</button>
           </div>
         </div>
         <div class="form-group">

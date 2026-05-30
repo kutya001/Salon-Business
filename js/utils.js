@@ -12,13 +12,10 @@ window.formatDate = function (dateStr) {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return dateStr;
   
-  const months = [
-    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-  ];
-  const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-  
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} (${days[date.getDay()]})`;
+  const d = date.getDate().toString().padStart(2, '0');
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}.${m}.${y}`;
 };
 
 window.formatClientPhone = function(phone) {
@@ -47,6 +44,14 @@ window.formatRelativeDate = function (dateStr) {
 
 window.formatTime = function (timeStr) {
   if (!timeStr) return '';
+  if (timeStr.includes('T')) {
+    const date = new Date(timeStr);
+    if (!isNaN(date.getTime())) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+  }
   return timeStr.substring(0, 5);
 };
 

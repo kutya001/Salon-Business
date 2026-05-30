@@ -73,7 +73,7 @@ window.renderSettings = function () {
           <form onsubmit="event.preventDefault(); handleSaveProfile();" style="display: flex; flex-direction: column; gap: 14px;">
             <div class="form-group">
               <label class="form-label">Название бизнеса</label>
-              <input type="text" id="set-name" class="form-input" value="${biz.name || ''}" required>
+              <input type="text" id="set-name" class="form-input" value="${biz.businessName || biz.name || ''}" required>
             </div>
             <div class="form-group">
               <label class="form-label">Краткое описание</label>
@@ -192,7 +192,7 @@ window.renderSettings = function () {
 
 // Сохранение общей информации о бизнесе
 window.handleSaveProfile = async function () {
-  const name = document.getElementById('set-name').value.trim();
+  const businessName = document.getElementById('set-name').value.trim();
   const description = document.getElementById('set-desc').value.trim();
   const address = document.getElementById('set-address').value.trim();
   const phone = document.getElementById('set-phone').value.trim();
@@ -200,7 +200,7 @@ window.handleSaveProfile = async function () {
 
   setUI({ loading: true });
   try {
-    const updated = await api.updateSettings({ name, description, address, phone, email });
+    const updated = await api.updateSettings({ businessName, description, address, phone, email });
     setState({ business: updated });
     showToast('Профиль успешно обновлен', 'success');
   } catch(e) {

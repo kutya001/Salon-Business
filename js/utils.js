@@ -137,3 +137,14 @@ window.ThemeManager = {
     this.setTheme(savedTheme);
   }
 };
+
+window.formatMasterTime = function (val) {
+  if (!val) return '09:00';
+  if (typeof val === 'string' && val.includes('1899-12-30')) {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+  return val;
+};

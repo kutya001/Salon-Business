@@ -51,7 +51,7 @@ window.renderMasters = function () {
               </div>
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: var(--text-secondary);">Рабочие часы:</span>
-                <span style="font-weight: 600;">${m.workHoursStart} - ${m.workHoursEnd}</span>
+                <span style="font-weight: 600;">${formatMasterTime(m.workHoursStart)} - ${formatMasterTime(m.workHoursEnd)}</span>
               </div>
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: var(--text-secondary);">Выручка (${new Date().toLocaleString('ru-RU', { month: 'long' })}):</span>
@@ -145,11 +145,11 @@ window.renderMasterModal = function () {
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Начало работы</label>
-            <input type="time" id="m-hours-start" class="form-input" value="${isEdit ? m.workHoursStart : '09:00'}" required>
+            <input type="time" id="m-hours-start" class="form-input" value="${isEdit ? formatMasterTime(m.workHoursStart) : '09:00'}" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Конец работы</label>
-            <input type="time" id="m-hours-end" class="form-input" value="${isEdit ? m.workHoursEnd : '20:00'}" required>
+            <input type="time" id="m-hours-end" class="form-input" value="${isEdit ? formatMasterTime(m.workHoursEnd) : '20:00'}" required>
           </div>
         </div>
 

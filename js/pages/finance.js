@@ -13,16 +13,17 @@ window.renderFinance = function () {
   ];
 
   const tabsHtml = `
-    <div style="display: flex; gap: 24px; border-bottom: 1px solid var(--border); overflow-x: auto; padding-bottom: 8px; margin-bottom: 24px; scrollbar-width: none; -ms-overflow-style: none;">
-      ${tabs.map(tab => {
-        const isActive = activeTab === tab.id;
-        return `
-          <div onclick="setUI({ financeTab: '${tab.id}' })" style="font-size: 13px; font-weight: 700; color: ${isActive ? 'var(--primary)' : 'var(--text-secondary)'}; cursor: pointer; position: relative; white-space: nowrap; transition: color 0.2s;">
-            ${tab.label}
-            ${isActive ? '<div style="position: absolute; bottom: -9px; left: 0; right: 0; height: 2px; background: var(--primary); border-radius: 2px;"></div>' : ''}
-          </div>
-        `;
-      }).join('')}
+    <div style="margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+      <div class="segment-tabs-container">
+        ${tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return `
+            <button onclick="setUI({ financeTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap;">
+              ${tab.label}
+            </button>
+          `;
+        }).join('')}
+      </div>
     </div>
   `;
 

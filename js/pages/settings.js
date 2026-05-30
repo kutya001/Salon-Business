@@ -33,52 +33,65 @@ window.renderSettings = function () {
     `;
   }).join('');
 
-  return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px;">
-      
-      <!-- Заголовок страницы -->
-      <div>
-        <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Настройки профиля</h1>
-        <p style="color: var(--text-secondary); font-size: 14px;">Управление информацией о салоне, расписанием, темой оформления и безопасностью</p>
-      </div>
+  const activeTab = state.ui.settingsTab || 'profile';
+  const tabs = [
+    { id: 'profile', label: 'Профиль' },
+    { id: 'schedule', label: 'График салона' },
+    { id: 'security', label: 'Безопасность' }
+  ];
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- Секция: Информация о бизнесе -->
-        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="briefcase" style="width: 18px; height: 18px;"></i> Профиль салона</h3>
-          
-          <form onsubmit="event.preventDefault(); handleSaveProfile();" style="display: flex; flex-direction: column; gap: 14px;">
-            <div class="form-group">
-              <label class="form-label">Название бизнеса</label>
-              <input type="text" id="set-name" class="form-input" value="${biz.businessName || biz.name || ''}" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Краткое описание</label>
-              <textarea id="set-desc" rows="2" class="form-textarea" placeholder="Салон красоты премиум-класса в центре города...">${biz.description || ''}</textarea>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Физический адрес</label>
-              <input type="text" id="set-address" class="form-input" value="${biz.address || ''}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Контактный телефон</label>
-              <input type="tel" id="set-phone" class="form-input" value="${biz.phone || ''}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Email для связи</label>
-              <input type="email" id="set-email" class="form-input" value="${biz.email || ''}">
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить изменения
+  const tabsHtml = `
+    <div style="margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+      <div class="segment-tabs-container">
+        ${tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return `
+            <button onclick="setUI({ settingsTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap;">
+              ${tab.label}
             </button>
-          </form>
-        </div>
-
+          `;
+        }).join('')}
       </div>
+    </div>
+  `;
 
-      <!-- Секция: Расписание работы -->
+  let contentHtml = '';
+
+  if (activeTab === 'profile') {
+    contentHtml = `
+      <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
+        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="briefcase" style="width: 18px; height: 18px;"></i> Профиль салона</h3>
+        
+        <form onsubmit="event.preventDefault(); handleSaveProfile();" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Название бизнеса</label>
+            <input type="text" id="set-name" class="form-input" value="${biz.businessName || biz.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Краткое описание</label>
+            <textarea id="set-desc" rows="2" class="form-textarea" placeholder="Салон красоты премиум-класса в центре города...">${biz.description || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Физический адрес</label>
+            <input type="text" id="set-address" class="form-input" value="${biz.address || ''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Контактный телефон</label>
+            <input type="tel" id="set-phone" class="form-input" value="${biz.phone || ''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email для связи</label>
+            <input type="email" id="set-email" class="form-input" value="${biz.email || ''}">
+          </div>
+          
+          <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content;">
+            <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить изменения
+          </button>
+        </form>
+      </div>
+    `;
+  } else if (activeTab === 'schedule') {
+    contentHtml = `
       <div class="card p-6">
         <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><i data-feather="calendar" style="width: 18px; height: 18px;"></i> График работы салона</h3>
         
@@ -104,10 +117,10 @@ window.renderSettings = function () {
           </button>
         </div>
       </div>
-
-      <!-- Секция: Смена пароля и информация о подключении -->
+    `;
+  } else if (activeTab === 'security') {
+    contentHtml = `
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
         <!-- Управление Пин-кодом -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
           <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="lock" style="width: 18px; height: 18px;"></i> Безопасность (PIN-код)</h3>
@@ -127,8 +140,8 @@ window.renderSettings = function () {
               <input type="password" id="pin-confirm" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••" required>
             </div>
             
-            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <i data-feather="key" style="width: 16px; height: 16px;"></i> Установить / Изменить PIN-код
+            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content;">
+              <i data-feather="key" style="width: 16px; height: 16px;"></i> Установить / Изменить
             </button>
           </form>
         </div>
@@ -146,15 +159,29 @@ window.renderSettings = function () {
             </div>
           </div>
           
-          <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end;">
+          <div style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end;">
             <button onclick="handleDisconnect()" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto; display: flex; align-items: center; gap: 6px;">
               <i data-feather="power" style="width: 16px; height: 16px;"></i> Отключить бэкенд
             </button>
           </div>
         </div>
+      </div>
+    `;
+  }
 
+  return `
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Заголовок страницы -->
+      <div>
+        <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Настройки</h1>
+        <p style="color: var(--text-secondary); font-size: 14px;">Управление информацией о салоне, расписанием и безопасностью</p>
       </div>
 
+      <!-- Вкладки настроек -->
+      ${tabsHtml}
+
+      <!-- Область контента -->
+      ${contentHtml}
     </div>
   `;
 };

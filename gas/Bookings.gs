@@ -39,7 +39,7 @@ function handleGetBookings(filters) {
  * @returns {object}
  */
 function handleCreateBooking(data) {
-  if (!data.clientPhone || !data.clientName || !data.serviceId || !data.masterId || !data.date || !data.time) {
+  if (!data.clientPhone || !data.clientName || !data.serviceId || !data.date || !data.time) {
     throw new Error("Недостаточно данных для создания записи");
   }
   

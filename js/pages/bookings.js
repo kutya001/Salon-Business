@@ -648,6 +648,12 @@ window.handleBookingDrop = function(event, colId, masterId) {
 
 // Быстрое изменение мастера записи (Optimistic UI)
 window.handleQuickUpdateBookingMaster = async function (id, newMasterId) {
+  if (String(id).startsWith('tmp_')) {
+    showToast('Дождитесь сохранения записи на сервере', 'warning');
+    if (window.render) window.render();
+    return;
+  }
+  
   const idx = state.bookings.findIndex(b => b.id === id);
   if (idx === -1) return;
   
@@ -666,9 +672,12 @@ window.handleQuickUpdateBookingMaster = async function (id, newMasterId) {
   api.updateBooking(id, { masterId: newMasterId }, { background: true })
     .catch(e => {
       showToast('Не удалось обновить мастера на сервере', 'error');
-      state.bookings[idx].masterId = oldMasterId;
-      state.bookings[idx].masterName = oldMasterName;
-      if (window.render) window.render();
+      const currentIdx = state.bookings.findIndex(b => b.id === id);
+      if (currentIdx !== -1) {
+        state.bookings[currentIdx].masterId = oldMasterId;
+        state.bookings[currentIdx].masterName = oldMasterName;
+        if (window.render) window.render();
+      }
     });
 };
 

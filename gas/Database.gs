@@ -135,7 +135,7 @@ function initializeDatabase() {
     ];
     var svcHeaders = schema["Services"];
     defaultServices.forEach(function(svc) {
-      servicesSheet.appendRow(svcHeaders.map(function(h) { return svc[h] || ""; }));
+      appendRow("Services", svc);
     });
   }
 }
@@ -182,8 +182,12 @@ function getSheetData(sheetName) {
       var val = row[idx];
       // Обрабатываем даты
       if (val instanceof Date) {
+        // Если это дата из 1899 года, Google Sheets так хранит чистое время
+        if (val.getFullYear() === 1899) {
+          obj[header] = Utilities.formatDate(val, Session.getScriptTimeZone(), "HH:mm");
+        }
         // Если это дата (без времени), сохраняем как YYYY-MM-DD
-        if (val.getHours() === 0 && val.getMinutes() === 0 && val.getSeconds() === 0) {
+        else if (val.getHours() === 0 && val.getMinutes() === 0 && val.getSeconds() === 0) {
           obj[header] = Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
         } else {
           obj[header] = val.toISOString();

@@ -44,12 +44,11 @@ function initializeDatabase() {
   var settingsSheet = getSheet("Settings");
   if (settingsSheet.getLastRow() <= 1) {
     var defaultSettings = {
-      "businessName": "Мой салон красоты",
-      "description": "Автономный кабинет Suluu Business",
-      "address": "ул. Токтогула, 125",
+      "businessName": "Suluu Beauty",
+      "description": "Студия красоты и стиля",
+      "address": "г. Бишкек, ул. Токтогула 125",
       "phone": "996555123456",
       "email": "info@mybeauty.kg",
-      "theme": "hair",
       "workSchedule": JSON.stringify({
         "mon": { "start": "09:00", "end": "20:00", "enabled": true },
         "tue": { "start": "09:00", "end": "20:00", "enabled": true },
@@ -58,7 +57,16 @@ function initializeDatabase() {
         "fri": { "start": "09:00", "end": "20:00", "enabled": true },
         "sat": { "start": "10:00", "end": "18:00", "enabled": true },
         "sun": { "enabled": false }
-      })
+      }),
+      "wallets": JSON.stringify([
+        { "id": "cash", "name": "Сейф (Наличные)", "icon": "💵", "type": "cash" },
+        { "id": "card", "name": "Расчетный счет (Карта)", "icon": "💳", "type": "card" }
+      ]),
+      "categories": JSON.stringify([
+        { "id": "cat_inc_1", "name": "Оплата услуг", "type": "income" },
+        { "id": "cat_exp_1", "name": "Закупка материалов", "type": "expense" },
+        { "id": "cat_exp_2", "name": "Зарплата", "type": "expense" }
+      ])
     };
     
     for (var key in defaultSettings) {

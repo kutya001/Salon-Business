@@ -19,8 +19,8 @@ function handleGetSettings() {
     var key = row[0];
     var val = row[1];
     
-    // Если это JSON строка (например, расписание), распарсим её
-    if (key === "workSchedule") {
+    // Если это JSON строка (начинается с { или [), распарсим её
+    if (typeof val === "string" && (val.trim().startsWith("{") || val.trim().startsWith("["))) {
       try {
         settings[key] = JSON.parse(val);
       } catch(e) {

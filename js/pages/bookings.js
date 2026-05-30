@@ -213,7 +213,7 @@ function renderBookingsTable(bookings) {
     const masterText = `<span style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>`;
 
     return `
-      <div class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+      <div id="booking-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
             <div style="font-weight: 800; font-size: 14px;">${formatRelativeDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
@@ -272,7 +272,7 @@ function renderBookingsTable(bookings) {
     `;
 
     return `
-      <tr onclick="showBookingDetails('${b.id}')" style="cursor: pointer; transition: background 0.2s;">
+      <tr id="booking-${b.id}" onclick="showBookingDetails('${b.id}')" style="cursor: pointer; transition: background 0.2s;">
         <td style="font-weight: 700;">${b.clientName}</td>
         <td style="color: var(--text-secondary); font-size: 13px;">${formatClientPhone(b.clientPhone)}</td>
         <td style="font-weight: 600;">${b.serviceName}</td>
@@ -403,7 +403,7 @@ function renderBookingsTimeline(bookings) {
         const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
 
         return `
-          <div onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 6px 8px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; text-align: left; font-size: 11px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <div id="booking-${b.id}" onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 6px 8px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; text-align: left; font-size: 11px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <span style="font-weight: 800; color: ${bdColor}; font-size: 10px;">${formatTime(b.time)}</span>
             </div>
@@ -420,12 +420,9 @@ function renderBookingsTimeline(bookings) {
     return `
       <tr>
         <td style="font-weight: 700; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 10;">
-          <div style="display: flex; align-items: center; gap: 10px; padding: 12px;">
-            <img src="${m.avatarUrl || 'https://ui-avatars.com/api/?name=' + m.name + '&background=random'}" style="width: 36px; height: 36px; border-radius: 18px; object-fit: cover;">
-            <div>
-              <div style="font-size: 13px; color: var(--text); white-space: nowrap; font-weight: 700;">${m.name}</div>
-              <div style="font-size: 10px; color: var(--text-secondary);">${m.specialization}</div>
-            </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; padding: 8px; max-width: 90px; overflow: hidden;">
+            <div style="font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700;">${m.name.split(' ')[0]}</div>
+            <div style="font-size: 9px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</div>
           </div>
         </td>
         ${colsHtml}
@@ -491,6 +488,7 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
     const idx = state.bookings.findIndex(b => b.id === id);
     if (idx !== -1) {
       state.bookings[idx] = updated;
+      if (window.render) window.render();
     }
     
     // Перезагружаем кассовые смены и транзакции при завершении записи

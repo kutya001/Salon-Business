@@ -167,7 +167,7 @@ window.renderLayout = function () {
     </div>
   ` : '';
 
-  const syncingIcon = (state.ui.syncingCount > 0) ? `<div style="animation: spin 1.5s linear infinite; font-size: 16px; display: inline-block; margin-left: 8px;">🔄</div>` : '';
+  const syncingIcon = (state.ui.syncingCount > 0) ? `<i data-feather="refresh-cw" class="sync-icon-spin" style="width: 16px; height: 16px; margin-left: 8px; color: var(--primary);"></i>` : '';
 
   return `
     <div class="app-layout">
@@ -233,7 +233,9 @@ window.renderLayout = function () {
 
       <!-- Главная область контента -->
       <main class="main-content">
-        ${pageContent}
+        <div class="container-max">
+          ${pageContent}
+        </div>
       </main>
 
       <nav class="bottom-nav glass-island">

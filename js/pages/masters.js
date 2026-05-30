@@ -8,7 +8,7 @@ window.renderMasters = function () {
   const masterCardsHtml = state.masters.length === 0
     ? `
       <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
-        <span style="font-size: 56px; display: block; margin-bottom: 16px;">👩‍🎨</span>
+        <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="users" style="width: 56px; height: 56px;"></i></span>
         <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Нет зарегистрированных мастеров</h3>
         <p style="font-size: 14px; margin-bottom: 16px;">Добавьте первого специалиста, чтобы принимать записи</p>
         <button onclick="showCreateMasterModal()" class="btn btn-primary" style="width: auto;">Добавить мастера</button>
@@ -64,12 +64,12 @@ window.renderMasters = function () {
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-              <button onclick="showEditMasterModal('${m.id}')" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px; border-radius: 10px; width: auto;">
-                ✏️ Изменить
-              </button>
-              <button onclick="handleDeleteMaster('${m.id}')" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px; border-radius: 10px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);">
-                🗑 Удалить
-              </button>
+                <button onclick="showEditMasterModal('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; display: flex; align-items: center; gap: 4px;">
+                  <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Изменить
+                </button>
+                <button onclick="handleDeleteMaster('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); display: flex; align-items: center; gap: 4px;">
+                  <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Удалить
+                </button>
             </div>
           </div>
         `;
@@ -81,11 +81,11 @@ window.renderMasters = function () {
       <!-- Заголовок -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Мастера салона</h1>
+          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="star" style="width: 28px; height: 28px;"></i> Мастера и расписание</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Управление командой профессионалов и расчетом заработных плат</p>
         </div>
         <button onclick="showCreateMasterModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-          ➕ Добавить мастера
+          <i data-feather="user-plus" style="width: 18px; height: 18px;"></i> Добавить мастера
         </button>
       </div>
 
@@ -118,7 +118,7 @@ window.renderMasterModal = function () {
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">${isEdit ? 'Редактировать мастера' : 'Добавить нового специалиста'}</h3>
-        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
       </div>
 
       <form id="master-form" onsubmit="event.preventDefault(); handleMasterSubmit('${isEdit ? m.id : ''}');" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 60vh; padding-right: 4px;">

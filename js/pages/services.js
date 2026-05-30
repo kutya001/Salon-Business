@@ -31,7 +31,7 @@ window.renderServices = function () {
   if (filteredServices.length === 0) {
     contentHtml = `
       <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
-        <span style="font-size: 56px; display: block; margin-bottom: 16px;">💇</span>
+        <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="inbox" style="width: 56px; height: 56px;"></i></span>
         <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">В этой категории нет услуг</h3>
         <p style="font-size: 14px; margin-bottom: 16px;">Добавьте новую процедуру, чтобы сделать ее доступной для записи</p>
         <button onclick="showCreateServiceModal()" class="btn btn-primary" style="width: auto;">Добавить услугу</button>
@@ -50,16 +50,19 @@ window.renderServices = function () {
               <p style="font-size: 13px; color: var(--text-secondary); min-height: 38px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 12px;">
                 ${s.description || 'Описание услуги отсутствует.'}
               </p>
-              <span class="badge" style="font-size: 10px;">${s.genderCategory === 'male' ? '👨 Мужская' : s.genderCategory === 'female' ? '👩 Женская' : '🧑 Любая'}</span>
+              <span class="badge" style="font-size: 10px; display: inline-flex; align-items: center; gap: 4px;">
+                <i data-feather="${s.genderCategory === 'male' ? 'user' : s.genderCategory === 'female' ? 'user' : 'users'}" style="width: 12px; height: 12px;"></i>
+                ${s.genderCategory === 'male' ? 'Мужская' : s.genderCategory === 'female' ? 'Женская' : 'Любая'}
+              </span>
             </div>
             <div>
               <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 14px;">
-                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">🕒 ${s.duration} мин</span>
+                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> ${s.duration} мин</span>
                 <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
               </div>
               <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto;">✏️</button>
-                <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);">🗑</button>
+                <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i></button>
+                <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);"><i data-feather="trash-2" style="width: 14px; height: 14px;"></i></button>
               </div>
             </div>
           </div>
@@ -69,34 +72,57 @@ window.renderServices = function () {
   } else {
     // Table mode
     contentHtml = `
-      <div class="card overflow-x-auto">
-        <table class="table" style="min-width: 700px;">
-          <thead>
-            <tr>
-              <th>Название</th>
-              <th>Вид услуги</th>
-              <th>Пол</th>
-              <th>Цена</th>
-              <th>Длительность</th>
-              <th style="text-align:right;">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredServices.map(s => `
-              <tr>
-                <td style="font-weight: 700;">${s.name}</td>
-                <td><span class="badge badge-info" style="font-size: 10px;">${s.categoryName}</span></td>
-                <td>${s.genderCategory === 'male' ? '👨 Мужская' : s.genderCategory === 'female' ? '👩 Женская' : '🧑 Любая'}</td>
-                <td style="font-weight: 800; color: var(--primary);">${formatPrice(s.price)}</td>
-                <td style="color: var(--text-secondary); font-size: 13px;">${s.duration} мин</td>
-                <td style="text-align: right;">
-                  <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; display: inline-block; width: auto; margin-right: 4px;">✏️</button>
-                  <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; display: inline-block; width: auto; color: #ef4444;">🗑</button>
-                </td>
+      <div class="card" style="overflow: hidden; border-radius: 16px;">
+        <div class="data-table-container">
+          <table class="data-table" style="min-width: 800px; width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border);">
+                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Услуга</th>
+                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Категория</th>
+                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Длительность</th>
+                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: left;">Стоимость</th>
+                <th style="padding: 16px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Действия</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${filteredServices.map(s => `
+                <tr class="table-row-hover" style="border-bottom: 1px solid var(--border); transition: background 0.2s;">
+                  <td style="padding: 16px;">
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text);">${s.name}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.description || 'Нет описания'}</div>
+                  </td>
+                  <td style="padding: 16px;">
+                    <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+                      <span class="badge badge-info" style="font-size: 10px; font-weight: 700; padding: 4px 8px;">${s.categoryName}</span>
+                      <span class="badge" style="font-size: 10px; display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border: 1px solid var(--border);">
+                        <i data-feather="${s.genderCategory === 'male' ? 'user' : s.genderCategory === 'female' ? 'user' : 'users'}" style="width: 10px; height: 10px;"></i>
+                        ${s.genderCategory === 'male' ? 'Мужская' : s.genderCategory === 'female' ? 'Женская' : 'Любая'}
+                      </span>
+                    </div>
+                  </td>
+                  <td style="padding: 16px;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary);">
+                      <i data-feather="clock" style="width: 14px; height: 14px; color: var(--primary);"></i> ${s.duration} мин
+                    </div>
+                  </td>
+                  <td style="padding: 16px; font-weight: 800; color: var(--primary); font-size: 15px;">
+                    ${formatPrice(s.price)}
+                  </td>
+                  <td style="padding: 16px; text-align: right;">
+                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                      <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto;" title="Редактировать">
+                        <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
+                      </button>
+                      <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); background: rgba(239,68,68,0.05);" title="Удалить">
+                        <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
   }
@@ -110,11 +136,11 @@ window.renderServices = function () {
         </div>
         <div style="display: flex; gap: 12px; align-items: center;">
           <div style="display: flex; background: var(--bg-secondary); border-radius: 12px; padding: 4px; border: 1px solid var(--border);">
-            <button onclick="setUI({ servicesViewMode: 'cards' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'cards' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'cards' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'cards' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'};">🗂 Карточки</button>
-            <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'};">📋 Таблица</button>
+            <button onclick="setUI({ servicesViewMode: 'cards' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'cards' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'cards' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'cards' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="grid" style="width: 14px; height: 14px;"></i> Карточки</button>
+            <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="list" style="width: 14px; height: 14px;"></i> Таблица</button>
           </div>
-          <button onclick="showCategoriesModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">📁 Справочник видов</button>
-          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">➕ Добавить услугу</button>
+          <button onclick="showCategoriesModal()" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;"><i data-feather="folder" style="width: 16px; height: 16px;"></i> Виды</button>
+          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;"><i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить</button>
         </div>
       </div>
 

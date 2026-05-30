@@ -68,7 +68,7 @@ window.renderSettings = function () {
         
         <!-- Секция: Информация о бизнесе -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">🏢 Профиль салона</h3>
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="briefcase" style="width: 18px; height: 18px;"></i> Профиль салона</h3>
           
           <form onsubmit="event.preventDefault(); handleSaveProfile();" style="display: flex; flex-direction: column; gap: 14px;">
             <div class="form-group">
@@ -92,15 +92,15 @@ window.renderSettings = function () {
               <input type="email" id="set-email" class="form-input" value="${biz.email || ''}">
             </div>
             
-            <button type="submit" class="btn btn-primary" style="margin-top: 6px;">
-              💾 Сохранить изменения
+            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить изменения
             </button>
           </form>
         </div>
 
         <!-- Секция: Темы оформления -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">🎨 Тема оформления</h3>
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="pen-tool" style="width: 18px; height: 18px;"></i> Тема оформления</h3>
           <p style="font-size: 12px; color: var(--text-secondary);">Выберите одну из тщательно подобранных цветовых палитр, соответствующих концепции вашего салона красоты</p>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
             ${themesHtml}
@@ -111,7 +111,7 @@ window.renderSettings = function () {
 
       <!-- Секция: Расписание работы -->
       <div class="card p-6">
-        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">📅 График работы салона</h3>
+        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><i data-feather="calendar" style="width: 18px; height: 18px;"></i> График работы салона</h3>
         
         <div class="data-table-container">
           <table class="data-table">
@@ -130,8 +130,8 @@ window.renderSettings = function () {
         </div>
         
         <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
-          <button onclick="handleSaveSchedule()" class="btn btn-primary" style="width: auto;">
-            💾 Сохранить график работы
+          <button onclick="handleSaveSchedule()" class="btn btn-primary" style="width: auto; display: flex; align-items: center; gap: 6px;">
+            <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить график работы
           </button>
         </div>
       </div>
@@ -141,7 +141,7 @@ window.renderSettings = function () {
         
         <!-- Управление Пин-кодом -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">🔒 Безопасность (PIN-код)</h3>
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="lock" style="width: 18px; height: 18px;"></i> Безопасность (PIN-код)</h3>
           <p style="font-size: 12px; color: var(--text-secondary);">Установите 4-значный цифровой пин-код для ограничения доступа к панели Suluu Business. Если вы настраиваете его впервые, поле старого пин-кода можно оставить пустым.</p>
           
           <form onsubmit="event.preventDefault(); handlePinChangeSubmit();" style="display: flex; flex-direction: column; gap: 14px;">
@@ -158,15 +158,15 @@ window.renderSettings = function () {
               <input type="password" id="pin-confirm" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••" required>
             </div>
             
-            <button type="submit" class="btn btn-primary" style="margin-top: 6px;">
-              🔑 Установить / Изменить PIN-код
+            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <i data-feather="key" style="width: 16px; height: 16px;"></i> Установить / Изменить PIN-код
             </button>
           </form>
         </div>
 
         <!-- Подключение бэкенда -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px; border-left: 5px solid var(--primary);">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text);">⚙️ Системная информация</h3>
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="settings" style="width: 18px; height: 18px;"></i> Системная информация</h3>
           
           <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
             <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Версия:</span><span style="font-weight: 700;">1.0.0 (PWA)</span></div>
@@ -178,8 +178,8 @@ window.renderSettings = function () {
           </div>
           
           <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end;">
-            <button onclick="handleDisconnect()" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto;">
-              🔌 Отключить бэкенд
+            <button onclick="handleDisconnect()" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto; display: flex; align-items: center; gap: 6px;">
+              <i data-feather="power" style="width: 16px; height: 16px;"></i> Отключить бэкенд
             </button>
           </div>
         </div>

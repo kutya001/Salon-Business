@@ -25,6 +25,11 @@ window.render = function () {
     if (window.ThemeManager) {
       window.ThemeManager.init();
     }
+    
+    // Инициализируем иконки Feather
+    if (window.feather) {
+      window.feather.replace();
+    }
   } catch (error) {
     console.error('Ошибка рендеринга DOM:', error);
     appEl.innerHTML = `

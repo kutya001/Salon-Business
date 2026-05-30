@@ -91,16 +91,16 @@ window.renderBookings = function () {
           
           <!-- Переключатель видов -->
           <div style="display: flex; background: var(--theme-50); border: 1px solid var(--border); padding: 4px; border-radius: 12px; gap: 4px;">
-            <button onclick="toggleBookingsView('table')" class="btn" style="padding: 8px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'table' ? 'var(--bg-secondary)' : 'none'}; box-shadow: ${viewMode === 'table' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'table' ? 'var(--primary)' : 'var(--text-secondary)'};">
-              📋 Список
+            <button onclick="toggleBookingsView('table')" class="btn" style="padding: 8px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'table' ? 'var(--bg-secondary)' : 'none'}; box-shadow: ${viewMode === 'table' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'table' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
+              <i data-feather="list" style="width: 14px; height: 14px;"></i> Список
             </button>
-            <button onclick="toggleBookingsView('timeline')" class="btn" style="padding: 8px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'timeline' ? 'var(--bg-secondary)' : 'none'}; box-shadow: ${viewMode === 'timeline' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'timeline' ? 'var(--primary)' : 'var(--text-secondary)'};">
-              📊 Сетка (Таймлайн)
+            <button onclick="toggleBookingsView('timeline')" class="btn" style="padding: 8px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'timeline' ? 'var(--bg-secondary)' : 'none'}; box-shadow: ${viewMode === 'timeline' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'timeline' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
+              <i data-feather="calendar" style="width: 14px; height: 14px;"></i> Сетка (Таймлайн)
             </button>
           </div>
 
           <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-            ➕ Новая запись
+            <i data-feather="plus" style="width: 16px; height: 16px;"></i> Новая запись
           </button>
         </div>
       </div>
@@ -124,7 +124,7 @@ function renderBookingsTable(bookings) {
   if (bookings.length === 0) {
     return `
       <div class="card p-12 text-center" style="color: var(--text-secondary);">
-        <span style="font-size: 56px; display: block; margin-bottom: 16px;">🔍</span>
+        <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="search" style="width: 56px; height: 56px;"></i></span>
         <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Записи не найдены</h3>
         <p style="font-size: 14px;">Попробуйте сбросить фильтры или создать новую запись</p>
       </div>
@@ -138,14 +138,14 @@ function renderBookingsTable(bookings) {
     let actionBtnHtml = '';
     if (b.status === 'pending') {
       actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto;">
-          👍 Подтвердить
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; display: flex; align-items: center; gap: 4px;">
+          <i data-feather="thumbs-up" style="width: 14px; height: 14px;"></i> Подтвердить
         </button>
       `;
     } else if (b.status === 'confirmed') {
       actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #10b981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05);">
-          ✅ Завершить
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #10b981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); display: flex; align-items: center; gap: 4px;">
+          <i data-feather="check-circle" style="width: 14px; height: 14px;"></i> Завершить
         </button>
       `;
     }
@@ -216,12 +216,14 @@ function renderBookingsTimeline(bookings) {
     </th>
   `).join('');
 
+  const slotDate = state.ui.timelineDate || new Date().toISOString().split('T')[0];
+  
   // Строки по часам
   const rows = hours.map(hour => {
     const cols = state.masters.map(m => {
-      // Ищем записи этого мастера на этот час на выбранную дату (state.ui.filters.dateFrom)
-      const slotDate = state.ui.filters.dateFrom || new Date().toISOString().split('T')[0];
-      const matchBookings = bookings.filter(b => 
+      // Ищем записи этого мастера на этот час на выбранную дату (slotDate)
+      // ВНИМАНИЕ: state.bookings здесь не отфильтровано глобальным фильтром по датам, чтобы таймлайн работал независимо
+      const matchBookings = state.bookings.filter(b => 
         b.masterId === m.id && 
         b.date === slotDate &&
         b.time.split(':')[0] === hour.split(':')[0]
@@ -258,19 +260,35 @@ function renderBookingsTimeline(bookings) {
   }).join('');
 
   return `
-    <div class="card p-2" style="overflow-x: auto;">
-      <div style="min-width: 700px;">
-        <table class="data-table" style="border: 1px solid var(--border);">
-          <thead>
-            <tr>
-              <th style="width: 70px; background: var(--theme-50);">Время</th>
-              ${masterHeaders}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
+    <div class="card p-4">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 0 8px; flex-wrap: wrap; gap: 12px;">
+        <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">Расписание на <span style="color: var(--primary);">${formatDate(slotDate)}</span></h3>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button onclick="
+            const d = new Date('${slotDate}'); d.setDate(d.getDate() - 1); setUI({ timelineDate: d.toISOString().split('T')[0] });
+          " class="btn btn-secondary" style="padding: 6px; width: auto;"><i data-feather="chevron-left" style="width: 16px; height: 16px;"></i></button>
+          
+          <input type="date" class="form-input" value="${slotDate}" onchange="setUI({ timelineDate: this.value })" style="width: auto; padding: 6px 12px; font-size: 13px;">
+          
+          <button onclick="
+            const d = new Date('${slotDate}'); d.setDate(d.getDate() + 1); setUI({ timelineDate: d.toISOString().split('T')[0] });
+          " class="btn btn-secondary" style="padding: 6px; width: auto;"><i data-feather="chevron-right" style="width: 16px; height: 16px;"></i></button>
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <div style="min-width: 700px;">
+          <table class="data-table" style="border: 1px solid var(--border); border-collapse: separate; border-spacing: 0;">
+            <thead>
+              <tr>
+                <th style="width: 70px; background: var(--theme-50); border-right: 1px solid var(--border);">Время</th>
+                ${masterHeaders}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
@@ -341,13 +359,13 @@ window.renderBookingDetailsModal = function () {
   let actionsHtml = '';
   if (b.status === 'pending') {
     actionsHtml = `
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="flex: 1;">👍 Подтвердить</button>
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'cancelled')" class="btn btn-danger" style="flex: 1; background: #dc2626;">❌ Отклонить</button>
+      <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="thumbs-up" style="width: 16px; height: 16px;"></i> Подтвердить</button>
+      <button onclick="handleUpdateBookingStatus('${b.id}', 'cancelled')" class="btn btn-danger" style="flex: 1; background: #dc2626; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="x" style="width: 16px; height: 16px;"></i> Отклонить</button>
     `;
   } else if (b.status === 'confirmed') {
     actionsHtml = `
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="flex: 1; background: #10b981;">✅ Завершить сеанс</button>
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'no-show')" class="btn btn-secondary" style="flex: 1; color: #ef4444; border-color: rgba(239,68,68,0.2);">🙅 Не пришел</button>
+      <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="flex: 1; background: #10b981; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="check-circle" style="width: 16px; height: 16px;"></i> Завершить сеанс</button>
+      <button onclick="handleUpdateBookingStatus('${b.id}', 'no-show')" class="btn btn-secondary" style="flex: 1; color: #ef4444; border-color: rgba(239,68,68,0.2); display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="user-x" style="width: 16px; height: 16px;"></i> Не пришел</button>
     `;
   }
 
@@ -385,7 +403,10 @@ window.renderBookingDetailsModal = function () {
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 13px; color: var(--text-secondary); font-weight: 600;">Способ оплаты</span>
-          <span style="font-weight: 700; color: var(--text);">${b.paymentMethod === 'card' ? '💳 Картой' : b.paymentMethod === 'bonus' ? '🌟 Бонусы' : '💵 Наличные'}</span>
+          <span style="font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px;">
+            <i data-feather="${b.paymentMethod === 'card' ? 'credit-card' : b.paymentMethod === 'bonus' ? 'star' : 'dollar-sign'}" style="width: 14px; height: 14px; color: var(--primary);"></i>
+            ${b.paymentMethod === 'card' ? 'Картой' : b.paymentMethod === 'bonus' ? 'Бонусы' : 'Наличные'}
+          </span>
         </div>
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <span style="font-size: 13px; color: var(--text-secondary); font-weight: 600;">Заметки/Комментарий</span>
@@ -395,15 +416,15 @@ window.renderBookingDetailsModal = function () {
 
       <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
         ${actionsHtml}
-        <button onclick="showBookingMessageModal('${b.id}')" class="btn btn-secondary" style="flex: 1; min-width: 140px; color: #3b82f6; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.05);">💬 Отправить сообщение</button>
+        <button onclick="showBookingMessageModal('${b.id}')" class="btn btn-secondary" style="flex: 1; min-width: 140px; color: #3b82f6; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.05); display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="message-circle" style="width: 16px; height: 16px;"></i> Отправить сообщение</button>
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; justify-content: space-between;">
-        <button onclick="showEditBookingModal('${b.id}')" class="btn btn-secondary" style="width: auto;">
-          ✏️ Редактировать
+        <button onclick="showEditBookingModal('${b.id}')" class="btn btn-secondary" style="width: auto; display: flex; align-items: center; gap: 6px;">
+          <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Редактировать
         </button>
-        <button onclick="handleDeleteBooking('${b.id}')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto;">
-          🗑 Удалить запись
+        <button onclick="handleDeleteBooking('${b.id}')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto; display: flex; align-items: center; gap: 6px;">
+          <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Удалить запись
         </button>
       </div>
     </div>
@@ -468,14 +489,14 @@ window.renderBookingMessageModal = function () {
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">💬 Отправить сообщение</h3>
-        <button onclick="setUI({ modal: 'viewBooking', modalData: md.booking })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">⬅</button>
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="message-circle" style="width: 20px; height: 20px; color: var(--primary);"></i> Отправить сообщение</h3>
+        <button onclick="setUI({ modal: 'viewBooking', modalData: md.booking })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="arrow-left"></i></button>
       </div>
       
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button onclick="handleMessageTemplateSelect('reminder')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto;">⏰ Напоминание</button>
-        <button onclick="handleMessageTemplateSelect('confirmation')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto;">✅ Подтверждение</button>
-        <button onclick="handleMessageTemplateSelect('thanks')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto;">❤️ Спасибо</button>
+        <button onclick="handleMessageTemplateSelect('reminder')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 14px; height: 14px;"></i> Напоминание</button>
+        <button onclick="handleMessageTemplateSelect('confirmation')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto; display: flex; align-items: center; gap: 4px;"><i data-feather="check" style="width: 14px; height: 14px;"></i> Подтверждение</button>
+        <button onclick="handleMessageTemplateSelect('thanks')" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; width: auto; display: flex; align-items: center; gap: 4px;"><i data-feather="heart" style="width: 14px; height: 14px;"></i> Спасибо</button>
       </div>
 
       <div class="form-group">

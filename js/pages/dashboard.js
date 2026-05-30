@@ -46,9 +46,10 @@ window.renderDashboard = function () {
   // 3. Записи на сегодня
   const todayBookingsListHtml = todayBookings.length === 0 
     ? `
-      <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-        <span style="font-size: 40px; display: block; margin-bottom: 12px;">📅</span>
-        На сегодня нет запланированных записей
+      <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
+        <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="activity" style="width: 56px; height: 56px;"></i></span>
+        <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Нет данных</h3>
+        <p style="font-size: 14px;">Пока нет записей для отображения статистики</p>
       </div>
     `
     : todayBookings.map(b => {
@@ -84,10 +85,12 @@ window.renderDashboard = function () {
                 <p style="font-size: 12px; color: var(--text-secondary);">${b.serviceName} • ${b.masterName}</p>
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge ${statusColor}">${statusLabel}</span>
-              ${actionBtnHtml}
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(59,130,246,0.1); border-radius: 12px; color: #3b82f6;">
+              <i data-feather="dollar-sign" style="width: 24px; height: 24px;"></i>
             </div>
+            <span class="badge ${statusColor}">${statusLabel}</span>
+            ${actionBtnHtml}
           </div>
         `;
       }).join('');
@@ -129,14 +132,30 @@ window.renderDashboard = function () {
     <div class="animate-slide-up" style="display: flex; flex-direction: column; gap: 28px;">
       
       <!-- Приветствие и кнопка новой записи -->
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Аналитика и дашборд</h1>
-          <p style="color: var(--text-secondary); font-size: 14px;">Обзор показателей вашего салона на сегодня</p>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(16,185,129,0.1); border-radius: 50%; color: #10b981;">
+                <i data-feather="check-circle" style="width: 20px; height: 20px;"></i>
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text);">Касса открыта</div>
+                <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена</div>
+              </div>
+            </div>
+            <button onclick="showCloseShiftModal()" class="btn btn-secondary" style="width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2);">Закрыть смену</button>
+          </div>
         </div>
-        <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 18px;">➕</span> Создать запись
-        </button>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Аналитика и дашборд</h1>
+            <p style="color: var(--text-secondary); font-size: 14px;">Обзор показателей вашего салона на сегодня</p>
+          </div>
+          <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+            <i data-feather="plus" style="width: 18px; height: 18px;"></i> Создать запись
+          </button>
+        </div>
       </div>
 
       <!-- Строка основных показателей -->

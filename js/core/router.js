@@ -83,32 +83,31 @@ window.renderLayout = function () {
   const businessName = state.business?.name || 'Мой Салон';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Дашборд', icon: '📊' },
-    { id: 'bookings', label: 'Записи', icon: '📅' },
-    { id: 'masters', label: 'Мастера', icon: '👩‍🎨' },
-    { id: 'clients', label: 'Клиенты', icon: '👥' },
-    { id: 'services', label: 'Услуги', icon: '💇' },
-    { id: 'finance', label: 'Финансы', icon: '💰' },
-    { id: 'settings', label: 'Настройки', icon: '⚙️' }
+    { id: 'dashboard', label: 'Дашборд', icon: 'grid' },
+    { id: 'bookings', label: 'Записи', icon: 'calendar' },
+    { id: 'masters', label: 'Мастера', icon: 'users' },
+    { id: 'clients', label: 'Клиенты', icon: 'user' },
+    { id: 'services', label: 'Услуги', icon: 'scissors' },
+    { id: 'finance', label: 'Финансы', icon: 'dollar-sign' },
+    { id: 'settings', label: 'Настройки', icon: 'settings' }
   ];
 
-  // Рендерим пункты меню
   const sidebarLinks = menuItems.map(item => {
     const activeClass = page === item.id ? 'active' : '';
     return `
       <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="nav-link ${activeClass}">
-        <span class="nav-icon">${item.icon}</span>
+        <span class="nav-icon"><i data-feather="${item.icon}" style="width: 20px; height: 20px;"></i></span>
         <span>${item.label}</span>
       </a>
     `;
   }).join('');
 
-  // Рендерим вкладки нижнего меню для мобильных
-  const mobileTabs = menuItems.slice(0, 4).concat([menuItems[5]]).map(item => {
+  const mobileTabs = ['dashboard', 'bookings', 'masters', 'finance'].map(id => {
+    const item = menuItems.find(m => m.id === id);
     const activeClass = page === item.id ? 'active' : '';
     return `
       <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}">
-        <span class="tab-icon" style="font-size: 20px;">${item.icon}</span>
+        <span class="tab-icon" style="display: flex; align-items: center; justify-content: center; height: 24px;"><i data-feather="${item.icon}" style="width: 20px; height: 20px;"></i></span>
         <span class="tab-label" style="font-size: 10px;">${item.label}</span>
       </a>
     `;
@@ -116,10 +115,10 @@ window.renderLayout = function () {
 
   // Рендерим тосты
   const toastsHtml = (state.ui.toasts || []).map(toast => {
-    const icon = toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️';
+    const icon = toast.type === 'success' ? '<i data-feather="check-circle" style="width: 18px; height: 18px;"></i>' : toast.type === 'error' ? '<i data-feather="x-octagon" style="width: 18px; height: 18px;"></i>' : '<i data-feather="info" style="width: 18px; height: 18px;"></i>';
     return `
-      <div class="toast-item toast-${toast.type} animate-slide-in-right">
-        <span>${icon}</span>
+      <div class="toast-item toast-${toast.type} animate-slide-in-right" style="display: flex; align-items: center; gap: 8px;">
+        <span style="display: flex; align-items: center;">${icon}</span>
         <span>${toast.message}</span>
       </div>
     `;
@@ -172,7 +171,7 @@ window.renderLayout = function () {
       <aside class="sidebar">
         <div class="sidebar-header" style="padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="font-size: 32px;">💎</div>
+            <div style="color: var(--primary);"><i data-feather="hexagon" style="width: 28px; height: 28px;"></i></div>
             <div>
               <h2 style="font-weight: 800; font-size: 18px; color: var(--text); line-height: 1.2;">Suluu</h2>
               <p style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Управление бизнесом</p>
@@ -184,22 +183,21 @@ window.renderLayout = function () {
           ${sidebarLinks}
         </nav>
         <div style="padding: 16px; border-top: 1px solid var(--border);">
-          <div style="font-size: 13px; font-weight: 600; padding: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px;">
-            🏢 ${businessName}
+          <div style="font-size: 13px; font-weight: 600; padding: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <i data-feather="briefcase" style="width: 16px; height: 16px;"></i> ${businessName}
           </div>
           <button onclick="api.logout()" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
-            <span>🚪</span> Выйти
+            <i data-feather="log-out" style="width: 16px; height: 16px;"></i> Выйти
           </button>
         </div>
       </aside>
 
-      <!-- Шапка для мобильных телефонов -->
       <header class="top-bar">
         <button onclick="setUI({ sidebarOpen: true })" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; color: var(--text);">
-          ☰
+          <i data-feather="menu"></i>
         </button>
         <div style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 6px;">
-          💎 ${businessName} ${syncingIcon}
+          <i data-feather="hexagon" style="width: 20px; height: 20px; color: var(--primary);"></i> ${businessName} ${syncingIcon}
         </div>
         <div style="width: 32px;"></div>
       </header>
@@ -209,16 +207,16 @@ window.renderLayout = function () {
         <aside class="mobile-sidebar" onclick="event.stopPropagation()">
           <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 28px;">💎</span>
+              <div style="color: var(--primary);"><i data-feather="hexagon" style="width: 28px; height: 28px;"></i></div>
               <span style="font-weight: 800; font-size: 18px; color: var(--text);">Suluu Business</span>
             </div>
-            <button onclick="setUI({ sidebarOpen: false })" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text);">✕</button>
+            <button onclick="setUI({ sidebarOpen: false })" style="background: none; border: none; cursor: pointer; color: var(--text);"><i data-feather="x"></i></button>
           </div>
           <nav style="padding: 16px; display: flex; flex-direction: column; gap: 6px;">
             ${sidebarLinks}
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 12px 0;">
             <button onclick="api.logout()" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
-              🚪 Выйти из аккаунта
+              <i data-feather="log-out" style="width: 18px; height: 18px;"></i> Выйти из аккаунта
             </button>
           </nav>
         </aside>
@@ -229,13 +227,8 @@ window.renderLayout = function () {
         ${pageContent}
       </main>
 
-      <!-- Нижнее меню для мобильных -->
       <nav class="bottom-nav">
         ${mobileTabs}
-        <a href="#" onclick="event.preventDefault(); navigate('settings')" class="tab-item ${page === 'settings' ? 'active' : ''}">
-          <span class="tab-icon" style="font-size: 20px;">⚙️</span>
-          <span class="tab-label" style="font-size: 10px;">Настройки</span>
-        </a>
       </nav>
 
       <!-- Контейнер для тостов -->

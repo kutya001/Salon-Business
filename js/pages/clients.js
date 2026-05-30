@@ -40,17 +40,17 @@ window.renderClients = function () {
       <!-- Заголовок страницы -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Клиентская база</h1>
+          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="users" style="width: 28px; height: 28px;"></i> База клиентов</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Список гостей, история процедур и суммарные траты</p>
         </div>
         <button onclick="showCreateClientModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-          ➕ Добавить клиента
+          <i data-feather="user-plus" style="width: 18px; height: 18px;"></i> Новый клиент
         </button>
       </div>
 
       <!-- Панель поиска -->
       <div class="card p-5" style="display: flex; align-items: center; gap: 12px;">
-        <span style="font-size: 20px; color: var(--text-secondary);">🔍</span>
+        <i data-feather="search" style="color: var(--text-secondary);"></i>
         <input type="text" placeholder="Поиск по имени, телефону или email..." value="${query}" oninput="setState({ ui: { ...state.ui, searchQuery: this.value } })" class="form-input" style="border: none; padding: 4px; font-size: 15px; width: 100%; box-shadow: none;">
       </div>
 
@@ -114,7 +114,7 @@ window.renderClientDetailsModal = function () {
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 85vh;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Карточка клиента</h3>
-        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-right: 4px;">
@@ -152,7 +152,9 @@ window.renderClientDetailsModal = function () {
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
-        <button onclick="showEditClientModal()" class="btn btn-secondary" style="width: auto;">✏️ Редактировать профиль</button>
+        <button onclick="showEditClientModal()" class="btn btn-secondary" style="width: auto; display: flex; align-items: center; gap: 6px;">
+          <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Редактировать профиль
+        </button>
       </div>
     </div>
   `;
@@ -172,7 +174,7 @@ window.renderClientModal = function () {
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">${isEdit ? 'Редактировать клиента' : 'Добавить клиента'}</h3>
-        <button onclick="setUI({ modal: ${isEdit ? "'viewClient'" : "null"}, modalData: ${isEdit ? "state.ui.modalData" : "null"} })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+        <button onclick="setUI({ modal: ${isEdit ? "'viewClient'" : "null"}, modalData: ${isEdit ? "state.ui.modalData" : "null"} })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
       </div>
 
       <form id="client-form" onsubmit="event.preventDefault(); handleClientSubmit('${isEdit ? c.id : ''}');" style="display: flex; flex-direction: column; gap: 16px;">

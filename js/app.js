@@ -76,3 +76,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }, 15000);
 });
+
+// Ручная принудительная синхронизация
+window.forceSync = async function () {
+  if (!window.state.isAuthenticated || !window.api.isConfigured()) return;
+  setUI({ loading: true });
+  try {
+    const allData = await window.api.getAll({ background: false });
+    setState({
+      business: allData.business || state.business,
+      categories: allData.categories || [],
+      masters: allData.masters || [],
+      services: allData.services || [],
+      bookings: allData.bookings || [],
+      clients: allData.clients || [],
+      transactions: allData.transactions || [],
+      shifts: allData.shifts || []
+    });
+    showToast('Синхронизация завершена', 'success');
+  } catch (err) {
+    showToast('Ошибка при синхронизации', 'error');
+  } finally {
+    setUI({ loading: false });
+  }
+};

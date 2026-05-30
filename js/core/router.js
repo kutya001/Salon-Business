@@ -96,9 +96,9 @@ window.renderLayout = function () {
   const sidebarLinks = menuItems.map(item => {
     const activeClass = page === item.id ? 'active' : '';
     return `
-      <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="nav-link ${activeClass}">
+      <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="nav-link ${activeClass}" title="${item.label}">
         <span class="nav-icon"><i data-feather="${item.icon}" style="width: 20px; height: 20px;"></i></span>
-        <span>${item.label}</span>
+        <span class="nav-label">${item.label}</span>
       </a>
     `;
   }).join('');
@@ -170,28 +170,33 @@ window.renderLayout = function () {
   const syncingIcon = (state.ui.syncingCount > 0) ? `<i data-feather="refresh-cw" class="sync-icon-spin" style="width: 16px; height: 16px; margin-left: 8px; color: var(--primary);"></i>` : '';
 
   return `
-    <div class="app-layout">
+    <div class="app-layout ${state.ui.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
       <!-- Навигационная панель для десктопа -->
       <aside class="sidebar glass-island">
-        <div class="sidebar-header" style="padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="color: var(--primary);"><i data-feather="hexagon" style="width: 28px; height: 28px;"></i></div>
-            <div>
+        <div class="sidebar-header" style="padding: 24px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 12px; overflow: hidden;">
+            <div style="color: var(--primary); min-width: 28px;"><i data-feather="hexagon" style="width: 28px; height: 28px;"></i></div>
+            <div class="sidebar-logo-text">
               <h2 style="font-weight: 800; font-size: 18px; color: var(--text); line-height: 1.2;">Suluu</h2>
               <p style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Управление бизнесом</p>
             </div>
           </div>
-          ${syncingIcon}
+          <button onclick="setUI({ sidebarCollapsed: !state.ui.sidebarCollapsed })" class="sidebar-toggle-btn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 24px;">
+            <i data-feather="${state.ui.sidebarCollapsed ? 'chevron-right' : 'chevron-left'}" style="width: 20px; height: 20px;"></i>
+          </button>
         </div>
-        <nav class="sidebar-menu" style="padding: 16px; display: flex; flex-direction: column; gap: 4px; flex-grow: 1;">
+        <nav class="sidebar-menu" style="padding: 16px; display: flex; flex-direction: column; gap: 4px; flex-grow: 1; overflow-x: hidden;">
           ${sidebarLinks}
         </nav>
-        <div style="padding: 16px; border-top: 1px solid var(--border);">
-          <div style="font-size: 13px; font-weight: 600; padding: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-            <i data-feather="briefcase" style="width: 16px; height: 16px;"></i> ${businessName}
+        <div class="sidebar-footer" style="padding: 16px; border-top: 1px solid var(--border); overflow-x: hidden;">
+          <div class="sidebar-business-name" style="font-size: 13px; font-weight: 600; padding: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <i data-feather="briefcase" style="width: 16px; height: 16px; min-width: 16px;"></i> <span>${businessName}</span>
           </div>
-          <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
-            <i data-feather="log-out" style="width: 16px; height: 16px;"></i> Выйти
+          <button onclick="forceSync()" title="Принудительная синхронизация" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--primary); border-color: rgba(99,102,241,0.2); background: rgba(99,102,241,0.05); margin-bottom: 8px;">
+            <i data-feather="refresh-cw" style="width: 16px; height: 16px; min-width: 16px;"></i> <span class="sidebar-action-text">Синхронизировать</span>
+          </button>
+          <button onclick="api.logout()" title="Выйти" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
+            <i data-feather="log-out" style="width: 16px; height: 16px; min-width: 16px;"></i> <span class="sidebar-action-text">Выйти</span>
           </button>
         </div>
       </aside>

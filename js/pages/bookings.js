@@ -282,6 +282,62 @@ function renderBookingsTable(bookings) {
     `;
   }
 
+  const mobileRows = bookings.map(b => {
+    const statusColor = getStatusColor(b.status);
+    const statusLabel = getStatusLabel(b.status);
+    
+    // Payment status indicator
+    const isPaid = b.status === 'completed';
+    const paymentIndicator = isPaid 
+      ? `<div style="font-size: 10px; color: #10b981; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #10b981;"></div> Оплачено</div>`
+      : `<div style="font-size: 10px; color: #ef4444; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #ef4444;"></div> Не оплачено</div>`;
+
+    // Quick actions
+    let actionBtnHtml = '';
+    if (b.status === 'pending') {
+      actionBtnHtml = `
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+      `;
+    } else if (b.status === 'confirmed') {
+      actionBtnHtml = `
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+      `;
+    }
+
+    // Master Dropdown (styled as text on mobile)
+    const masterText = `<span style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>`;
+
+    return `
+      <div id="booking-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-weight: 800; font-size: 14px;">${formatDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
+            <div style="font-weight: 700; font-size: 15px; color: var(--text); margin-top: 4px; display: flex; align-items: center;">${b.clientName} <a href="tel:${b.clientPhone}" onclick="event.stopPropagation()" style="color: var(--primary); margin-left: 8px; padding: 4px; background: var(--bg-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-feather="phone" style="width: 12px; height: 12px;"></i></a></div>
+          </div>
+          <div style="text-align: right;">
+            <span class="badge ${statusColor}" style="font-size: 10px;">${statusLabel}</span>
+            ${paymentIndicator}
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--border);">
+          <div>
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">${b.serviceName}</div>
+            <div style="margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              <i data-feather="user" style="width: 12px; height: 12px; color: var(--text-secondary);"></i>
+              ${masterText}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</div>
+            <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px;">${actionBtnHtml}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   const tableRows = bookings.map(b => {
     const statusColor = getStatusColor(b.status);
     const statusLabel = getStatusLabel(b.status);
@@ -333,26 +389,31 @@ function renderBookingsTable(bookings) {
   }).join('');
 
   return `
-    <div class="card p-0" style="overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
-        <table class="data-table" style="min-width: 800px;">
-          <thead>
-            <tr>
-              ${getHeaderHtml('Клиент', 'clientName')}
-              ${getHeaderHtml('Номер телефона', 'clientPhone')}
-              ${getHeaderHtml('Услуга', 'serviceName')}
-              ${getHeaderHtml('Дата', 'date')}
-              ${getHeaderHtml('Время', 'time')}
-              ${getHeaderHtml('Мастер', 'masterName')}
-              ${getHeaderHtml('Сумма', 'price')}
-              ${getHeaderHtml('Статус', 'status')}
-              <th style="text-align: right; padding: 8px 12px; font-size: 13px;">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
+    <div>
+      <div class="card p-0 hidden md-block" style="overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                ${getHeaderHtml('Клиент', 'clientName')}
+                ${getHeaderHtml('Номер телефона', 'clientPhone')}
+                ${getHeaderHtml('Услуга', 'serviceName')}
+                ${getHeaderHtml('Дата', 'date')}
+                ${getHeaderHtml('Время', 'time')}
+                ${getHeaderHtml('Мастер', 'masterName')}
+                ${getHeaderHtml('Сумма', 'price')}
+                ${getHeaderHtml('Статус', 'status')}
+                <th style="text-align: right; padding: 8px 12px; font-size: 13px;">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="md-hidden">
+        ${mobileRows}
       </div>
     </div>
   `;

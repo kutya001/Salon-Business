@@ -135,12 +135,6 @@ window.renderLayout = function () {
 
   return `
     <div class="app-layout ${state.ui.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
-      <!-- Кнопка синхронизации для десктопа в правом верхнем углу -->
-      <button onclick="setUI({ modal: 'syncLogs' })" class="hidden md-flex" style="position: fixed; top: 24px; right: 40px; z-index: 999; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: var(--text); align-items: center; gap: 8px; cursor: pointer; backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-        <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px; color: var(--primary);"></i>
-        <span>Синхронизация</span>
-        ${logsCount > 0 ? `<span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 2px;">${logsCount}</span>` : ''}
-      </button>
 
       <!-- Навигационная панель для десктопа -->
       <aside class="sidebar glass-island">
@@ -159,12 +153,18 @@ window.renderLayout = function () {
         <nav class="sidebar-menu" style="padding: 16px; display: flex; flex-direction: column; gap: 4px; flex-grow: 1; overflow-x: hidden;">
           ${sidebarLinks}
         </nav>
-        <div class="sidebar-footer" style="padding: 16px; border-top: 1px solid var(--border); overflow-x: hidden;">
-          <div class="sidebar-business-name" style="font-size: 13px; font-weight: 600; padding: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <div class="sidebar-footer" style="padding: 16px; border-top: 1px solid var(--border); overflow-x: hidden; display: flex; flex-direction: column; gap: 8px;">
+          <div class="sidebar-business-name" style="font-size: 13px; font-weight: 600; padding: 0 12px 8px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px;">
             <i data-feather="briefcase" style="width: 16px; height: 16px; min-width: 16px;"></i> <span>${businessName}</span>
           </div>
-          <button onclick="api.logout()" title="Выйти" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
-            <i data-feather="log-out" style="width: 16px; height: 16px; min-width: 16px;"></i> <span class="sidebar-action-text">Выйти</span>
+          <button onclick="setUI({ modal: 'syncLogs' })" title="Синхронизация" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text); border-color: var(--border); background: var(--bg-secondary);">
+            <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px; min-width: 16px; color: var(--primary);"></i>
+            <span class="sidebar-action-text" style="flex-grow: 1; text-align: left;">Синхронизация</span>
+            ${logsCount > 0 ? `<span class="sidebar-action-text" style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px;">${logsCount}</span>` : ''}
+          </button>
+          <button onclick="api.logout()" title="Выйти" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
+            <i data-feather="log-out" style="width: 16px; height: 16px; min-width: 16px;"></i>
+            <span class="sidebar-action-text" style="flex-grow: 1; text-align: left;">Выйти</span>
           </button>
         </div>
       </aside>
@@ -201,8 +201,14 @@ window.renderLayout = function () {
           <nav style="padding: 16px; display: flex; flex-direction: column; gap: 6px;">
             ${sidebarLinks}
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 12px 0;">
-            <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
-              <i data-feather="log-out" style="width: 18px; height: 18px;"></i> Выйти из аккаунта
+            <button onclick="setUI({ modal: 'syncLogs', sidebarOpen: false })" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: var(--text); border-color: var(--border); background: var(--bg-secondary); cursor: pointer;">
+              <i data-feather="refresh-cw" class="${syncClass}" style="width: 18px; height: 18px; color: var(--primary);"></i>
+              <span style="flex-grow: 1; text-align: left;">Синхронизация</span>
+              ${logsCount > 0 ? `<span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px;">${logsCount}</span>` : ''}
+            </button>
+            <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
+              <i data-feather="log-out" style="width: 18px; height: 18px;"></i>
+              <span style="flex-grow: 1; text-align: left;">Выйти из аккаунта</span>
             </button>
           </nav>
         </aside>

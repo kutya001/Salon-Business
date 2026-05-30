@@ -389,7 +389,9 @@ function renderBookingsTable(bookings) {
           <div style="display: flex; align-items: center; gap: 6px;">
             <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text);">${getInitials(b.masterName)}</div>
             <select onchange="handleQuickUpdateBookingMaster('${b.id}', this.value);" style="background: transparent; border: none; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; padding: 2px 4px; outline: none; width: auto; max-width: 140px;">
-              ${masterOptionsHtml}
+              ${`<option value="">👤 Любой мастер</option>` + state.masters.map(m => `
+                <option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>
+              `).join('')}
             </select>
           </div>
         </td>

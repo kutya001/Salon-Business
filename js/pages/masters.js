@@ -166,17 +166,17 @@ window.renderMasterModal = function () {
       <form id="master-form" onsubmit="event.preventDefault(); handleMasterSubmit('${isEdit ? m.id : ''}');" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 60vh; padding-right: 4px;">
         <div class="form-group">
           <label class="form-label">ФИО мастера</label>
-          <input type="text" id="m-name" class="form-input" placeholder="Алина Бакиева" value="${isEdit ? m.name : ''}" required>
+          <input type="text" id="m-name" class="form-input" placeholder="Алина Бакиева" value="${m.name || ''}" oninput="state.ui.modalData.name = this.value" required>
         </div>
         <div class="form-group">
           <label class="form-label">Номер телефона</label>
-          <input type="tel" id="m-phone" class="form-input" placeholder="+996 555 111 222" value="${isEdit ? m.phone : ''}" required>
+          <input type="tel" id="m-phone" class="form-input" placeholder="+996 555 111 222" value="${m.phone || ''}" oninput="state.ui.modalData.phone = this.value" required>
         </div>
         <div class="form-group">
           <label class="form-label">Специализация (категория)</label>
-          <select id="m-specialization" class="form-select" required>
+          <select id="m-specialization" class="form-select" onchange="state.ui.modalData.specialization = this.value" required>
             <option value="">Выберите специализацию...</option>
-            ${state.categories.map(c => `<option value="${c.name}" ${(isEdit && m.specialization === c.name) ? 'selected' : ''}>${c.name}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.name}" ${(m.specialization === c.name) ? 'selected' : ''}>${c.name}</option>`).join('')}
           </select>
         </div>
         
@@ -188,17 +188,17 @@ window.renderMasterModal = function () {
         </div>
         <div class="form-group">
           <label class="form-label">Процентная ставка от стоимости услуг (%)</label>
-          <input type="number" id="m-percentage" class="form-input" placeholder="40" min="0" max="100" value="${isEdit ? m.percentage : '40'}" required>
+          <input type="number" id="m-percentage" class="form-input" placeholder="40" min="0" max="100" value="${m.percentage !== undefined ? m.percentage : '40'}" oninput="state.ui.modalData.percentage = this.value" required>
         </div>
         
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Начало работы</label>
-            <input type="time" id="m-hours-start" class="form-input" value="${isEdit ? formatMasterTime(m.workHoursStart) : '09:00'}" required>
+            <input type="time" id="m-hours-start" class="form-input" value="${formatMasterTime(m.workHoursStart || '09:00')}" onchange="state.ui.modalData.workHoursStart = this.value" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Конец работы</label>
-            <input type="time" id="m-hours-end" class="form-input" value="${isEdit ? formatMasterTime(m.workHoursEnd) : '20:00'}" required>
+            <input type="time" id="m-hours-end" class="form-input" value="${formatMasterTime(m.workHoursEnd || '20:00')}" onchange="state.ui.modalData.workHoursEnd = this.value" required>
           </div>
         </div>
 

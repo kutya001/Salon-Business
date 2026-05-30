@@ -6,19 +6,31 @@ window.renderServices = function () {
   const activeTab = state.ui.servicesMainTab || 'services'; // 'services' or 'categories'
   const viewMode = state.ui.servicesViewMode || 'cards';
 
-  // Вкладки главные
-  const mainTabsHtml = `
-    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-      <button onclick="setUI({ servicesMainTab: 'services' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'services' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative; display: inline-flex; align-items: center; gap: 8px;" title="Услуги">
-        <i data-feather="scissors" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
-        <span class="hidden md-inline">Услуги</span>
-        ${activeTab === 'services' ? '<div style="position: absolute; bottom: -13px; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;"></div>' : ''}
-      </button>
-      <button onclick="setUI({ servicesMainTab: 'categories' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'categories' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative; display: inline-flex; align-items: center; gap: 8px;" title="Виды услуг">
-        <i data-feather="tag" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
-        <span class="hidden md-inline">Виды услуг</span>
-        ${activeTab === 'categories' ? '<div style="position: absolute; bottom: -13px; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;"></div>' : ''}
-      </button>
+  const combinedTabsHtml = `
+    <div style="display: flex; justify-content: center; margin-bottom: 24px; width: 100%; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+      <div class="segment-tabs-container" style="display: inline-flex; align-items: center; flex-wrap: nowrap;">
+        <button onclick="setUI({ servicesMainTab: 'services' })" class="segment-tab ${activeTab === 'services' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Услуги">
+          <i data-feather="scissors" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+          <span class="hidden md-inline">Услуги</span>
+        </button>
+        <button onclick="setUI({ servicesMainTab: 'categories' })" class="segment-tab ${activeTab === 'categories' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Виды услуг">
+          <i data-feather="tag" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+          <span class="hidden md-inline">Виды услуг</span>
+        </button>
+        
+        ${activeTab === 'services' ? `
+          <div style="width: 1px; height: 24px; background: var(--border); margin: 0 4px;"></div>
+          
+          <button onclick="setUI({ servicesViewMode: 'cards' })" class="segment-tab ${viewMode === 'cards' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Карточки">
+            <i data-feather="grid" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+            <span class="hidden md-inline">Карточки</span>
+          </button>
+          <button onclick="setUI({ servicesViewMode: 'table' })" class="segment-tab ${viewMode === 'table' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Таблица">
+            <i data-feather="list" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+            <span class="hidden md-inline">Таблица</span>
+          </button>
+        ` : ''}
+      </div>
     </div>
   `;
 
@@ -180,26 +192,27 @@ window.renderServices = function () {
     }
   }
 
+  const fabAction = activeTab === 'services' ? 'showCreateServiceModal()' : `document.getElementById('cat-name-input')?.focus()`;
+
   return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 20px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div>
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <div class="hidden md-flex" style="align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Виды и Услуги</h1>
-        </div>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          ${activeTab === 'services' ? `
-            <div style="display: flex; background: var(--bg-secondary); border-radius: 12px; padding: 4px; border: 1px solid var(--border);">
-              <button onclick="setUI({ servicesViewMode: 'cards' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'cards' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'cards' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'cards' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="grid" style="width: 14px; height: 14px;"></i> Карточки</button>
-              <button onclick="setUI({ servicesViewMode: 'table' })" class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; border: none; background: ${viewMode === 'table' ? 'var(--bg)' : 'transparent'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow: ${viewMode === 'table' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; display: flex; align-items: center; gap: 6px;"><i data-feather="list" style="width: 14px; height: 14px;"></i> Таблица</button>
-            </div>
-          ` : ''}
-          <button onclick="${activeTab === 'services' ? 'showCreateServiceModal()' : `document.getElementById('cat-name-input')?.focus()`}" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;"><i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}</button>
+          <button onclick="${fabAction}" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+            <i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}
+          </button>
         </div>
       </div>
 
-      ${mainTabsHtml}
+      ${combinedTabsHtml}
 
       ${contentHtml}
+
+      <!-- Плавающая кнопка (FAB) -->
+      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 110px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;">
+        <i data-feather="plus" style="width: 28px; height: 28px;"></i>
+      </button>
     </div>
   `;
 };

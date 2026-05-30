@@ -12,22 +12,6 @@ window.renderFinance = function () {
     { id: 'wallets', label: 'КОШЕЛЬКИ', icon: 'credit-card' }
   ];
 
-  const tabsHtml = `
-    <div style="margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
-      <div class="segment-tabs-container">
-        ${tabs.map(tab => {
-          const isActive = activeTab === tab.id;
-          return `
-            <button onclick="setUI({ financeTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
-              <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
-              <span class="hidden md-inline">${tab.label}</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-
   let contentHtml = '';
   let fabAction = '';
 
@@ -60,16 +44,28 @@ window.renderFinance = function () {
 
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-        <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Финансы</h1>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          ${topButtonHtml}
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; width: 100%; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 16px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+            <h1 class="hidden md-block" style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin: 0; flex-shrink: 0;">Финансы</h1>
+            <div class="segment-tabs-container" style="display: inline-flex; flex-wrap: nowrap;">
+              ${tabs.map(tab => {
+                const isActive = activeTab === tab.id;
+                return `
+                  <button onclick="setUI({ financeTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
+                    <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+                    <span class="hidden md-inline">${tab.label}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+            ${topButtonHtml}
+          </div>
         </div>
       </div>
 
-      ${tabsHtml}
       ${contentHtml}
       
       ${activeTab !== 'shifts' ? `

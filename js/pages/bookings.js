@@ -106,21 +106,7 @@ window.renderBookings = function () {
     { id: 'cancelled', label: 'ОТМЕНА', icon: 'x-circle' }
   ];
 
-  const statusTabsHtml = `
-    <div style="margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
-      <div class="segment-tabs-container">
-        ${statusTabs.map(tab => {
-          const isActive = (filters.status || '') === tab.id;
-          return `
-            <button onclick="setFilters({ status: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
-              <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
-              <span class="hidden md-inline">${tab.label}</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
+
 
   // Отрисовка фильтров
   const masterOptions = state.masters.map(m => `
@@ -203,7 +189,7 @@ window.renderBookings = function () {
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column;">
       
-      <!-- Заголовок страницы и переключатель видов -->
+      <!-- Заголовок страницы -->
       <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
         <div class="hidden md-flex" style="align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Записи салона</h1>
@@ -211,22 +197,33 @@ window.renderBookings = function () {
             <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить запись
           </button>
         </div>
-        
-        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
-          <!-- Переключатель видов -->
-          <div style="display: flex; background: var(--bg-secondary); padding: 4px; border-radius: 12px; gap: 4px;">
-            <button onclick="toggleBookingsView('table')" class="btn" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'table' ? 'var(--bg)' : 'none'}; box-shadow: ${viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'table' ? 'var(--text)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
-              <i data-feather="list" style="width: 14px; height: 14px;"></i> <span class="hidden md-block">Таблица</span>
-            </button>
-            <button onclick="toggleBookingsView('timeline')" class="btn" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: ${viewMode === 'timeline' ? 'var(--bg)' : 'none'}; box-shadow: ${viewMode === 'timeline' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'}; color: ${viewMode === 'timeline' ? 'var(--text)' : 'var(--text-secondary)'}; display: flex; align-items: center; gap: 6px;">
-              <i data-feather="calendar" style="width: 14px; height: 14px;"></i> <span class="hidden md-block">Timeline</span>
-            </button>
-          </div>
-        </div>
       </div>
 
-      <!-- Вкладки статусов -->
-      ${statusTabsHtml}
+      <!-- Вкладки статусов и переключатель видов (Единый блок) -->
+      <div style="display: flex; justify-content: center; margin-bottom: 16px; width: 100%; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+        <div class="segment-tabs-container" style="display: inline-flex; align-items: center; flex-wrap: nowrap;">
+          ${statusTabs.map(tab => {
+            const isActive = (filters.status || '') === tab.id;
+            return `
+              <button onclick="setFilters({ status: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
+                <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+                <span class="hidden md-inline">${tab.label}</span>
+              </button>
+            `;
+          }).join('')}
+          
+          <div style="width: 1px; height: 24px; background: var(--border); margin: 0 4px;"></div>
+          
+          <button onclick="toggleBookingsView('table')" class="segment-tab ${viewMode === 'table' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Таблица">
+            <i data-feather="grid" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+            <span class="hidden md-inline">Таблица</span>
+          </button>
+          <button onclick="toggleBookingsView('timeline')" class="segment-tab ${viewMode === 'timeline' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Timeline">
+            <i data-feather="calendar" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+            <span class="hidden md-inline">Таймлайн</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Панель фильтров -->
       ${filterBarHtml}

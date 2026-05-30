@@ -186,7 +186,7 @@ function renderBookingsTable(bookings) {
     `;
   }
 
-  const rows = bookings.map(b => {
+  const mobileRows = bookings.map(b => {
     const statusColor = getStatusColor(b.status);
     const statusLabel = getStatusLabel(b.status);
     
@@ -210,17 +210,11 @@ function renderBookingsTable(bookings) {
       `;
     }
 
-    // Master Dropdown (styled as text on mobile, select on desktop)
-    const masterSelect = `
-      <select onchange="event.stopPropagation();" onclick="event.stopPropagation();" class="form-select hidden md-block" style="padding: 4px 24px 4px 8px; font-size: 12px; border: none; background: var(--bg-secondary); border-radius: 6px;">
-        ${state.masters.map(m => `<option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
-      </select>
-      <span class="md-hidden" style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>
-    `;
+    // Master Dropdown (styled as text on mobile)
+    const masterText = `<span style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>`;
 
-    // Mobile Card View
-    const mobileCard = `
-      <div class="card p-4 md-hidden" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+    return `
+      <div class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
             <div style="font-weight: 800; font-size: 14px;">${formatRelativeDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
@@ -236,7 +230,7 @@ function renderBookingsTable(bookings) {
             <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">${b.serviceName}</div>
             <div style="margin-top: 4px; display: flex; align-items: center; gap: 4px;">
               <i data-feather="user" style="width: 12px; height: 12px; color: var(--text-secondary);"></i>
-              ${masterSelect}
+              ${masterText}
             </div>
           </div>
           <div style="text-align: right;">
@@ -246,10 +240,40 @@ function renderBookingsTable(bookings) {
         </div>
       </div>
     `;
+  }).join('');
 
-    // Desktop Table Row
-    const desktopRow = `
-      <tr class="hidden md-table-row" onclick="showBookingDetails('${b.id}')" style="cursor: pointer; transition: background 0.2s;">
+  const desktopRows = bookings.map(b => {
+    const statusColor = getStatusColor(b.status);
+    const statusLabel = getStatusLabel(b.status);
+    
+    // Payment status indicator
+    const isPaid = b.status === 'completed';
+    const paymentIndicator = isPaid 
+      ? `<div style="font-size: 10px; color: #10b981; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #10b981;"></div> Оплачено</div>`
+      : `<div style="font-size: 10px; color: #ef4444; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600;"><div style="width: 6px; height: 6px; border-radius: 3px; background: #ef4444;"></div> Не оплачено</div>`;
+
+    // Quick actions
+    let actionBtnHtml = '';
+    if (b.status === 'pending') {
+      actionBtnHtml = `
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+      `;
+    } else if (b.status === 'confirmed') {
+      actionBtnHtml = `
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
+        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+      `;
+    }
+
+    const masterSelect = `
+      <select onchange="event.stopPropagation();" onclick="event.stopPropagation();" class="form-select" style="padding: 4px 24px 4px 8px; font-size: 12px; border: none; background: var(--bg-secondary); border-radius: 6px;">
+        ${state.masters.map(m => `<option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+      </select>
+    `;
+
+    return `
+      <tr onclick="showBookingDetails('${b.id}')" style="cursor: pointer; transition: background 0.2s;">
         <td style="font-weight: 700;">${b.clientName}</td>
         <td style="color: var(--text-secondary); font-size: 13px;">${formatClientPhone(b.clientPhone)}</td>
         <td style="font-weight: 600;">${b.serviceName}</td>
@@ -266,8 +290,6 @@ function renderBookingsTable(bookings) {
         </td>
       </tr>
     `;
-
-    return mobileCard + desktopRow;
   }).join('');
 
   return `
@@ -289,15 +311,16 @@ function renderBookingsTable(bookings) {
               </tr>
             </thead>
             <tbody>
-              ${rows}
+              ${desktopRows}
             </tbody>
           </table>
         </div>
       </div>
       <div class="md-hidden">
-        ${rows}
+        ${mobileRows}
       </div>
     </div>
+
   `;
 }
 

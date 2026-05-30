@@ -57,8 +57,9 @@ window.renderApp = function () {
         </div>
     </div>
   ` : `
-    <button onclick="setUI({ showDevConsole: true })" style="position: fixed; bottom: 80px; left: 20px; background: #0f172a; color: #38bdf8; border: 1px dashed #3b82f6; border-radius: 12px; padding: 8px 14px; font-family: monospace; font-size: 11px; font-weight: 700; cursor: pointer; z-index: 99998; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px;">
-        📡 Лог GAS API (${logsCount})
+    <button onclick="setUI({ showDevConsole: true })" title="Лог GAS API" style="position: fixed; bottom: 80px; left: 20px; width: 44px; height: 44px; border-radius: 22px; background: #0f172a; color: #38bdf8; border: 1px dashed #3b82f6; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 99998; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <span style="font-size: 16px;">📡</span>
+        ${logsCount > 0 ? `<div style="position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">${logsCount}</div>` : ''}
     </button>
   `;
 

@@ -136,7 +136,7 @@ window.renderLayout = function () {
   return `
     <div class="app-layout ${state.ui.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
       <!-- Кнопка синхронизации для десктопа в правом верхнем углу -->
-      <button onclick="setUI({ modal: 'syncLogs' })" class="hidden lg-flex" style="position: fixed; top: 24px; right: 40px; z-index: 999; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: var(--text); align-items: center; gap: 8px; cursor: pointer; backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+      <button onclick="setUI({ modal: 'syncLogs' })" class="hidden md-flex" style="position: fixed; top: 24px; right: 40px; z-index: 999; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: var(--text); align-items: center; gap: 8px; cursor: pointer; backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
         <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px; color: var(--primary);"></i>
         <span>Синхронизация</span>
         ${logsCount > 0 ? `<span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 2px;">${logsCount}</span>` : ''}

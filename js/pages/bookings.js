@@ -306,8 +306,16 @@ function renderBookingsTable(bookings) {
       `;
     }
 
-    // Master Dropdown (styled as text on mobile)
-    const masterText = `<span style="font-weight: 600; color: var(--text-secondary); font-size: 12px;">${b.masterName}</span>`;
+    // Master Dropdown (styled as select on mobile)
+    const masterOptionsHtml = `<option value="">👤 Любой мастер</option>` + state.masters.map(m => `
+      <option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>
+    `).join('');
+
+    const masterText = `
+      <select onchange="event.stopPropagation(); handleQuickUpdateBookingMaster('${b.id}', this.value);" style="background: transparent; border: none; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; padding: 0; outline: none; width: auto; max-width: 140px; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+        ${masterOptionsHtml}
+      </select>
+    `;
     
     const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
     const statusHtmlMobile = `<span class="badge ${statusColor}" style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; padding: 0;" title="${statusLabel}"><i data-feather="${iconStr}" style="width: 14px; height: 14px;"></i></span>`;
@@ -376,10 +384,12 @@ function renderBookingsTable(bookings) {
         </td>
         <td style="font-weight: 600; font-size: 13px;">${formatDate(b.date)}</td>
         <td style="font-weight: 800; color: var(--primary);">${formatTime(b.time)}</td>
-        <td>
+        <td onclick="event.stopPropagation();">
           <div style="display: flex; align-items: center; gap: 6px;">
             <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text);">${getInitials(b.masterName)}</div>
-            <span style="font-size: 13px; font-weight: 600;">${b.masterName}</span>
+            <select onchange="handleQuickUpdateBookingMaster('${b.id}', this.value);" style="background: transparent; border: none; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; padding: 2px 4px; outline: none; width: auto; max-width: 140px;">
+              ${masterOptionsHtml}
+            </select>
           </div>
         </td>
         <td style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</td>
@@ -582,6 +592,32 @@ function renderBookingsTimeline(bookings) {
     </div>
   `;
 }
+
+// Быстрое изменение мастера записи (Optimistic UI)
+window.handleQuickUpdateBookingMaster = async function (id, newMasterId) {
+  const idx = state.bookings.findIndex(b => b.id === id);
+  if (idx === -1) return;
+  
+  const oldMasterId = state.bookings[idx].masterId;
+  const oldMasterName = state.bookings[idx].masterName;
+  
+  const master = state.masters.find(m => m.id === newMasterId) || { name: 'Любой мастер' };
+  
+  // Optimistic UI update
+  state.bookings[idx].masterId = newMasterId;
+  state.bookings[idx].masterName = master.name;
+  
+  if (window.render) window.render();
+  showToast('Мастер записи изменен', 'success');
+  
+  api.updateBooking(id, { masterId: newMasterId }, { background: true })
+    .catch(e => {
+      showToast('Не удалось обновить мастера на сервере', 'error');
+      state.bookings[idx].masterId = oldMasterId;
+      state.bookings[idx].masterName = oldMasterName;
+      if (window.render) window.render();
+    });
+};
 
 // Изменение статуса записи (Optimistic UI)
 window.handleUpdateBookingStatus = async function (id, newStatus) {
@@ -911,7 +947,7 @@ window.renderEditBookingFullModal = function() {
         
         <div class="form-group">
           <label class="form-label">Телефон клиента</label>
-          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 '; state.ui.modalData.draft.clientPhone = this.value;" required>
+          <input type="tel" id="edit-b-phone" class="form-input" value="${draft.clientPhone}" oninput="if(this.value && !this.value.startsWith('+996')) this.value='+996 ' + this.value; state.ui.modalData.draft.clientPhone = this.value;" required>
         </div>
 
         <div class="form-group">
@@ -1138,7 +1174,7 @@ window.renderBookingModal = function () {
       </div>
       <div class="form-group animate-slide-in-right" style="animation-delay: 0.1s;">
         <label class="form-label">Телефон клиента</label>
-        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(!this.value.startsWith('+996')) this.value='+996 '; state.ui.modalData.draft.clientPhone = this.value;" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
+        <input type="tel" id="b-client-phone" class="form-input" placeholder="+996 555 123 456" value="${draft.clientPhone}" oninput="if(this.value && !this.value.startsWith('+996')) this.value='+996 ' + this.value; state.ui.modalData.draft.clientPhone = this.value;" onkeydown="if(event.key==='Enter') { event.preventDefault(); setBookingWizardStep(2); }" required>
       </div>
       <button type="button" onclick="setBookingWizardStep(2)" class="btn btn-primary" style="margin-top: 10px;">Далее: Категория ➔</button>
     `;

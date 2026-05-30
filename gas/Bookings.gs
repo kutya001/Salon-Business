@@ -47,12 +47,30 @@ function handleCreateBooking(data) {
   var client = findOrCreateClient(data.clientName, data.clientPhone, data.clientEmail || "");
   data.clientId = client.id;
   
-  // Получаем информацию об услуге
-  var service = getSheetData("Services").filter(function(s) { return s.id === data.serviceId; })[0];
-  if (!service) throw new Error("Услуга не найдена");
-  data.serviceName = service.name;
-  data.price = data.price || service.price;
-  data.duration = data.duration || service.duration;
+  // Получаем информацию об услугах (поддерживаем множественный выбор через запятую)
+  var serviceIds = String(data.serviceId).split(",").map(function(id) { return id.trim(); });
+  var services = getSheetData("Services");
+  
+  var totalDuration = 0;
+  var totalPrice = 0;
+  var serviceNames = [];
+  
+  serviceIds.forEach(function(id) {
+    var s = services.filter(function(item) { return item.id === id; })[0];
+    if (s) {
+      totalDuration += parseInt(s.duration, 10) || 0;
+      totalPrice += parseFloat(s.price) || 0;
+      serviceNames.push(s.name);
+    }
+  });
+  
+  if (serviceNames.length === 0) {
+    throw new Error("Услуга не найдена");
+  }
+  
+  data.serviceName = serviceNames.join(" + ");
+  data.price = data.price || totalPrice;
+  data.duration = data.duration || totalDuration;
   
   // Получаем информацию о мастере
   if (!data.masterId) {

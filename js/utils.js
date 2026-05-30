@@ -23,7 +23,8 @@ window.formatDate = function (dateStr) {
 
 window.formatClientPhone = function(phone) {
   if (!phone) return '';
-  const clean = phone.replace(/\D/g, '');
+  const phoneStr = String(phone);
+  const clean = phoneStr.replace(/\D/g, '');
   if (clean.startsWith('996')) {
     return '+' + clean;
   }

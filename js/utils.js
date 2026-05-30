@@ -78,7 +78,7 @@ window.showToast = function (message, type = 'info', duration = 3000) {
 
 window.getStatusLabel = function (status) {
   const labels = {
-    'pending': 'Ожидает',
+    'pending': 'Новая',
     'confirmed': 'Подтверждена',
     'completed': 'Завершена',
     'cancelled': 'Отменена',

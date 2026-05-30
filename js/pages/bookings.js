@@ -33,10 +33,11 @@ window.renderBookings = function () {
   // Вкладки статусов (Desktop + Mobile)
   const statusTabs = [
     { id: '', label: 'ВСЕ ЗАПИСИ' },
-    { id: 'pending', label: 'ОЖИДАЮТ' },
+    { id: 'pending', label: 'НОВЫЕ' },
     { id: 'confirmed', label: 'ПОДТВЕРЖДЕННЫЕ' },
     { id: 'completed', label: 'ЗАВЕРШЕННЫЕ' },
-    { id: 'cancelled', label: 'ОТМЕНЕННЫЕ' }
+    { id: 'cancelled', label: 'ОТМЕНЕННЫЕ' },
+    { id: 'no-show', label: 'НЕ ПРИШЛИ' }
   ];
 
   const statusTabsHtml = `
@@ -1002,7 +1003,7 @@ window.handleCreateBookingSubmit = function () {
     time: timeInput.value,
     paymentMethod: draft.paymentMethod,
     notes: notesInput.value.trim(),
-    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'confirmed') : 'confirmed'
+    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : 'pending'
   };
 
   // Оптимистичное обновление

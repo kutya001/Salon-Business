@@ -125,12 +125,7 @@ window.renderBookings = function () {
     viewHtml = renderBookingsTimeline(filteredBookings);
   }
 
-  // FAB button for mobile
-  const fabHtml = `
-    <button onclick="showCreateBookingModal()" class="md-hidden btn btn-primary animate-scale-in" style="position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 28px; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(99,102,241,0.4); z-index: 50;">
-      <i data-feather="plus" style="width: 24px; height: 24px;"></i>
-    </button>
-  `;
+  // Убрали старую FAB кнопку
 
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column;">
@@ -165,7 +160,6 @@ window.renderBookings = function () {
 
       <!-- Область контента -->
       ${viewHtml}
-      ${fabHtml}
     </div>
   `;
 };

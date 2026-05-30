@@ -4,114 +4,23 @@
 
 /* 1. Глобальные CSS переменные тем оформления */
 
-:root, html[data-theme="hair"] {
-  --primary: #8b5cf6;
-  --primary-light: #c084fc;
-  --primary-dark: #6d28d9;
-  --bg: #f9fafb;
-  --bg-secondary: #ffffff;
-  --text: #1e1b4b;
-  --text-secondary: #4b5563;
-  --border: #e5e7eb;
-  --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --accent: #8b5cf6;
-  --theme-500: #8b5cf6;
-  --theme-600: #6d28d9;
-  --theme-100: #ede9fe;
-  --theme-50: #f5f3ff;
+:root {
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --bg: #0b0f1a;
+  --bg-secondary: rgba(255, 255, 255, 0.06);
+  --text: #ffffff;
+  --text-secondary: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-bg: rgba(255, 255, 255, 0.1);
+  --accent: #10b981;
+  --theme-500: #6366f1;
+  --theme-600: #4f46e5;
+  --theme-100: rgba(99, 102, 241, 0.1);
+  --theme-50: rgba(99, 102, 241, 0.05);
 }
-
-html[data-theme="barber"] {
-  --primary: #d48b59;
-  --primary-light: #e5a97e;
-  --primary-dark: #b57245;
-  --bg: #1e1b1a;
-  --bg-secondary: #2a2625;
-  --text: #f5f2f0;
-  --text-secondary: #9c9691;
-  --border: #3c3735;
-  --card-bg: #2a2625;
-  --sidebar-bg: #2a2625;
-  --accent: #d48b59;
-  --theme-500: #d48b59;
-  --theme-600: #b57245;
-  --theme-100: #4a423f;
-  --theme-50: #3a3431;
-}
-
-html[data-theme="beauty"] {
-  --primary: #e58b9b;
-  --primary-light: #f5b0bd;
-  --primary-dark: #c97181;
-  --bg: #fcf8f9;
-  --bg-secondary: #ffffff;
-  --text: #4a3338;
-  --text-secondary: #8c7379;
-  --border: #f2e3e6;
-  --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --accent: #e58b9b;
-  --theme-500: #e58b9b;
-  --theme-600: #c97181;
-  --theme-100: #fae8eb;
-  --theme-50: #fdf5f6;
-}
-
-html[data-theme="eco"] {
-  --primary: #7b9e87;
-  --primary-light: #a3c2ad;
-  --primary-dark: #62826d;
-  --bg: #f4f6f4;
-  --bg-secondary: #ffffff;
-  --text: #2f3b33;
-  --text-secondary: #6e7f74;
-  --border: #dfe6e1;
-  --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --accent: #7b9e87;
-  --theme-500: #7b9e87;
-  --theme-600: #62826d;
-  --theme-100: #e3ede6;
-  --theme-50: #f2f7f4;
-}
-
-html[data-theme="medical"] {
-  --primary: #6b9eb3;
-  --primary-light: #94c3d6;
-  --primary-dark: #548296;
-  --bg: #f3f7f9;
-  --bg-secondary: #ffffff;
-  --text: #25333c;
-  --text-secondary: #6a7f8c;
-  --border: #dbe5ea;
-  --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --accent: #6b9eb3;
-  --theme-500: #6b9eb3;
-  --theme-600: #548296;
-  --theme-100: #e0edf2;
-  --theme-50: #f1f7fa;
-}
-
-html[data-theme="graphite"] {
-  --primary: #7d8899;
-  --primary-light: #a2adb8;
-  --primary-dark: #626d7f;
-  --bg: #121418;
-  --bg-secondary: #1d2026;
-  --text: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --border: #2d323b;
-  --card-bg: #1d2026;
-  --sidebar-bg: #1d2026;
-  --accent: #7d8899;
-  --theme-500: #7d8899;
-  --theme-600: #626d7f;
-  --theme-100: #313742;
-  --theme-50: #252a33;
-}
-
 /* 2. CSS Сброс и базовые стили */
 
 * {
@@ -142,6 +51,51 @@ body {
   scrollbar-width: none;
 }
 
+/* Glassmorphism Styles */
+.bg-mesh {
+  background: 
+    radial-gradient(at 10% 10%, rgba(67, 56, 202, 0.4) 0px, transparent 40%), 
+    radial-gradient(at 90% 90%, rgba(124, 58, 237, 0.3) 0px, transparent 40%);
+  background-attachment: fixed;
+}
+
+.glass-island {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.4);
+}
+
+.glass-interactive-card {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.glass-interactive-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-island {
+    background: rgba(15, 23, 42, 0.95);
+  }
+  .glass-interactive-card {
+    background: rgba(15, 23, 42, 0.8);
+  }
+}
+
+
 /* 3. Архитектурная сетка Layout */
 
 .app-layout {
@@ -150,22 +104,15 @@ body {
   flex-direction: column;
 }
 
-@media (min-width: 1024px) {
-  .app-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-  }
-}
-
 /* Сайдбар (Десктоп) */
 .sidebar {
   display: none;
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
   flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  position: fixed;
+  top: 16px;
+  bottom: 16px;
+  left: 16px;
+  width: 280px;
   z-index: 50;
   transition: all 0.3s ease;
 }
@@ -183,10 +130,10 @@ body {
   justify-content: space-between;
   height: 64px;
   padding: 0 16px;
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
   z-index: 40;
 }
 
@@ -235,14 +182,17 @@ body {
 .main-content {
   flex-grow: 1;
   padding: 20px;
-  padding-bottom: 100px; /* Отступ для мобильного нижнего меню */
+  padding-top: 100px; /* Отступ для плавающего хедера */
+  padding-bottom: 120px; /* Отступ для мобильного нижнего меню */
   overflow-y: auto;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
   .main-content {
     padding: 36px 40px;
     padding-bottom: 36px;
+    margin-left: 312px; /* 16px + 280px + 16px */
   }
 }
 
@@ -251,15 +201,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  height: 68px;
-  background-color: var(--bg-secondary);
-  border-top: 1px solid var(--border);
+  height: 80px;
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
   z-index: 40;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media (min-width: 1024px) {
@@ -291,30 +238,36 @@ body {
 /* Карточки */
 .card {
   background-color: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 20px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* Метрики */
 .stat-card {
-  background-color: var(--bg-secondary);
+  background-color: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 24px;
   padding: 24px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   gap: 12px;
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
 .stat-card::before {
@@ -518,10 +471,12 @@ body {
 .modal {
   width: 100%;
   max-width: 540px;
-  background-color: var(--bg-secondary);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
   border-radius: 28px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   max-height: 90vh;
   display: flex;

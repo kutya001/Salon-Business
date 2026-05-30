@@ -103,15 +103,35 @@ window.renderLayout = function () {
     `;
   }).join('');
 
-  const mobileTabs = ['dashboard', 'bookings', 'masters', 'finance'].map(id => {
+  let ctaAction = 'if(window.showCreateBookingModal) showCreateBookingModal()';
+  if (page === 'clients') ctaAction = 'if(window.showClientModal) showClientModal()';
+  else if (page === 'masters') ctaAction = 'if(window.showMasterModal) showMasterModal()';
+  else if (page === 'services') ctaAction = 'if(window.showServiceModal) showServiceModal()';
+  else if (page === 'finance') ctaAction = 'if(window.showTransactionModal) showTransactionModal()';
+
+  const mobileTabs = ['dashboard', 'bookings', 'masters', 'finance'].map((id, index) => {
     const item = menuItems.find(m => m.id === id);
     const activeClass = page === item.id ? 'active' : '';
-    return `
-      <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}">
+    const tabHtml = `
+      <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}" style="flex: 1; min-width: 64px;">
         <span class="tab-icon" style="display: flex; align-items: center; justify-content: center; height: 24px;"><i data-feather="${item.icon}" style="width: 20px; height: 20px;"></i></span>
-        <span class="tab-label" style="font-size: 10px;">${item.label}</span>
+        <span class="tab-label" style="font-size: 10px; font-weight: ${activeClass ? '700' : '500'}; margin-top: 4px;">${item.label}</span>
       </a>
     `;
+    
+    // Вставляем Floating CTA ровно посередине (после 'bookings')
+    if (index === 1) {
+      const ctaHtml = `
+        <div style="flex: 0 0 64px; display: flex; justify-content: center; position: relative;">
+          <button onclick="${ctaAction}" style="position: absolute; top: -24px; width: 64px; height: 64px; border-radius: 24px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; z-index: 50;">
+            <i data-feather="plus" style="width: 28px; height: 28px;"></i>
+          </button>
+        </div>
+      `;
+      return tabHtml + ctaHtml;
+    }
+    
+    return tabHtml;
   }).join('');
 
   // Рендерим тосты
@@ -169,7 +189,7 @@ window.renderLayout = function () {
   return `
     <div class="app-layout">
       <!-- Навигационная панель для десктопа -->
-      <aside class="sidebar">
+      <aside class="sidebar glass-island">
         <div class="sidebar-header" style="padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div style="color: var(--primary);"><i data-feather="hexagon" style="width: 28px; height: 28px;"></i></div>
@@ -187,13 +207,13 @@ window.renderLayout = function () {
           <div style="font-size: 13px; font-weight: 600; padding: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
             <i data-feather="briefcase" style="width: 16px; height: 16px;"></i> ${businessName}
           </div>
-          <button onclick="api.logout()" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
+          <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
             <i data-feather="log-out" style="width: 16px; height: 16px;"></i> Выйти
           </button>
         </div>
       </aside>
 
-      <header class="top-bar">
+      <header class="top-bar glass-island">
         <button onclick="setUI({ sidebarOpen: true })" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; color: var(--text);">
           <i data-feather="menu"></i>
         </button>
@@ -210,7 +230,7 @@ window.renderLayout = function () {
 
       <!-- Выпадающий оверлей-сайдбар для мобильных -->
       <div class="mobile-sidebar-overlay ${isSidebarOpen ? 'active' : ''}" onclick="setUI({ sidebarOpen: false })">
-        <aside class="mobile-sidebar" onclick="event.stopPropagation()">
+        <aside class="mobile-sidebar glass-island" onclick="event.stopPropagation()">
           <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);">
             <div style="display: flex; align-items: center; gap: 10px;">
               <div style="color: var(--primary);"><i data-feather="hexagon" style="width: 28px; height: 28px;"></i></div>
@@ -221,7 +241,7 @@ window.renderLayout = function () {
           <nav style="padding: 16px; display: flex; flex-direction: column; gap: 6px;">
             ${sidebarLinks}
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 12px 0;">
-            <button onclick="api.logout()" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
+            <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
               <i data-feather="log-out" style="width: 18px; height: 18px;"></i> Выйти из аккаунта
             </button>
           </nav>
@@ -233,7 +253,7 @@ window.renderLayout = function () {
         ${pageContent}
       </main>
 
-      <nav class="bottom-nav">
+      <nav class="bottom-nav glass-island">
         ${mobileTabs}
       </nav>
 

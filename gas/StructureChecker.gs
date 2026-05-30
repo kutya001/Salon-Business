@@ -13,7 +13,7 @@ var REQUIRED_SCHEMA = {
   "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt"],
   "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
   "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
-  "Transactions": ["id", "type", "amount", "description", "paymentMethod", "bookingId", "shiftId", "createdAt"],
+  "Transactions": ["id", "type", "amount", "description", "paymentMethod", "categoryId", "bookingId", "shiftId", "createdAt"],
   "Shifts": ["id", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
   "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"]
 };

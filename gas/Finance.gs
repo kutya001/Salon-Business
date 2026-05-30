@@ -97,6 +97,15 @@ function handleCloseShift(id, data) {
   if (!shift) throw new Error("Смена не найдена");
   if (shift.status !== "open") throw new Error("Смена уже закрыта");
   
+  // Проверка: все записи на сегодня должны быть завершены или отменены
+  var todayStr = new Date().toISOString().split("T")[0];
+  var pendingBookings = getSheetData("Bookings").filter(function(b) {
+    return b.date === todayStr && (b.status === "pending" || b.status === "confirmed");
+  });
+  if (pendingBookings.length > 0) {
+    throw new Error("Нельзя закрыть смену: на сегодня есть необработанные записи");
+  }
+  
   // Получаем транзакции этой смены
   var txs = getSheetData("Transactions").filter(function(t) { return t.shiftId === id; });
   

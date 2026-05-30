@@ -216,7 +216,7 @@ window.renderDashboard = function () {
                       <i data-feather="check-circle" style="width: 20px; height: 20px;"></i>
                     </div>
                     <div>
-                      <div style="font-weight: 700; color: var(--text);">Касса открыта</div>
+                      <div style="font-weight: 700; color: var(--text);">Кассовая смена открыта</div>
                       <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
                         <i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена №${activeShift.id.substring(0, 5)}
                       </div>
@@ -227,6 +227,20 @@ window.renderDashboard = function () {
               </div>
             `;
           } else {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const lastShift = state.shifts.find(s => s.openedAt && s.openedAt.startsWith(todayStr));
+            let closedTitle = 'Кассовая смена закрыта';
+            let closedDesc = 'Финансовые операции приостановлены. Откройте смену.';
+            
+            if (lastShift) {
+              closedTitle = `Кассовая смена №${lastShift.id.substring(0, 5)} закрыта`;
+              try {
+                if (lastShift.closedAt) {
+                  const closedTimeStr = formatTime(lastShift.closedAt.split('T')[1]);
+                  closedDesc = `Смена закрыта в ${closedTimeStr}. Финансовые операции приостановлены.`;
+                }
+              } catch(e) {}
+            }
             return `
               <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px; border-left: 4px solid #ef4444;">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
@@ -235,9 +249,9 @@ window.renderDashboard = function () {
                       <i data-feather="x-circle" style="width: 20px; height: 20px;"></i>
                     </div>
                     <div>
-                      <div style="font-weight: 700; color: var(--text);">Касса закрыта</div>
+                      <div style="font-weight: 700; color: var(--text);">${closedTitle}</div>
                       <div style="font-size: 12px; color: #ef4444; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                        <i data-feather="lock" style="width: 12px; height: 12px;"></i> Финансовые операции приостановлены. Откройте смену.
+                        <i data-feather="lock" style="width: 12px; height: 12px;"></i> ${closedDesc}
                       </div>
                     </div>
                   </div>

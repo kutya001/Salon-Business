@@ -30,17 +30,17 @@ class GASClient {
     showToast('Вы вышли из системы', 'info');
   }
 
-  async request(action, data = {}) {
+  async request(action, data = {}, options = { background: false }) {
     if (!this.gasUrl) {
-      showToast('Служба бэкенда не настроена', 'error');
+      if (!options.background) showToast('Служба бэкенда не настроена', 'error');
       throw new Error('GAS URL not configured');
     }
 
     // Логируем отправку
     if (window.logApiCall) window.logApiCall('send', action, data);
 
-    // Увеличиваем счетчик синхронизации (для спиннера)
-    if (window.state && window.state.ui) {
+    // Увеличиваем счетчик синхронизации (для спиннера), если это не фоновый запрос
+    if (!options.background && window.state && window.state.ui) {
       window.setUI({ syncingCount: (window.state.ui.syncingCount || 0) + 1 });
     }
 
@@ -83,11 +83,11 @@ class GASClient {
       if (window.logApiCall && !error.message.includes('Сессия истекла')) {
         window.logApiCall('error', action, error.message);
       }
-      showToast(error.message || 'Ошибка подключения к бэкенду', 'error');
+      if (!options.background) showToast(error.message || 'Ошибка подключения к бэкенду', 'error');
       throw error;
     } finally {
       // Уменьшаем счетчик синхронизации
-      if (window.state && window.state.ui) {
+      if (!options.background && window.state && window.state.ui) {
         window.setUI({ syncingCount: Math.max(0, (window.state.ui.syncingCount || 0) - 1) });
       }
     }
@@ -106,16 +106,16 @@ class GASClient {
     return data;
   }
 
-  async getAll() {
-    return await this.request('getAll');
+  async getAll(options = {}) {
+    return await this.request('getAll', {}, options);
   }
 
   async getSettings() {
     return await this.request('getSettings');
   }
 
-  async updateSettings(data) {
-    return await this.request('updateSettings', data);
+  async updateSettings(data, options = {}) {
+    return await this.request('updateSettings', data, options);
   }
 
   async changePassword(oldPassword, newPassword) {
@@ -187,12 +187,12 @@ class GASClient {
     return await this.request('getBookings', filters);
   }
 
-  async createBooking(data) {
-    return await this.request('createBooking', data);
+  async createBooking(data, options = {}) {
+    return await this.request('createBooking', data, options);
   }
 
-  async updateBooking(id, data) {
-    return await this.request('updateBooking', { id, ...data });
+  async updateBooking(id, data, options = {}) {
+    return await this.request('updateBooking', { id, ...data }, options);
   }
 
   async deleteBooking(id) {
@@ -203,20 +203,20 @@ class GASClient {
     return await this.request('getTransactions', filters);
   }
 
-  async createTransaction(data) {
-    return await this.request('createTransaction', data);
+  async createTransaction(data, options = {}) {
+    return await this.request('createTransaction', data, options);
   }
 
   async getShifts() {
     return await this.request('getShifts');
   }
 
-  async openShift(openingCash) {
-    return await this.request('openShift', { openingCash });
+  async openShift(openingCash, options = {}) {
+    return await this.request('openShift', { openingCash }, options);
   }
 
-  async closeShift(id, closingCash) {
-    return await this.request('closeShift', { id, closingCash });
+  async closeShift(id, closingCash, options = {}) {
+    return await this.request('closeShift', { id, closingCash }, options);
   }
 }
 

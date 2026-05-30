@@ -53,4 +53,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.ThemeManager) {
     window.ThemeManager.init();
   }
+
+  // Фоновая синхронизация (по умолчанию 15 секунд)
+  setInterval(async () => {
+    if (window.state && window.state.isAuthenticated && window.api && window.api.isConfigured()) {
+      try {
+        const allData = await window.api.getAll({ background: true });
+        // Сливаем данные, обновляя state без прерывания UI
+        setState({
+          business: allData.business || state.business,
+          categories: allData.categories || [],
+          masters: allData.masters || [],
+          services: allData.services || [],
+          bookings: allData.bookings || [],
+          clients: allData.clients || [],
+          transactions: allData.transactions || [],
+          shifts: allData.shifts || []
+        });
+      } catch (err) {
+        console.error('Ошибка фоновой синхронизации:', err);
+      }
+    }
+  }, 15000);
 });

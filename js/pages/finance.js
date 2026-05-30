@@ -382,21 +382,33 @@ window.handleTransactionSubmit = async function () {
   const categoryId = document.getElementById('tx-category').value;
   const description = document.getElementById('tx-desc').value.trim();
 
-  setUI({ loading: true });
-  try {
-    const tx = await api.createTransaction({ type, amount, description, paymentMethod, categoryId });
-    state.transactions.unshift(tx);
-    
-    const allData = await api.getAll();
-    setState({ shifts: allData.shifts });
-    
-    setUI({ modal: null });
-    showToast('Транзакция успешно зафиксирована', 'success');
-  } catch(e) {
-    showToast('Не удалось сохранить транзакцию', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  const activeShift = state.shifts.find(s => s.status === 'open');
+  const shiftId = activeShift ? activeShift.id : '';
+
+  const optimisticTx = {
+    id: 'tx_tmp_' + Date.now(),
+    type,
+    amount,
+    description,
+    paymentMethod,
+    categoryId,
+    shiftId,
+    createdAt: new Date().toISOString()
+  };
+
+  // Мгновенное обновление UI (Optimistic Update)
+  state.transactions.unshift(optimisticTx);
+  setUI({ modal: null });
+  showToast('Транзакция успешно зафиксирована', 'success');
+
+  // Запрос в фоне
+  api.createTransaction({ type, amount, description, paymentMethod, categoryId }, { background: true })
+    .catch(e => {
+      showToast('Не удалось сохранить транзакцию', 'error');
+      // Откат при ошибке
+      state.transactions = state.transactions.filter(t => t.id !== optimisticTx.id);
+      if (window.render) window.render();
+    });
 };
 
 // Смены (Modal functions)
@@ -423,17 +435,25 @@ window.renderOpenShiftModal = function () {
 
 window.handleOpenShiftSubmit = async function () {
   const openingCash = parseFloat(document.getElementById('shift-opening-cash').value) || 0;
-  setUI({ loading: true });
-  try {
-    const shift = await api.openShift(openingCash);
-    state.shifts.unshift(shift);
-    setUI({ modal: null });
-    showToast('Смена успешно открыта!', 'success');
-  } catch(e) {
-    showToast('Не удалось открыть смену', 'error');
-  } finally {
-    setUI({ loading: false });
-  }
+  
+  const optimisticShift = {
+    id: 'shift_tmp_' + Date.now(),
+    openedAt: new Date().toISOString(),
+    openingCash,
+    status: 'open'
+  };
+
+  // Optimistic UI
+  state.shifts.unshift(optimisticShift);
+  setUI({ modal: null });
+  showToast('Смена успешно открыта!', 'success');
+
+  api.openShift(openingCash, { background: true })
+    .catch(e => {
+      showToast('Не удалось открыть смену', 'error');
+      state.shifts = state.shifts.filter(s => s.id !== optimisticShift.id);
+      if (window.render) window.render();
+    });
 };
 
 window.showCloseShiftModal = function (id) { setUI({ modal: 'closeShift', modalData: id }); };
@@ -461,22 +481,28 @@ window.renderCloseShiftModal = function () {
 
 window.handleCloseShiftSubmit = async function (id) {
   const closingCash = parseFloat(document.getElementById('shift-closing-cash').value) || 0;
-  setUI({ loading: true });
-  try {
-    const shift = await api.closeShift(id, closingCash);
-    const idx = state.shifts.findIndex(s => s.id === id);
-    if (idx !== -1) {
-      state.shifts[idx] = shift;
-    }
-    const allData = await api.getAll();
-    setState({ shifts: allData.shifts, transactions: allData.transactions });
-    setUI({ modal: null, modalData: null });
-    showToast('Смена успешно закрыта. Отчет сдан!', 'success');
-  } catch(e) {
-    showToast('Не удалось закрыть смену', 'error');
-  } finally {
-    setUI({ loading: false });
+  
+  const idx = state.shifts.findIndex(s => s.id === id);
+  if (idx !== -1) {
+    state.shifts[idx].status = 'closed';
+    state.shifts[idx].closedAt = new Date().toISOString();
+    state.shifts[idx].closingCash = closingCash;
+    if (window.render) window.render();
   }
+
+  setUI({ modal: null, modalData: null });
+  showToast('Смена успешно закрыта. Отчет сдан!', 'success');
+
+  api.closeShift(id, closingCash, { background: true })
+    .catch(e => {
+      showToast('Не удалось закрыть смену', 'error');
+      if (idx !== -1) {
+        state.shifts[idx].status = 'open';
+        delete state.shifts[idx].closedAt;
+        delete state.shifts[idx].closingCash;
+        if (window.render) window.render();
+      }
+    });
 };
 
 // Заглушки для модалок категорий и кошельков (для отображения UI)

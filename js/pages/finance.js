@@ -109,7 +109,7 @@ window.renderFinanceShifts = function () {
           <div>
             <span class="badge" style="background: rgba(16,185,129,0.3); color: #34d399; font-size: 10px;">🟢 СМЕНА ОТКРЫТА</span>
             <h3 style="font-weight: 800; font-size: 18px; margin-top: 4px; color: var(--text);">Кассовая смена №${activeShift.id.substring(0, 5)}</h3>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Открыта: ${formatDate(activeShift.openedAt)} в ${formatTime(activeShift.openedAt.split('T')[1])}</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Открыта: ${formatDate(activeShift.openedAt.split('T')[0])} в ${formatTime(activeShift.openedAt.split('T')[1])}</p>
           </div>
           <button onclick="showCloseShiftModal('${activeShift.id}')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.3); padding: 10px 18px; border-radius: 12px; width: auto;">
             🔒 Закрыть смену
@@ -151,13 +151,71 @@ window.renderFinanceShifts = function () {
     `;
   }
 
+  const formatShiftDateTime = (isoString) => {
+    if (!isoString) return '—';
+    try {
+      const parts = isoString.split('T');
+      return `${formatDate(parts[0])} в ${formatTime(parts[1])}`;
+    } catch (e) {
+      return isoString;
+    }
+  };
+
+  let shiftsRowsHtml = '';
+  if (state.shifts.length === 0) {
+    shiftsRowsHtml = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">Смен пока не зарегистрировано</td></tr>`;
+  } else {
+    shiftsRowsHtml = state.shifts.map(s => {
+      const isOpen = s.status === 'open';
+      const badgeColor = isOpen ? 'badge-success' : 'badge-danger';
+      const statusText = isOpen ? '🟢 Открыта' : '🔴 Закрыта';
+      
+      const openedTime = formatShiftDateTime(s.openedAt);
+      const closedTime = formatShiftDateTime(s.closedAt);
+      
+      let actionBtn = '';
+      if (isOpen) {
+        actionBtn = `<button onclick="showCloseShiftModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2); font-weight: 700;">🔒 Закрыть</button>`;
+      } else {
+        actionBtn = `<button onclick="handleReopenShift('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; color: var(--primary); border-color: var(--theme-200); font-weight: 700;">🔑 Переоткрыть</button>`;
+      }
+
+      return `
+        <tr>
+          <td data-label="Смена" style="font-weight: 700;">№${s.id.substring(0, 5)}</td>
+          <td data-label="Статус"><span class="badge ${badgeColor}">${statusText}</span></td>
+          <td data-label="Открыта">${openedTime}</td>
+          <td data-label="Закрыта">${closedTime}</td>
+          <td data-label="Касса">${formatPrice(s.openingCash)} / ${isOpen ? '—' : formatPrice(s.closingCash)}</td>
+          <td data-label="Действие" style="text-align: right;" onclick="event.stopPropagation()">${actionBtn}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
   return `
     <div style="display: flex; flex-direction: column; gap: 16px;">
       ${shiftBlockHtml}
       
       <div class="glass-interactive-card p-6">
-        <h3 style="font-weight: 800; font-size: 16px; margin-bottom: 12px;">История смен</h3>
-        <p style="color: var(--text-secondary); font-size: 13px;">Здесь будет история предыдущих смен.</p>
+        <h3 style="font-weight: 800; font-size: 16px; margin-bottom: 12px;">Журнал кассовых смен</h3>
+        <div class="data-table-container">
+          <table class="data-table mobile-table-card">
+            <thead>
+              <tr>
+                <th>Смена</th>
+                <th>Статус</th>
+                <th>Открыта</th>
+                <th>Закрыта</th>
+                <th>Касса (Вход / Выход)</th>
+                <th style="text-align: right;">Действие</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${shiftsRowsHtml}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
@@ -479,6 +537,16 @@ window.renderCloseShiftModal = function () {
 };
 
 window.handleCloseShiftSubmit = async function (id) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const activeTodayBookings = state.bookings.filter(b => 
+    b.date === todayStr && 
+    (b.status === 'pending' || b.status === 'confirmed')
+  );
+
+  if (activeTodayBookings.length > 0) {
+    return showToast('Нельзя закрыть смену: на сегодня есть необработанные записи (в статусе "Записан" или "Подтверждён")', 'error', 5000);
+  }
+
   const closingCash = parseFloat(document.getElementById('shift-closing-cash').value) || 0;
   
   const idx = state.shifts.findIndex(s => s.id === id);
@@ -648,4 +716,37 @@ window.showEditWalletModal = function(id) {
   if (w) {
     setUI({ modal: 'createWallet', modalData: { ...w } });
   }
+};
+
+window.handleReopenShift = async function (id) {
+  const activeShift = state.shifts.find(s => s.status === 'open');
+  if (activeShift) {
+    return showToast('Нельзя переоткрыть смену: сначала закройте текущую открытую смену', 'error', 4000);
+  }
+
+  const idx = state.shifts.findIndex(s => s.id === id);
+  if (idx === -1) return;
+
+  if (!confirm('Вы действительно хотите переоткрыть смену №' + id.substring(0, 5) + '?')) return;
+
+  const oldStatus = state.shifts[idx].status;
+  const oldClosedAt = state.shifts[idx].closedAt;
+  const oldClosingCash = state.shifts[idx].closingCash;
+
+  // Optimistic UI update
+  state.shifts[idx].status = 'open';
+  delete state.shifts[idx].closedAt;
+  state.shifts[idx].closingCash = 0;
+  
+  if (window.render) window.render();
+  showToast('Смена переоткрыта!', 'success');
+
+  api.reopenShift(id, { background: true })
+    .catch(e => {
+      showToast(e.message || 'Не удалось переоткрыть смену на сервере', 'error');
+      state.shifts[idx].status = oldStatus;
+      state.shifts[idx].closedAt = oldClosedAt;
+      state.shifts[idx].closingCash = oldClosingCash;
+      if (window.render) window.render();
+    });
 };

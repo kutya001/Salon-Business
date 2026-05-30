@@ -218,6 +218,10 @@ class GASClient {
   async closeShift(id, closingCash, options = {}) {
     return await this.request('closeShift', { id, closingCash }, options);
   }
+
+  async reopenShift(id, options = {}) {
+    return await this.request('reopenShift', { id }, options);
+  }
 }
 
 window.api = new GASClient();

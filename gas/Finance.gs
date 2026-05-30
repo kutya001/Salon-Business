@@ -138,3 +138,25 @@ function getActiveShift() {
   var shifts = getSheetData("Shifts");
   return shifts.filter(function(s) { return s.status === "open"; })[0] || null;
 }
+
+/**
+ * Переоткрывает кассовую смену
+ * @param {string} id
+ * @returns {object}
+ */
+function handleReopenShift(id) {
+  var active = getActiveShift();
+  if (active) throw new Error("Уже есть открытая смена №" + active.id.substring(0, 5));
+  
+  var shift = getSheetData("Shifts").filter(function(s) { return s.id === id; })[0];
+  if (!shift) throw new Error("Смена не найдена");
+  if (shift.status !== "closed") throw new Error("Смена не находится в статусе закрытой");
+  
+  var updates = {
+    closedAt: "",
+    closingCash: 0,
+    status: "open"
+  };
+  
+  return updateRow("Shifts", id, updates);
+}

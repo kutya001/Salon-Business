@@ -196,20 +196,48 @@ window.renderDashboard = function () {
       
       <!-- Приветствие и кнопка новой записи -->
       <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(16,185,129,0.1); border-radius: 50%; color: #10b981;">
-                <i data-feather="check-circle" style="width: 20px; height: 20px;"></i>
+        ${(() => {
+          const activeShift = state.shifts.find(s => s.status === 'open');
+          if (activeShift) {
+            return `
+              <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(16,185,129,0.1); border-radius: 50%; color: #10b981;">
+                      <i data-feather="check-circle" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-weight: 700; color: var(--text);">Касса открыта</div>
+                      <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена №${activeShift.id.substring(0, 5)}
+                      </div>
+                    </div>
+                  </div>
+                  <button onclick="showCloseShiftModal('${activeShift.id}')" class="btn btn-secondary" style="width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2);">Закрыть смену</button>
+                </div>
               </div>
-              <div>
-                <div style="font-weight: 700; color: var(--text);">Касса открыта</div>
-                <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена</div>
+            `;
+          } else {
+            return `
+              <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px; border-left: 4px solid #ef4444;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(239,68,68,0.1); border-radius: 50%; color: #ef4444;">
+                      <i data-feather="x-circle" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                      <div style="font-weight: 700; color: var(--text);">Касса закрыта</div>
+                      <div style="font-size: 12px; color: #ef4444; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <i data-feather="lock" style="width: 12px; height: 12px;"></i> Финансовые операции приостановлены. Откройте смену.
+                      </div>
+                    </div>
+                  </div>
+                  <button onclick="showOpenShiftModal()" class="btn btn-primary" style="background: #10b981; border-color: #10b981; width: auto;">Открыть смену</button>
+                </div>
               </div>
-            </div>
-            <button onclick="showCloseShiftModal()" class="btn btn-secondary" style="width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2);">Закрыть смену</button>
-          </div>
-        </div>
+            `;
+          }
+        })()}
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
           <div>
             <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Главное</h1>

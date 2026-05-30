@@ -169,6 +169,9 @@ function doPost(e) {
       case "closeShift":
         result = handleCloseShift(data.id, data);
         break;
+      case "reopenShift":
+        result = handleReopenShift(data.id);
+        break;
         
       // Неизвестное действие
       default:

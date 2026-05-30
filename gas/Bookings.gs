@@ -209,14 +209,14 @@ function parseDurationToMinutes(duration) {
 }
 
 /**
- * Вспомогательное: переводит минуты в формат "ЧЧ:ММ"
+ * Вспомогательное: переводит минуты в формат "ЧЧ:ММ:00"
  * @param {number} mins 
  * @returns {string}
  */
 function formatMinutesToDuration(mins) {
   var h = Math.floor(mins / 60);
   var m = mins % 60;
-  return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+  return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m) + ':00';
 }
 
 /**

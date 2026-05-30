@@ -9,12 +9,14 @@ window.renderServices = function () {
   // Вкладки главные
   const mainTabsHtml = `
     <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-      <button onclick="setUI({ servicesMainTab: 'services' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'services' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative;">
-        Услуги
+      <button onclick="setUI({ servicesMainTab: 'services' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'services' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative; display: inline-flex; align-items: center; gap: 8px;" title="Услуги">
+        <i data-feather="scissors" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
+        <span class="hidden md-inline">Услуги</span>
         ${activeTab === 'services' ? '<div style="position: absolute; bottom: -13px; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;"></div>' : ''}
       </button>
-      <button onclick="setUI({ servicesMainTab: 'categories' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'categories' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative;">
-        Виды услуг
+      <button onclick="setUI({ servicesMainTab: 'categories' })" class="btn" style="font-size: 16px; font-weight: 800; border: none; background: transparent; padding: 8px 16px; color: ${activeTab === 'categories' ? 'var(--primary)' : 'var(--text-secondary)'}; position: relative; display: inline-flex; align-items: center; gap: 8px;" title="Виды услуг">
+        <i data-feather="tag" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
+        <span class="hidden md-inline">Виды услуг</span>
         ${activeTab === 'categories' ? '<div style="position: absolute; bottom: -13px; left: 0; right: 0; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;"></div>' : ''}
       </button>
     </div>

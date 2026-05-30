@@ -35,9 +35,9 @@ window.renderSettings = function () {
 
   const activeTab = state.ui.settingsTab || 'profile';
   const tabs = [
-    { id: 'profile', label: 'Профиль' },
-    { id: 'schedule', label: 'График салона' },
-    { id: 'security', label: 'Безопасность' }
+    { id: 'profile', label: 'Профиль', icon: 'user' },
+    { id: 'schedule', label: 'График салона', icon: 'calendar' },
+    { id: 'security', label: 'Безопасность', icon: 'lock' }
   ];
 
   const tabsHtml = `
@@ -46,8 +46,9 @@ window.renderSettings = function () {
         ${tabs.map(tab => {
           const isActive = activeTab === tab.id;
           return `
-            <button onclick="setUI({ settingsTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap;">
-              ${tab.label}
+            <button onclick="setUI({ settingsTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
+              <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+              <span class="hidden md-inline">${tab.label}</span>
             </button>
           `;
         }).join('')}

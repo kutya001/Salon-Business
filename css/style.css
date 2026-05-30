@@ -649,6 +649,7 @@ body {
 .hidden { display: none !important; }
 @media (min-width: 768px) {
   .md-block { display: block !important; }
+  .md-inline { display: inline !important; }
   .md-flex { display: flex !important; }
   .md-table-row { display: table-row !important; }
   .md-hidden { display: none !important; }
@@ -684,6 +685,12 @@ body {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: transparent;
+}
+
+@media (max-width: 767px) {
+  .segment-tab {
+    padding: 8px 10px;
+  }
 }
 
 .segment-tab:hover {

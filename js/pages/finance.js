@@ -6,10 +6,10 @@ window.renderFinance = function () {
   const activeTab = state.ui.financeTab || 'shifts';
 
   const tabs = [
-    { id: 'shifts', label: 'КАССОВЫЕ СМЕНЫ' },
-    { id: 'transactions', label: 'ТРАНЗАКЦИИ' },
-    { id: 'categories', label: 'СТАТЬИ РАСХОДА/ПРИХОДА' },
-    { id: 'wallets', label: 'КОШЕЛЬКИ' }
+    { id: 'shifts', label: 'КАССОВЫЕ СМЕНЫ', icon: 'briefcase' },
+    { id: 'transactions', label: 'ТРАНЗАКЦИИ', icon: 'trending-up' },
+    { id: 'categories', label: 'СТАТЬИ РАСХОДА/ПРИХОДА', icon: 'layers' },
+    { id: 'wallets', label: 'КОШЕЛЬКИ', icon: 'credit-card' }
   ];
 
   const tabsHtml = `
@@ -18,8 +18,9 @@ window.renderFinance = function () {
         ${tabs.map(tab => {
           const isActive = activeTab === tab.id;
           return `
-            <button onclick="setUI({ financeTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap;">
-              ${tab.label}
+            <button onclick="setUI({ financeTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
+              <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+              <span class="hidden md-inline">${tab.label}</span>
             </button>
           `;
         }).join('')}

@@ -166,7 +166,7 @@ window.renderFinanceShifts = function () {
 
   let shiftsRowsHtml = '';
   if (state.shifts.length === 0) {
-    shiftsRowsHtml = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">Смен пока не зарегистрировано</td></tr>`;
+    shiftsRowsHtml = `<div style="text-align: center; padding: 30px; color: var(--text-secondary);">Смен пока не зарегистрировано</div>`;
   } else {
     shiftsRowsHtml = state.shifts.map(s => {
       const isOpen = s.status === 'open';
@@ -178,20 +178,31 @@ window.renderFinanceShifts = function () {
       
       let actionBtn = '';
       if (isOpen) {
-        actionBtn = `<button onclick="showCloseShiftModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2); font-weight: 700;">🔒 Закрыть</button>`;
+        actionBtn = `<button onclick="event.stopPropagation(); showCloseShiftModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2); font-weight: 700;">🔒 Закрыть</button>`;
       } else {
-        actionBtn = `<button onclick="handleReopenShift('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; color: var(--primary); border-color: var(--theme-200); font-weight: 700;">🔑 Переоткрыть</button>`;
+        actionBtn = `<button onclick="event.stopPropagation(); handleReopenShift('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; color: var(--primary); border-color: var(--theme-200); font-weight: 700;">🔑 Переоткрыть</button>`;
       }
 
       return `
-        <tr>
-          <td data-label="Смена" style="font-weight: 700;">№${s.id.substring(0, 5)}</td>
-          <td data-label="Статус"><span class="badge ${badgeColor}">${statusText}</span></td>
-          <td data-label="Открыта">${openedTime}</td>
-          <td data-label="Закрыта">${closedTime}</td>
-          <td data-label="Касса">${formatPrice(s.openingCash)} / ${isOpen ? '—' : formatPrice(s.closingCash)}</td>
-          <td data-label="Действие" style="text-align: right;" onclick="event.stopPropagation()">${actionBtn}</td>
-        </tr>
+        <div class="card p-4" onclick="showShiftDetailsModal('${s.id}')" style="cursor: pointer; margin-bottom: 12px; display: flex; flex-direction: column; gap: 12px; border-left: 4px solid ${isOpen ? '#10b981' : '#ef4444'}; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-weight: 800; font-size: 15px; color: var(--text);">Смена №${s.id.substring(0, 5)}</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Открыта: ${openedTime}</div>
+              ${!isOpen ? `<div style="font-size: 12px; color: var(--text-secondary);">Закрыта: ${closedTime}</div>` : ''}
+            </div>
+            <span class="badge ${badgeColor}">${statusText}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 8px; border-top: 1px dashed var(--border);">
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">В кассе:</div>
+              <div style="font-weight: 800; color: var(--text); font-size: 14px;">${formatPrice(isOpen ? s.openingCash : s.closingCash)}</div>
+            </div>
+            <div>
+              ${actionBtn}
+            </div>
+          </div>
+        </div>
       `;
     }).join('');
   }
@@ -201,23 +212,9 @@ window.renderFinanceShifts = function () {
       ${shiftBlockHtml}
       
       <div class="glass-interactive-card p-6">
-        <h3 style="font-weight: 800; font-size: 16px; margin-bottom: 12px;">Журнал кассовых смен</h3>
-        <div class="data-table-container">
-          <table class="data-table mobile-table-card">
-            <thead>
-              <tr>
-                <th>Смена</th>
-                <th>Статус</th>
-                <th>Открыта</th>
-                <th>Закрыта</th>
-                <th>Касса (Вход / Выход)</th>
-                <th style="text-align: right;">Действие</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${shiftsRowsHtml}
-            </tbody>
-          </table>
+        <h3 style="font-weight: 800; font-size: 16px; margin-bottom: 16px;">Журнал кассовых смен</h3>
+        <div style="display: flex; flex-direction: column;">
+          ${shiftsRowsHtml}
         </div>
       </div>
     </div>
@@ -771,4 +768,104 @@ window.handleReopenShift = async function (id) {
       state.shifts[idx].closingCash = oldClosingCash;
       if (window.render) window.render();
     });
+};
+
+// ============================================
+// Детали смены
+// ============================================
+
+window.showShiftDetailsModal = function (shiftId) {
+  setUI({ modal: 'viewShift', modalData: { shiftId } });
+};
+
+window.renderShiftDetailsModal = function () {
+  const shiftId = state.ui.modalData?.shiftId;
+  const shift = state.shifts.find(s => s.id === shiftId);
+  
+  if (!shift) return `<div>Смена не найдена</div>`;
+  
+  const shiftTxs = state.transactions.filter(t => t.shiftId === shiftId);
+  
+  const isOpen = shift.status === 'open';
+  
+  let incomeCash = 0;
+  let incomeCard = 0;
+  let expenseCash = 0;
+  
+  const txHtml = shiftTxs.map(t => {
+    const isIncome = t.type === 'income';
+    const amt = parseFloat(t.amount) || 0;
+    
+    if (isIncome) {
+      if (t.paymentMethod === 'cash') incomeCash += amt;
+      else if (t.paymentMethod === 'card') incomeCard += amt;
+    } else {
+      if (t.paymentMethod === 'cash') expenseCash += amt;
+    }
+    
+    const color = isIncome ? '#10b981' : '#ef4444';
+    const sign = isIncome ? '+' : '—';
+    const catName = state.transactionCategories?.find(c => c.id === t.categoryId)?.name || (isIncome ? 'Приход' : 'Расход');
+    const walletIcon = state.wallets?.find(w => w.id === t.paymentMethod)?.icon || '💰';
+    
+    // Check if it's related to a booking
+    let bookingInfo = '';
+    if (t.bookingId) {
+      const b = state.bookings.find(bk => bk.id === t.bookingId);
+      if (b) {
+        bookingInfo = `<div style="font-size: 11px; color: var(--primary); margin-top: 4px;"><i data-feather="calendar" style="width: 10px; height: 10px;"></i> Запись: ${b.clientName} - ${b.serviceName}</div>`;
+      }
+    }
+    
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <div>
+          <div style="font-weight: 600; font-size: 13px; color: var(--text);">${catName}</div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${t.description}</div>
+          ${bookingInfo}
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 800; color: ${color};">${sign}${formatPrice(amt)}</div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${walletIcon}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  const currentCashInDrawer = parseFloat(shift.openingCash || 0) + incomeCash - expenseCash;
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 80vh; overflow-y: auto;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Детали смены №${shift.id.substring(0, 5)}</h3>
+        <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-secondary); padding: 16px; border-radius: 12px;">
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">В кассе сейчас</div>
+          <div style="font-size: 16px; font-weight: 800; color: var(--text);">${formatPrice(currentCashInDrawer)}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Открыта</div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text);">${shift.openedAt ? formatDate(shift.openedAt.split('T')[0]) + ' ' + formatTime(shift.openedAt.split('T')[1]) : '—'}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Расход наличных</div>
+          <div style="font-size: 16px; font-weight: 800; color: #ef4444;">-${formatPrice(expenseCash)}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Безнал (Карты)</div>
+          <div style="font-size: 16px; font-weight: 800; color: var(--primary);">${formatPrice(incomeCard)}</div>
+        </div>
+      </div>
+      
+      <div>
+        <h4 style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">Транзакции за смену (${shiftTxs.length})</h4>
+        <div style="display: flex; flex-direction: column;">
+          ${shiftTxs.length > 0 ? txHtml : '<div style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 20px 0;">Нет транзакций</div>'}
+        </div>
+      </div>
+    </div>
+  `;
 };

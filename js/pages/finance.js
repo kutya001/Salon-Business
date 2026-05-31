@@ -838,7 +838,10 @@ window.renderShiftDetailsModal = function () {
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 80vh; overflow-y: auto;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Детали смены №${shift.id.substring(0, 5)}</h3>
-        <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button onclick="window.showEditShiftCashModal('${shift.id}')" style="background: none; border: none; cursor: pointer; color: var(--primary); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Остатки</button>
+          <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+        </div>
       </div>
       
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-secondary); padding: 16px; border-radius: 12px;">
@@ -866,6 +869,59 @@ window.renderShiftDetailsModal = function () {
           ${shiftTxs.length > 0 ? txHtml : '<div style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 20px 0;">Нет транзакций</div>'}
         </div>
       </div>
+      </div>
     </div>
   `;
+};
+
+window.showEditShiftCashModal = function(shiftId) {
+  setUI({ modal: 'editShiftCash', modalData: { shiftId } });
+};
+
+window.renderEditShiftCashModal = function() {
+  const shiftId = state.ui.modalData?.shiftId;
+  const shift = state.shifts.find(s => s.id === shiftId);
+  if (!shift) return `<div>Смена не найдена</div>`;
+  
+  const isOpen = shift.status === 'open';
+  
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 400px; width: 100%;">
+      <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Изменение остатков</h3>
+      <form onsubmit="event.preventDefault(); window.handleEditShiftCashSubmit('${shift.id}')" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Начальный остаток в кассе</label>
+          <input type="number" id="edit-opening-cash" value="${shift.openingCash}" class="input-field" style="margin-top: 6px; width: 100%;" step="0.01" required>
+        </div>
+        ${!isOpen ? `
+        <div>
+          <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Фактический остаток при закрытии</label>
+          <input type="number" id="edit-closing-cash" value="${shift.closingCash}" class="input-field" style="margin-top: 6px; width: 100%;" step="0.01" required>
+        </div>
+        ` : ''}
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <button type="button" onclick="setUI({ modal: 'viewShift', modalData: { shiftId: '${shift.id}' } })" class="btn btn-secondary" style="flex: 1;">Отмена</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  `;
+};
+
+window.handleEditShiftCashSubmit = async function(id) {
+  const openingEl = document.getElementById('edit-opening-cash');
+  const closingEl = document.getElementById('edit-closing-cash');
+  
+  const data = {};
+  if (openingEl) data.openingCash = openingEl.value;
+  if (closingEl) data.closingCash = closingEl.value;
+  
+  try {
+    setUI({ modal: null });
+    showToast('Сохранение остатков...', 'info');
+    await api.updateShiftCash(id, data);
+    showToast('Остатки успешно обновлены', 'success');
+  } catch (e) {
+    showToast(e.message || 'Ошибка обновления', 'error');
+  }
 };

@@ -172,6 +172,9 @@ function doPost(e) {
       case "reopenShift":
         result = handleReopenShift(data.id);
         break;
+      case "updateShiftCash":
+        result = handleUpdateShiftCash(data.id, data);
+        break;
         
       // Кошельки
       case "getWallets":

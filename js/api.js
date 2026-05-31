@@ -223,6 +223,10 @@ class GASClient {
     return await this.request('reopenShift', { id }, options);
   }
 
+  async updateShiftCash(id, data, options = {}) {
+    return await this.request('updateShiftCash', { id, ...data }, options);
+  }
+
   // Кошельки
   async getWallets() {
     return await this.request('getWallets');

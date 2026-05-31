@@ -107,6 +107,7 @@ window.renderLayout = function () {
     else if (state.ui.modal === 'openShift' && window.renderOpenShiftModal) modalContent = renderOpenShiftModal();
     else if (state.ui.modal === 'closeShift' && window.renderCloseShiftModal) modalContent = renderCloseShiftModal();
     else if (state.ui.modal === 'viewShift' && window.renderShiftDetailsModal) modalContent = renderShiftDetailsModal();
+    else if (state.ui.modal === 'editShiftCash' && window.renderEditShiftCashModal) modalContent = renderEditShiftCashModal();
     else if (state.ui.modal === 'bookingMessage' && window.renderBookingMessageModal) modalContent = renderBookingMessageModal();
     else if (state.ui.modal === 'viewMaster' && window.renderMasterDetailsModal) modalContent = renderMasterDetailsModal();
     else if (state.ui.modal === 'syncLogs' && window.renderSyncLogsModal) modalContent = renderSyncLogsModal();

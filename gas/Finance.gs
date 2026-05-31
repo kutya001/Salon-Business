@@ -109,19 +109,22 @@ function handleCloseShift(id, data) {
   // Получаем транзакции этой смены
   var txs = getSheetData("Transactions").filter(function(t) { return t.shiftId === id; });
   
+  var wallets = getSheetData("Wallets");
+  var cashWalletId = "cash";
+  var cashWallet = wallets.filter(function(w) { return w.type === "cash"; })[0];
+  if (cashWallet) cashWalletId = cashWallet.id;
+  
   var cashIncome = 0;
   var cashExpense = 0;
-  var cardIncome = 0;
-  var bonusIncome = 0;
+  var nonCashIncome = 0;
   
   txs.forEach(function(t) {
     var amt = parseFloat(t.amount) || 0;
     if (t.type === "income") {
-      if (t.paymentMethod === "cash") cashIncome += amt;
-      else if (t.paymentMethod === "card") cardIncome += amt;
-      else if (t.paymentMethod === "bonus") bonusIncome += amt;
+      if (t.paymentMethod === cashWalletId || t.paymentMethod === "cash") cashIncome += amt;
+      else nonCashIncome += amt;
     } else if (t.type === "expense") {
-      if (t.paymentMethod === "cash") cashExpense += amt;
+      if (t.paymentMethod === cashWalletId || t.paymentMethod === "cash") cashExpense += amt;
     }
   });
   
@@ -131,10 +134,42 @@ function handleCloseShift(id, data) {
     closedAt: new Date().toISOString(),
     closingCash: parseFloat(data.closingCash) || 0,
     totalCash: totalCash,
-    totalCard: cardIncome,
-    totalBonus: bonusIncome,
+    totalCard: nonCashIncome,
+    totalBonus: 0,
     status: "closed"
   };
+  
+  return updateRow("Shifts", id, updates);
+}
+
+function handleUpdateShiftCash(id, data) {
+  var shift = getSheetData("Shifts").filter(function(s) { return s.id === id; })[0];
+  if (!shift) throw new Error("Смена не найдена");
+  
+  var updates = {};
+  if (data.openingCash !== undefined) updates.openingCash = parseFloat(data.openingCash) || 0;
+  if (data.closingCash !== undefined) updates.closingCash = parseFloat(data.closingCash) || 0;
+  
+  if (shift.status === "closed") {
+    var txs = getSheetData("Transactions").filter(function(t) { return t.shiftId === id; });
+    var wallets = getSheetData("Wallets");
+    var cashWalletId = "cash";
+    var cashWallet = wallets.filter(function(w) { return w.type === "cash"; })[0];
+    if (cashWallet) cashWalletId = cashWallet.id;
+    
+    var cashIncome = 0;
+    var cashExpense = 0;
+    txs.forEach(function(t) {
+      var amt = parseFloat(t.amount) || 0;
+      if (t.paymentMethod === cashWalletId || t.paymentMethod === "cash") {
+        if (t.type === "income") cashIncome += amt;
+        else if (t.type === "expense") cashExpense += amt;
+      }
+    });
+    
+    var opCash = updates.openingCash !== undefined ? updates.openingCash : parseFloat(shift.openingCash);
+    updates.totalCash = opCash + cashIncome - cashExpense;
+  }
   
   return updateRow("Shifts", id, updates);
 }
@@ -180,10 +215,18 @@ function handleGetWallets() {
 
 function handleCreateWallet(data) {
   if (!data.name || !data.type) throw new Error("Название и тип кошелька обязательны");
+  if (data.type === "cash") {
+    var existingCash = getSheetData("Wallets").filter(function(w) { return w.type === "cash"; });
+    if (existingCash.length > 0) throw new Error("Может быть только один кошелек типа 'Наличные'");
+  }
   return appendRow("Wallets", data);
 }
 
 function handleUpdateWallet(id, data) {
+  if (data.type === "cash") {
+    var existingCash = getSheetData("Wallets").filter(function(w) { return w.type === "cash" && w.id !== id; });
+    if (existingCash.length > 0) throw new Error("Может быть только один кошелек типа 'Наличные'");
+  }
   return updateRow("Wallets", id, data);
 }
 

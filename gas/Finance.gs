@@ -129,10 +129,15 @@ function handleCloseShift(id, data) {
   });
   
   var totalCash = parseFloat(shift.openingCash) + cashIncome - cashExpense;
+  var declaredCash = parseFloat(data.closingCash) || 0;
+
+  if (Math.abs(declaredCash - totalCash) > 0.01) {
+    throw new Error("Не сходится касса! Ожидается " + totalCash.toFixed(2) + ", по факту " + declaredCash.toFixed(2) + ". Выровняйте кассу перед закрытием смены.");
+  }
   
   var updates = {
     closedAt: new Date().toISOString(),
-    closingCash: parseFloat(data.closingCash) || 0,
+    closingCash: declaredCash,
     totalCash: totalCash,
     totalCard: nonCashIncome,
     totalBonus: 0,

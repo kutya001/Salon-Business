@@ -513,24 +513,110 @@ window.handleOpenShiftSubmit = async function () {
 window.showCloseShiftModal = function (id) { setUI({ modal: 'closeShift', modalData: { id: id, closingCash: '' } }); };
 window.renderCloseShiftModal = function () {
   const md = state.ui.modalData || {};
+  const shiftId = md.id;
+  const shift = state.shifts.find(s => s.id === shiftId);
+  const shiftTxs = (state.transactions || []).filter(t => t.shiftId === shiftId);
+  
+  const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
+  const cashWalletId = cashWallet ? cashWallet.id : 'cash';
+  
+  let cashIncome = 0;
+  let cashExpense = 0;
+  
+  shiftTxs.forEach(t => {
+    const amt = parseFloat(t.amount) || 0;
+    if (t.paymentMethod === cashWalletId || t.paymentMethod === 'cash') {
+      if (t.type === 'income') cashIncome += amt;
+      else if (t.type === 'expense') cashExpense += amt;
+    }
+  });
+  
+  const expectedCash = parseFloat(shift.openingCash) + cashIncome - cashExpense;
+  const actualCash = parseFloat(md.closingCash);
+  const deviation = !isNaN(actualCash) ? (actualCash - expectedCash) : 0;
+  
+  let deviationHtml = '';
+  let disableSubmit = true;
+  let adjustBtnHtml = '';
+
+  if (!isNaN(actualCash)) {
+    if (Math.abs(deviation) < 0.01) {
+      deviationHtml = '<span style="color: #10b981; font-weight: 700;">✅ Касса сходится (Отклонение: 0)</span>';
+      disableSubmit = false;
+    } else if (deviation < 0) {
+      deviationHtml = `<span style="color: #ef4444; font-weight: 700;">❌ Недостача: ${formatPrice(Math.abs(deviation))}</span>`;
+      adjustBtnHtml = `<button type="button" class="btn btn-secondary" onclick="window.handleAutoAdjustShift(${deviation})" style="margin-top: 8px; width: 100%; border-color: rgba(239,68,68,0.3); color: #ef4444;">Оформить недостачу</button>`;
+    } else {
+      deviationHtml = `<span style="color: #eab308; font-weight: 700;">⚠️ Излишек: ${formatPrice(Math.abs(deviation))}</span>`;
+      adjustBtnHtml = `<button type="button" class="btn btn-secondary" onclick="window.handleAutoAdjustShift(${deviation})" style="margin-top: 8px; width: 100%; border-color: rgba(234,179,8,0.3); color: #eab308;">Оприходовать излишек</button>`;
+    }
+  }
+
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Закрытие кассовой смены</h3>
         <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
       </div>
+      
+      <div style="background: var(--bg-secondary); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;">
+        <div style="display: flex; justify-content: space-between;"><span>Остаток на начало:</span> <span style="font-weight: 600;">${formatPrice(parseFloat(shift.openingCash))}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>Приходы (наличные):</span> <span style="font-weight: 600; color: #10b981;">+${formatPrice(cashIncome)}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>Расходы (наличные):</span> <span style="font-weight: 600; color: #ef4444;">-${formatPrice(cashExpense)}</span></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 15px;">
+          <span style="font-weight: 700;">Ожидаемый остаток:</span> <span style="font-weight: 800; color: var(--primary);">${formatPrice(expectedCash)}</span>
+        </div>
+      </div>
+
       <form onsubmit="event.preventDefault(); handleCloseShiftSubmit('${md.id}');" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="form-group">
-          <label class="form-label">Фактический остаток наличных в кассе (инкассация)</label>
-          <input type="number" id="shift-closing-cash" class="form-input" placeholder="Сумма в сом" min="0" value="${md.closingCash || ''}" oninput="state.ui.modalData.closingCash = this.value" required>
+          <label class="form-label" style="font-weight: 700;">Фактический остаток наличных (инкассация)</label>
+          <input type="number" id="shift-closing-cash" class="form-input" placeholder="Сумма в сом" min="0" step="0.01" value="${md.closingCash || ''}" oninput="state.ui.modalData.closingCash = this.value; if(window.render) window.render();" required style="font-size: 18px; font-weight: 800;">
         </div>
-        <p style="font-size: 12px; color: var(--text-secondary);">Система автоматически сверит эту сумму с расчетной и покажет расхождения в случае их наличия.</p>
-        <button type="submit" class="btn btn-primary" style="background: #dc2626; margin-top: 10px;">
+        
+        <div id="shift-deviation-text" style="font-size: 14px; text-align: center;">
+          ${deviationHtml}
+        </div>
+        
+        ${adjustBtnHtml}
+
+        <p style="font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 8px;">Система не позволит закрыть смену при наличии отклонений.</p>
+        <button type="submit" class="btn btn-primary" style="background: #dc2626;" ${disableSubmit ? 'disabled' : ''}>
           🔒 Закрыть смену и сдать отчет
         </button>
       </form>
     </div>
   `;
+};
+
+window.handleAutoAdjustShift = async function(deviation) {
+  const md = state.ui.modalData || {};
+  const shiftId = md.id;
+  const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
+  const cashWalletId = cashWallet ? cashWallet.id : 'cash';
+  
+  const isSurplus = deviation > 0;
+  const type = isSurplus ? 'income' : 'expense';
+  const amount = Math.abs(deviation);
+  
+  const txData = {
+    type: type,
+    amount: amount,
+    paymentMethod: cashWalletId,
+    description: isSurplus ? 'Авто-корректировка (излишек)' : 'Авто-корректировка (недостача)',
+    shiftId: shiftId
+  };
+  
+  try {
+    showToast('Создание корректировки...', 'info');
+    await api.createTransaction(txData);
+    
+    // Синхронизация для подтягивания новой транзакции
+    await window.forceSync();
+    showToast('Касса выровнена. Вы можете закрыть смену.', 'success');
+  } catch (e) {
+    showToast(e.message || 'Ошибка создания корректировки', 'error');
+  }
 };
 
 window.handleCloseShiftSubmit = async function (id) {

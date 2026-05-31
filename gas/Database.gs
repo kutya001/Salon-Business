@@ -26,16 +26,16 @@ function getSheet(name) {
 function initializeDatabase() {
   var schema = {
     "Settings": ["key", "value"],
-    "ServiceCategories": ["id", "name", "description", "status", "createdAt"],
-    "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt", "services"],
-    "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt"],
+    "ServiceCategories": ["id", "name", "description", "status", "createdAt", "updatedAt"],
+    "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt", "updatedAt", "services"],
+    "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt", "updatedAt"],
     "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
-    "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
-    "Transactions": ["id", "type", "amount", "description", "paymentMethod", "bookingId", "shiftId", "createdAt"],
-    "Shifts": ["id", "date", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
-    "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
-    "Wallets": ["id", "name", "icon", "type", "createdAt"],
-    "Articles": ["id", "name", "type", "createdAt"]
+    "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt", "updatedAt"],
+    "Transactions": ["id", "type", "amount", "description", "paymentMethod", "categoryId", "bookingId", "transactionDateTime", "createdAt", "updatedAt"],
+    "Shifts": ["id", "date", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status", "createdAt", "updatedAt"],
+    "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt", "createdAt", "updatedAt"],
+    "Wallets": ["id", "name", "icon", "type", "createdAt", "updatedAt"],
+    "Articles": ["id", "name", "type", "createdAt", "updatedAt"]
   };
 
   for (var sheetName in schema) {
@@ -261,10 +261,17 @@ function getSheetData(sheetName) {
 function appendRow(sheetName, data) {
   var sheet = getSheet(sheetName);
   var lastCol = sheet.getLastColumn();
-  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
   
   if (!data.id) data.id = generateId();
-  if (!data.createdAt) data.createdAt = new Date().toISOString();
+  
+  var nowStr = formatDateTimeRU(new Date());
+  if (headers.indexOf("createdAt") !== -1 && !data.createdAt) {
+    data.createdAt = nowStr;
+  }
+  if (headers.indexOf("updatedAt") !== -1 && !data.updatedAt) {
+    data.updatedAt = nowStr;
+  }
   
   var row = headers.map(function(header) {
     var val = data[header] !== undefined ? data[header] : "";
@@ -300,11 +307,16 @@ function updateRow(sheetName, id, data) {
   
   if (lastRow <= 1) return null;
   
-  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
   var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().map(function(r) { return r[0].toString(); });
   
   var idx = ids.indexOf(id.toString());
   if (idx === -1) return null;
+  
+  var nowStr = formatDateTimeRU(new Date());
+  if (headers.indexOf("updatedAt") !== -1) {
+    data.updatedAt = nowStr;
+  }
   
   var rowNum = idx + 2; // +1 для пропуска заголовков, +1 для 1-индексации
   var existingRange = sheet.getRange(rowNum, 1, 1, lastCol);
@@ -401,5 +413,36 @@ function menuInitializeDatabase() {
       Logger.log('Ошибка инициализации: ' + e.message);
     }
   }
+}
+
+/**
+ * Форматирует дату и время в единый СНГ формат (ДД.ММ.ГГГГ ЧЧ:ММ:СС)
+ * @param {Date} dateObj
+ * @returns {string}
+ */
+function formatDateTimeRU(dateObj) {
+  if (!dateObj) return "";
+  var d = dateObj;
+  var day = ("0" + d.getDate()).slice(-2);
+  var month = ("0" + (d.getMonth() + 1)).slice(-2);
+  var year = d.getFullYear();
+  var hours = ("0" + d.getHours()).slice(-2);
+  var minutes = ("0" + d.getMinutes()).slice(-2);
+  var seconds = ("0" + d.getSeconds()).slice(-2);
+  return day + "." + month + "." + year + " " + hours + ":" + minutes + ":" + seconds;
+}
+
+/**
+ * Форматирует дату в единый СНГ формат (ДД.ММ.ГГГГ)
+ * @param {Date} dateObj
+ * @returns {string}
+ */
+function formatDateRU(dateObj) {
+  if (!dateObj) return "";
+  var d = dateObj;
+  var day = ("0" + d.getDate()).slice(-2);
+  var month = ("0" + (d.getMonth() + 1)).slice(-2);
+  var year = d.getFullYear();
+  return day + "." + month + "." + year;
 }
 

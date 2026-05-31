@@ -41,10 +41,8 @@ function handleCreateTransaction(data) {
     throw new Error("Недостаточно данных для транзакции");
   }
   
-  // Автоматически привязываем к открытой смене, если она есть
-  var openShift = getActiveShift();
-  if (openShift) {
-    data.shiftId = openShift.id;
+  if (!data.transactionDateTime) {
+    data.transactionDateTime = formatDateTimeRU(new Date());
   }
   
   return appendRow("Transactions", data);
@@ -65,6 +63,7 @@ function handleUpdateTransaction(id, data) {
   if (data.paymentMethod !== undefined) updates.paymentMethod = data.paymentMethod;
   if (data.categoryId !== undefined) updates.categoryId = data.categoryId;
   if (data.type !== undefined) updates.type = data.type;
+  if (data.transactionDateTime !== undefined) updates.transactionDateTime = data.transactionDateTime;
   
   var updated = updateRow("Transactions", id, updates);
   if (!updated) throw new Error("Транзакция не найдена");
@@ -158,8 +157,12 @@ function handleCloseShift(id, data) {
     throw new Error("Нельзя закрыть смену: на сегодня есть необработанные записи");
   }
   
-  // Получаем транзакции этой смены
-  var txs = getSheetData("Transactions").filter(function(t) { return t.shiftId === id; });
+  // Получаем транзакции этой смены по дате (без Shift ID)
+  var shiftDateStr = shift.date ? shift.date.replace(/-/g, ".") : "";
+  var txs = getSheetData("Transactions").filter(function(t) {
+    var tDate = t.transactionDateTime ? t.transactionDateTime.split(" ")[0].replace(/-/g, ".") : "";
+    return tDate === shiftDateStr;
+  });
   
   var wallets = getSheetData("Wallets");
   var cashWalletId = "cash";
@@ -208,7 +211,12 @@ function handleUpdateShiftCash(id, data) {
   if (data.closingCash !== undefined) updates.closingCash = parseFloat(data.closingCash) || 0;
   
   if (shift.status === "closed") {
-    var txs = getSheetData("Transactions").filter(function(t) { return t.shiftId === id; });
+    var shiftDateStr = shift.date ? shift.date.replace(/-/g, ".") : "";
+    var txs = getSheetData("Transactions").filter(function(t) {
+      var tDate = t.transactionDateTime ? t.transactionDateTime.split(" ")[0].replace(/-/g, ".") : "";
+      return tDate === shiftDateStr;
+    });
+    
     var wallets = getSheetData("Wallets");
     var cashWalletId = "cash";
     var cashWallet = wallets.filter(function(w) { return w.type === "cash"; })[0];

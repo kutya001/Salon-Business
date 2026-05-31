@@ -8,16 +8,16 @@
 // Ожидаемая структура таблиц (Схема метаданных)
 var REQUIRED_SCHEMA = {
   "Settings": ["key", "value"],
-  "ServiceCategories": ["id", "name", "description", "status", "createdAt"],
-  "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt", "services"],
-  "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt"],
+  "ServiceCategories": ["id", "name", "description", "status", "createdAt", "updatedAt"],
+  "Masters": ["id", "name", "phone", "email", "specialization", "percentage", "workDays", "workHoursStart", "workHoursEnd", "avatar", "status", "createdAt", "updatedAt", "services"],
+  "Services": ["id", "name", "genderCategory", "categoryId", "categoryName", "price", "duration", "description", "status", "createdAt", "updatedAt"],
   "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
-  "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
-  "Transactions": ["id", "type", "amount", "description", "paymentMethod", "categoryId", "bookingId", "shiftId", "createdAt"],
-  "Shifts": ["id", "date", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
-  "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
-  "Wallets": ["id", "name", "icon", "type", "createdAt"],
-  "Articles": ["id", "name", "type", "createdAt"]
+  "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt", "updatedAt"],
+  "Transactions": ["id", "type", "amount", "description", "paymentMethod", "categoryId", "bookingId", "transactionDateTime", "createdAt", "updatedAt"],
+  "Shifts": ["id", "date", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status", "createdAt", "updatedAt"],
+  "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt", "createdAt", "updatedAt"],
+  "Wallets": ["id", "name", "icon", "type", "createdAt", "updatedAt"],
+  "Articles": ["id", "name", "type", "createdAt", "updatedAt"]
 };
 
 /**

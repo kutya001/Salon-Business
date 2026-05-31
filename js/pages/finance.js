@@ -160,7 +160,11 @@ window.renderFinanceShifts = function () {
 
   let shiftBlockHtml = '';
   if (activeShift) {
-    const shiftTxs = state.transactions.filter(t => t.shiftId === activeShift.id);
+    const shiftDateStr = activeShift.date ? activeShift.date.replace(/-/g, '.') : '';
+    const shiftTxs = state.transactions.filter(t => {
+      const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0].replace(/-/g, '.') : '';
+      return txDate === shiftDateStr;
+    });
     let shiftCashIncome = 0;
     let shiftCashExpense = 0;
     let shiftCard = 0;
@@ -315,15 +319,21 @@ window.renderFinanceTransactions = function () {
   
   if (filters.dateFrom) {
     filteredTxs = filteredTxs.filter(t => {
-      const tDate = t.createdAt.split('T')[0];
-      return tDate >= filters.dateFrom;
+      const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0] : '';
+      if (!txDate) return false;
+      const p = txDate.split('.');
+      const formattedTxDate = `${p[2]}-${p[1]}-${p[0]}`;
+      return formattedTxDate >= filters.dateFrom;
     });
   }
   
   if (filters.dateTo) {
     filteredTxs = filteredTxs.filter(t => {
-      const tDate = t.createdAt.split('T')[0];
-      return tDate <= filters.dateTo;
+      const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0] : '';
+      if (!txDate) return false;
+      const p = txDate.split('.');
+      const formattedTxDate = `${p[2]}-${p[1]}-${p[0]}`;
+      return formattedTxDate <= filters.dateTo;
     });
   }
 
@@ -346,7 +356,7 @@ window.renderFinanceTransactions = function () {
 
         return `
           <tr onclick="window.showTransactionDetailsModal('${t.id}')" style="cursor: pointer; transition: all 0.2s ease;">
-            <td data-label="Дата">${formatDate(t.createdAt)}</td>
+            <td data-label="Дата">${formatDate(t.transactionDateTime || t.createdAt)}</td>
             <td data-label="Тип">
               <span class="badge ${isIncome ? 'badge-success' : 'badge-danger'}">${catName}</span>
             </td>
@@ -391,7 +401,7 @@ window.renderFinanceTransactions = function () {
           <div class="card p-4" onclick="window.showTransactionDetailsModal('${t.id}')" style="cursor: pointer; display: flex; flex-direction: column; gap: 8px; border-left: 4px solid ${color}; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: transform 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span class="badge ${isIncome ? 'badge-success' : 'badge-danger'}">${catName}</span>
-              <span style="font-size: 11px; color: var(--text-secondary);">${formatDate(t.createdAt)}</span>
+              <span style="font-size: 11px; color: var(--text-secondary);">${formatDate(t.transactionDateTime || t.createdAt)}</span>
             </div>
             <div style="font-weight: 700; color: var(--text); font-size: 14px; line-height: 1.3;">${t.description}</div>
             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px;">
@@ -686,9 +696,7 @@ window.handleTransactionSubmit = async function () {
     return;
   }
 
-  const activeShift = state.shifts.find(s => s.status === 'open');
-  const shiftId = isEdit ? (state.ui.modalData.shiftId || '') : (activeShift ? activeShift.id : '');
-  const createdAt = isEdit ? (state.ui.modalData.createdAt || new Date().toISOString()) : new Date().toISOString();
+  const transactionDateTime = isEdit ? (state.ui.modalData.transactionDateTime || window.formatDateTimeRU(new Date())) : window.formatDateTimeRU(new Date());
 
   const optimisticTx = {
     id: isEdit ? id : 'tx_tmp_' + Date.now(),
@@ -697,8 +705,10 @@ window.handleTransactionSubmit = async function () {
     description,
     paymentMethod,
     categoryId,
-    shiftId,
-    createdAt
+    bookingId: isEdit ? (state.ui.modalData.bookingId || '') : '',
+    transactionDateTime,
+    createdAt: isEdit ? (state.ui.modalData.createdAt || transactionDateTime) : transactionDateTime,
+    updatedAt: window.formatDateTimeRU(new Date())
   };
 
   // Мгновенное обновление UI (Optimistic Update)
@@ -717,8 +727,8 @@ window.handleTransactionSubmit = async function () {
   showToast(isEdit ? 'Операция успешно изменена' : 'Транзакция успешно зафиксирована', 'success');
 
   const apiCall = isEdit
-    ? api.updateTransaction(id, { type, amount, description, paymentMethod, categoryId }, { background: true })
-    : api.createTransaction({ type, amount, description, paymentMethod, categoryId }, { background: true });
+    ? api.updateTransaction(id, { type, amount, description, paymentMethod, categoryId, transactionDateTime }, { background: true })
+    : api.createTransaction({ type, amount, description, paymentMethod, categoryId, transactionDateTime }, { background: true });
 
   apiCall.then(savedTx => {
     if (!isEdit && savedTx && savedTx.id) {
@@ -986,7 +996,12 @@ window.renderCloseShiftModal = function () {
   const md = state.ui.modalData || {};
   const shiftId = md.id;
   const shift = state.shifts.find(s => s.id === shiftId);
-  const shiftTxs = (state.transactions || []).filter(t => t.shiftId === shiftId);
+  
+  const shiftDateStr = shift && shift.date ? shift.date.replace(/-/g, '.') : '';
+  const shiftTxs = (state.transactions || []).filter(t => {
+    const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0].replace(/-/g, '.') : '';
+    return txDate === shiftDateStr;
+  });
   
   const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
   const cashWalletId = cashWallet ? cashWallet.id : 'cash';
@@ -1341,7 +1356,11 @@ window.renderShiftDetailsModal = function () {
   
   if (!shift) return `<div>Смена не найдена</div>`;
   
-  const shiftTxs = state.transactions.filter(t => t.shiftId === shiftId);
+  const shiftDateStr = shift.date ? shift.date.replace(/-/g, '.') : '';
+  const shiftTxs = state.transactions.filter(t => {
+    const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0].replace(/-/g, '.') : '';
+    return txDate === shiftDateStr;
+  });
   const isOpen = shift.status === 'open';
   
   // Подсчет статистики наличных/безналичных операций

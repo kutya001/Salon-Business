@@ -7,16 +7,69 @@ window.formatPrice = function (amount) {
   return new Intl.NumberFormat('ru-RU', { style: 'decimal' }).format(number) + ' сом';
 };
 
+window.parseDateTimeRU = function (dateStr) {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  
+  // Если это ISO с дефисами, например, "2026-05-31" или ISO-строка
+  if (typeof dateStr === 'string' && (dateStr.includes('T') || (dateStr.includes('-') && dateStr.indexOf('.') === -1))) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d;
+  }
+  
+  // Парсим формат DD.MM.YYYY HH:mm:ss или DD.MM.YYYY
+  if (typeof dateStr === 'string') {
+    const parts = dateStr.trim().split(' ');
+    // Поддержка дефисов или точек
+    const dateParts = parts[0].includes('-') ? parts[0].split('-') : parts[0].split('.');
+    if (dateParts.length === 3) {
+      let day, month, year;
+      if (dateParts[0].length === 4) {
+        // YYYY-MM-DD
+        year = parseInt(dateParts[0], 10);
+        month = parseInt(dateParts[1], 10) - 1;
+        day = parseInt(dateParts[2], 10);
+      } else {
+        // DD.MM.YYYY
+        day = parseInt(dateParts[0], 10);
+        month = parseInt(dateParts[1], 10) - 1;
+        year = parseInt(dateParts[2], 10);
+      }
+      
+      let hours = 0, minutes = 0, seconds = 0;
+      if (parts[1]) {
+        const timeParts = parts[1].split(':');
+        hours = parseInt(timeParts[0], 10) || 0;
+        minutes = parseInt(timeParts[1], 10) || 0;
+        seconds = parseInt(timeParts[2], 10) || 0;
+      }
+      return new Date(year, month, day, hours, minutes, seconds);
+    }
+  }
+  
+  const fallback = new Date(dateStr);
+  return isNaN(fallback.getTime()) ? new Date() : fallback;
+};
+
 window.formatDate = function (dateStr) {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  
+  const date = window.parseDateTimeRU(dateStr);
   return date.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   }).replace(' г.', '');
+};
+
+window.formatDateTimeRU = function(dateObj) {
+  const d = dateObj || new Date();
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const seconds = d.getSeconds().toString().padStart(2, '0');
+  return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
 };
 
 window.formatClientPhone = function(phone) {

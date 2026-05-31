@@ -694,9 +694,7 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   
   let optimisticTx = null;
   if (newStatus === 'completed') {
-    const activeShift = state.shifts.find(s => s.status === 'open');
-    const shiftId = activeShift ? activeShift.id : '';
-    
+    const nowStr = window.formatDateTimeRU(new Date());
     optimisticTx = {
       id: 'tx_tmp_' + Date.now(),
       type: 'income',
@@ -704,8 +702,10 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
       description: 'Оплата: ' + (b.serviceName || 'Услуга'),
       paymentMethod: 'cash',
       categoryId: 'income_general', // Значение по умолчанию, если нет точного ID
-      shiftId: shiftId,
-      createdAt: new Date().toISOString()
+      bookingId: b.id,
+      transactionDateTime: nowStr,
+      createdAt: nowStr,
+      updatedAt: nowStr
     };
     state.transactions.unshift(optimisticTx);
   }

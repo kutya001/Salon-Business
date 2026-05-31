@@ -56,9 +56,9 @@ function handleCreateTransaction(data) {
  */
 function handleGetShifts() {
   var shifts = getSheetData("Shifts");
-  // Новые смены вверху
+  // Новые смены вверху (по дате открытия)
   shifts.sort(function(a, b) {
-    return b.openedAt.localeCompare(a.openedAt);
+    return parseShiftDate(b.openedAt).getTime() - parseShiftDate(a.openedAt).getTime();
   });
   return shifts;
 }
@@ -72,10 +72,28 @@ function handleOpenShift(data) {
   var active = getActiveShift();
   if (active) throw new Error("Уже есть открытая смена №" + active.id.substring(0, 5));
   
+  // Преобразуем переданную дату (формат YYYY-MM-DD) или берем текущую
+  var shiftDateObj = data.date ? new Date(data.date) : new Date();
+  var dateStr = formatDateRU(shiftDateObj);
+  
+  // Проверка, была ли уже открыта смена на эту дату
+  var existingShifts = getSheetData("Shifts");
+  var duplicate = existingShifts.filter(function(s) { return s.date === dateStr; })[0];
+  if (duplicate) {
+    throw new Error("Смена за дату " + dateStr + " уже существует (№" + duplicate.id.substring(0, 5) + ")");
+  }
+  
+  // Рассчитываем остаток с предыдущей смены, если он не передан
+  var openingCash = parseFloat(data.openingCash);
+  if (isNaN(openingCash)) {
+    openingCash = getPreviousShiftClosingCash(dateStr);
+  }
+  
   var shift = {
-    openedAt: new Date().toISOString(),
+    date: dateStr,
+    openedAt: formatDateTimeRU(new Date()),
     closedAt: "",
-    openingCash: parseFloat(data.openingCash) || 0,
+    openingCash: openingCash,
     closingCash: 0,
     totalCash: 0,
     totalCard: 0,
@@ -136,7 +154,7 @@ function handleCloseShift(id, data) {
   }
   
   var updates = {
-    closedAt: new Date().toISOString(),
+    closedAt: formatDateTimeRU(new Date()),
     closingCash: declaredCash,
     totalCash: totalCash,
     totalCard: nonCashIncome,
@@ -266,4 +284,78 @@ function handleUpdateTransactionCategory(id, data) {
 function handleDeleteTransactionCategory(id) {
   var deleted = deleteRow("Articles", id);
   return { success: deleted };
+}
+
+// ==========================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ФОРМАТИРОВАНИЯ ДАТ
+// ==========================================
+
+function formatDateRU(dateObj) {
+  if (!dateObj) return "";
+  var d = dateObj;
+  var day = ("0" + d.getDate()).slice(-2);
+  var month = ("0" + (d.getMonth() + 1)).slice(-2);
+  var year = d.getFullYear();
+  return day + "." + month + "." + year;
+}
+
+function formatDateTimeRU(dateObj) {
+  if (!dateObj) return "";
+  var d = dateObj;
+  var day = ("0" + d.getDate()).slice(-2);
+  var month = ("0" + (d.getMonth() + 1)).slice(-2);
+  var year = d.getFullYear();
+  var hours = ("0" + d.getHours()).slice(-2);
+  var minutes = ("0" + d.getMinutes()).slice(-2);
+  var seconds = ("0" + d.getSeconds()).slice(-2);
+  return day + "." + month + "." + year + " " + hours + ":" + minutes + ":" + seconds;
+}
+
+function parseShiftDate(dateStr) {
+  if (!dateStr) return new Date(0);
+  // Проверяем формат ДД.ММ.ГГГГ ЧЧ:ММ:СС или ДД.ММ.ГГГГ
+  var parts = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
+  if (parts) {
+    var day = parseInt(parts[1], 10);
+    var month = parseInt(parts[2], 10) - 1;
+    var year = parseInt(parts[3], 10);
+    var hours = parts[4] ? parseInt(parts[4], 10) : 0;
+    var minutes = parts[5] ? parseInt(parts[5], 10) : 0;
+    var seconds = parts[6] ? parseInt(parts[6], 10) : 0;
+    return new Date(year, month, day, hours, minutes, seconds);
+  }
+  // fallback на стандартный ISO парсинг
+  return new Date(dateStr);
+}
+
+function getPreviousShiftClosingCash(targetDateStr) {
+  var shifts = getSheetData("Shifts").filter(function(s) { return s.status === "closed"; });
+  if (shifts.length === 0) return 0;
+  
+  // Хронологическая сортировка
+  shifts.sort(function(a, b) {
+    return parseShiftDate(a.openedAt).getTime() - parseShiftDate(b.openedAt).getTime();
+  });
+  
+  var parts = targetDateStr.split(".");
+  var targetDate = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+  
+  var lastClosingCash = 0;
+  var foundPrior = false;
+  
+  for (var i = 0; i < shifts.length; i++) {
+    var sDate = parseShiftDate(shifts[i].openedAt);
+    sDate.setHours(0, 0, 0, 0);
+    if (sDate.getTime() < targetDate.getTime()) {
+      lastClosingCash = parseFloat(shifts[i].closingCash) || 0;
+      foundPrior = true;
+    }
+  }
+  
+  // Если не нашли смену до этой даты, берем просто последнюю закрытую смену
+  if (!foundPrior && shifts.length > 0) {
+    lastClosingCash = parseFloat(shifts[shifts.length - 1].closingCash) || 0;
+  }
+  
+  return lastClosingCash;
 }

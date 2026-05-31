@@ -211,8 +211,8 @@ class GASClient {
     return await this.request('getShifts');
   }
 
-  async openShift(openingCash, options = {}) {
-    return await this.request('openShift', { openingCash }, options);
+  async openShift(openingCash, date = null, options = {}) {
+    return await this.request('openShift', { openingCash, date }, options);
   }
 
   async closeShift(id, closingCash, options = {}) {

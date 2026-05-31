@@ -154,13 +154,28 @@ window.renderFinanceShifts = function () {
     `;
   }
 
-  const formatShiftDateTime = (isoString) => {
-    if (!isoString) return '—';
+  const formatShiftDateTime = (dateStr) => {
+    if (!dateStr) return '—';
     try {
-      const parts = isoString.split('T');
-      return `${formatDate(parts[0])} в ${formatTime(parts[1])}`;
+      // Проверяем формат ДД.ММ.ГГГГ ЧЧ:ММ:СС или ДД.ММ.ГГГГ
+      const partsRU = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
+      if (partsRU) {
+        const day = parseInt(partsRU[1], 10);
+        const monthIdx = parseInt(partsRU[2], 10) - 1;
+        const year = partsRU[3];
+        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        const dateFormatted = `${day} ${months[monthIdx]} ${year}`;
+        if (partsRU[4] && partsRU[5]) {
+          return `${dateFormatted} в ${partsRU[4]}:${partsRU[5]}`;
+        }
+        return dateFormatted;
+      }
+      
+      // Fallback на стандартный ISO
+      const partsISO = dateStr.split('T');
+      return `${formatDate(partsISO[0])} в ${formatTime(partsISO[1])}`;
     } catch (e) {
-      return isoString;
+      return dateStr;
     }
   };
 
@@ -465,9 +480,71 @@ window.handleTransactionSubmit = async function () {
 };
 
 // Смены (Modal functions)
-window.showOpenShiftModal = function () { setUI({ modal: 'openShift', modalData: { openingCash: '0' } }); };
+window.getSuggestedOpeningCash = function(selectedDateStr) {
+  if (!selectedDateStr) return 0;
+  const closedShifts = (state.shifts || []).filter(s => s.status === 'closed');
+  if (closedShifts.length === 0) return 0;
+  
+  const parseShiftDateStr = (dateStr) => {
+    if (!dateStr) return new Date(0);
+    const parts = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if (parts) {
+      return new Date(parts[3], parts[2] - 1, parts[1]);
+    }
+    return new Date(dateStr);
+  };
+  
+  // Сортируем закрытые смены хронологически (по возрастанию)
+  closedShifts.sort((a, b) => parseShiftDateStr(a.openedAt) - parseShiftDateStr(b.openedAt));
+  
+  const selectedDate = new Date(selectedDateStr);
+  selectedDate.setHours(0, 0, 0, 0);
+  
+  let lastClosingCash = 0;
+  let foundPrior = false;
+  
+  for (const s of closedShifts) {
+    const sDate = parseShiftDateStr(s.openedAt);
+    sDate.setHours(0, 0, 0, 0);
+    if (sDate < selectedDate) {
+      lastClosingCash = parseFloat(s.closingCash) || 0;
+      foundPrior = true;
+    }
+  }
+  
+  // Если не нашлось смены до этой даты, по умолчанию берем последнюю закрытую смену
+  if (!foundPrior && closedShifts.length > 0) {
+    lastClosingCash = parseFloat(closedShifts[closedShifts.length - 1].closingCash) || 0;
+  }
+  
+  return lastClosingCash;
+};
+
+window.handleOpenShiftDateChange = function(selectedDate) {
+  const suggestedCash = window.getSuggestedOpeningCash(selectedDate);
+  setUI({
+    modalData: {
+      ...state.ui.modalData,
+      date: selectedDate,
+      openingCash: suggestedCash.toString()
+    }
+  });
+};
+
+window.showOpenShiftModal = function () {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const suggestedCash = window.getSuggestedOpeningCash(todayStr);
+  setUI({ 
+    modal: 'openShift', 
+    modalData: { 
+      date: todayStr, 
+      openingCash: suggestedCash.toString() 
+    } 
+  }); 
+};
+
 window.renderOpenShiftModal = function () {
-  const md = state.ui.modalData || { openingCash: '0' };
+  const md = state.ui.modalData || { date: new Date().toISOString().split('T')[0], openingCash: '0' };
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
@@ -476,9 +553,16 @@ window.renderOpenShiftModal = function () {
       </div>
       <form onsubmit="event.preventDefault(); handleOpenShiftSubmit();" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="form-group">
-          <label class="form-label">Входящий остаток в кассе (наличные)</label>
-          <input type="number" id="shift-opening-cash" class="form-input" placeholder="0" value="${md.openingCash}" min="0" oninput="state.ui.modalData.openingCash = this.value" required>
+          <label class="form-label">Дата смены</label>
+          <input type="date" id="shift-date" class="form-input" value="${md.date}" onchange="window.handleOpenShiftDateChange(this.value)" required style="font-weight: 600;">
         </div>
+        
+        <div class="form-group">
+          <label class="form-label">Входящий остаток в кассе (наличные)</label>
+          <input type="number" id="shift-opening-cash" class="form-input" placeholder="0" value="${md.openingCash}" min="0" oninput="state.ui.modalData.openingCash = this.value" required style="font-weight: 700; font-size: 16px;">
+          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Сумма перенесена автоматически из закрывающего остатка предыдущей смены.</p>
+        </div>
+        
         <button type="submit" class="btn btn-primary" style="background: #10b981; margin-top: 10px;">
           🚀 Запустить смену
         </button>
@@ -488,11 +572,23 @@ window.renderOpenShiftModal = function () {
 };
 
 window.handleOpenShiftSubmit = async function () {
+  const date = state.ui.modalData.date;
   const openingCash = parseFloat(state.ui.modalData.openingCash) || 0;
+  
+  // Преобразуем выбранную дату для оптимистичного рендеринга
+  const dParts = date.split('-');
+  const dateRU = `${dParts[2]}.${dParts[1]}.${dParts[0]}`;
+  
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const seconds = now.getSeconds().toString().padStart(2, '0');
+  const openedAtRU = `${dateRU} ${hours}:${minutes}:${seconds}`;
   
   const optimisticShift = {
     id: 'shift_tmp_' + Date.now(),
-    openedAt: new Date().toISOString(),
+    date: dateRU,
+    openedAt: openedAtRU,
     openingCash,
     status: 'open'
   };
@@ -502,9 +598,9 @@ window.handleOpenShiftSubmit = async function () {
   setUI({ modal: null });
   showToast('Смена успешно открыта!', 'success');
 
-  api.openShift(openingCash, { background: true })
+  api.openShift(openingCash, date, { background: true })
     .catch(e => {
-      showToast('Не удалось открыть смену', 'error');
+      showToast(e.message || 'Не удалось открыть смену', 'error');
       state.shifts = state.shifts.filter(s => s.id !== optimisticShift.id);
       if (window.render) window.render();
     });

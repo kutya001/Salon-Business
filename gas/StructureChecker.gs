@@ -14,7 +14,7 @@ var REQUIRED_SCHEMA = {
   "Bookings": ["id", "clientId", "clientName", "clientPhone", "serviceId", "serviceName", "masterId", "masterName", "date", "time", "duration", "price", "status", "paymentMethod", "notes", "createdAt", "updatedAt"],
   "Clients": ["id", "name", "phone", "email", "notes", "totalBookings", "totalSpent", "createdAt"],
   "Transactions": ["id", "type", "amount", "description", "paymentMethod", "categoryId", "bookingId", "shiftId", "createdAt"],
-  "Shifts": ["id", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
+  "Shifts": ["id", "date", "openedAt", "closedAt", "openingCash", "closingCash", "totalCash", "totalCard", "totalBonus", "status"],
   "PriceHistory": ["id", "serviceId", "masterId", "oldPrice", "newPrice", "changedAt"],
   "Wallets": ["id", "name", "icon", "type", "createdAt"],
   "Articles": ["id", "name", "type", "createdAt"]

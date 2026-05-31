@@ -59,6 +59,7 @@ window.state = {
       dateFrom: '',
       dateTo: ''
     },
+    showTxFilters: false,
     selectedDate: new Date().toISOString().split('T')[0],
     toasts: [],
     viewMode: 'table', // 'table' или 'timeline' для записей

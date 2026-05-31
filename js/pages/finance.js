@@ -404,10 +404,36 @@ window.renderFinanceTransactions = function () {
         `;
       }).join('');
 
+  const showTxFilters = state.ui.showTxFilters || false;
+  const activeFiltersCount = [
+    filters.search,
+    filters.type,
+    filters.categoryId,
+    filters.paymentMethod,
+    filters.dateFrom,
+    filters.dateTo
+  ].filter(Boolean).length;
+
   return `
     <div style="display: flex; flex-direction: column; gap: 16px;">
-      <!-- Панель фильтров -->
-      <div class="glass-interactive-card p-4" style="display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--border);">
+      <!-- Кнопка управления фильтрами -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <button onclick="setUI({ showTxFilters: !state.ui.showTxFilters })" class="btn btn-secondary animate-scale-in" style="width: auto; padding: 8px 14px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-color: var(--border); background: var(--bg-secondary); color: var(--text);">
+          <i data-feather="sliders" style="width: 14px; height: 14px; color: ${showTxFilters ? 'var(--primary)' : 'var(--text-secondary)'};"></i>
+          <span>${showTxFilters ? 'Скрыть фильтры' : 'Показать фильтры'}</span>
+          ${activeFiltersCount > 0 ? `<span style="background: var(--primary); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 4px;">${activeFiltersCount}</span>` : ''}
+        </button>
+        
+        ${activeFiltersCount > 0 ? `
+          <button onclick="window.setTxFilters({ search: '', type: '', categoryId: '', paymentMethod: '', dateFrom: '', dateTo: '' })" class="btn btn-secondary animate-scale-in" style="padding: 8px 14px; font-size: 13px; width: auto; display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
+            <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Сбросить фильтры
+          </button>
+        ` : ''}
+      </div>
+
+      <!-- Сворачиваемая панель фильтров -->
+      ${showTxFilters ? `
+      <div class="glass-interactive-card p-4 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--border);">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
           <!-- Поиск -->
           <div class="form-group" style="margin-bottom: 0;">
@@ -458,16 +484,8 @@ window.renderFinanceTransactions = function () {
             <input type="date" class="form-input" style="margin-top: 4px;" value="${filters.dateTo || ''}" onchange="window.setTxFilters({ dateTo: this.value })">
           </div>
         </div>
-        
-        <!-- Кнопка очистки -->
-        ${(filters.search || filters.type || filters.categoryId || filters.paymentMethod || filters.dateFrom || filters.dateTo) ? `
-          <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
-            <button onclick="window.setTxFilters({ search: '', type: '', categoryId: '', paymentMethod: '', dateFrom: '', dateTo: '' })" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; display: flex; align-items: center; gap: 6px; border-radius: 8px;">
-              <i data-feather="x" style="width: 12px; height: 12px;"></i> Сбросить фильтры
-            </button>
-          </div>
-        ` : ''}
       </div>
+      ` : ''}
 
       <!-- Десктопная таблица -->
       <div class="hidden md-block glass-interactive-card p-6">

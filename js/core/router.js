@@ -66,7 +66,7 @@ window.renderLayout = function () {
     const activeClass = page === item.id ? 'active' : '';
     return `
       <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}">
-        <span class="tab-icon" style="display: flex; align-items: center; justify-content: center; height: 24px;"><i data-feather="${item.icon}" style="width: 20px; height: 20px;"></i></span>
+        <span class="tab-icon" style="display: flex; align-items: center; justify-content: center; height: 28px;"><i data-feather="${item.icon}" style="width: 24px; height: 24px;"></i></span>
         <span class="tab-label" style="font-size: 10px;">${item.label}</span>
       </a>
     `;

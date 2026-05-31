@@ -121,6 +121,42 @@ window.toggleMasterService = function(id) {
   setUI({ modalData: state.ui.modalData });
 };
 
+window.formatSvcDuration = function(durationStr) {
+  if (!durationStr) return '';
+  const parts = durationStr.split(':');
+  if (parts.length < 2) return durationStr;
+  const hrs = parseInt(parts[0], 10) || 0;
+  const mins = parseInt(parts[1], 10) || 0;
+  if (hrs > 0) {
+    return `${hrs} ч${mins > 0 ? ` ${mins} мин` : ''}`;
+  }
+  return `${mins} мин`;
+};
+
+window.toggleMasterCategory = function(typeName) {
+  const svcs = state.services || [];
+  const categoryServices = svcs.filter(s => (s.categoryName || 'Другое') === typeName);
+  const categorySvcIds = categoryServices.map(s => s.id);
+  
+  const current = state.ui.modalData.services || [];
+  const allSelected = categorySvcIds.every(id => current.includes(id));
+  
+  if (allSelected) {
+    // Деактивируем все услуги категории
+    state.ui.modalData.services = current.filter(id => !categorySvcIds.includes(id));
+  } else {
+    // Активируем все услуги категории
+    const newServices = [...current];
+    categorySvcIds.forEach(id => {
+      if (!newServices.includes(id)) {
+        newServices.push(id);
+      }
+    });
+    state.ui.modalData.services = newServices;
+  }
+  setUI({ modalData: state.ui.modalData });
+};
+
 window.showMasterDetailsModal = function(id) {
   const master = state.masters.find(m => m.id === id);
   if (!master) return;
@@ -143,13 +179,33 @@ window.renderMasterModal = function () {
 
   let svcsHtml = '';
   for (const typeName in grouped) {
-    svcsHtml += `<h4 style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-top: 12px; margin-bottom: 8px;">${typeName}</h4>`;
-    svcsHtml += grouped[typeName].map(s => {
+    const categoryServices = grouped[typeName];
+    const categorySvcIds = categoryServices.map(s => s.id);
+    const selectedCount = categorySvcIds.filter(id => selectedServices.includes(id)).length;
+    const allSelected = categorySvcIds.every(id => selectedServices.includes(id));
+    const isSomeSelected = selectedCount > 0 && !allSelected;
+
+    svcsHtml += `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 16px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleMasterCategory('${typeName}')">
+          <input type="checkbox" onchange="event.stopPropagation(); toggleMasterCategory('${typeName}');" ${allSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; ${isSomeSelected ? 'opacity: 0.7;' : ''}">
+          <span style="font-size: 13px; font-weight: 700; color: var(--text);">${typeName}</span>
+        </div>
+        <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">
+          Выбрано: ${selectedCount} из ${categoryServices.length}
+        </span>
+      </div>
+    `;
+
+    svcsHtml += categoryServices.map(s => {
       const isSelected = selectedServices.includes(s.id);
       return `
-        <div onclick="toggleMasterService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
+        <div onclick="toggleMasterService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'}; transition: all 0.2s ease;">
           <input type="checkbox" onchange="event.stopPropagation(); toggleMasterService('${s.id}');" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer;">
-          <div style="flex: 1; font-weight: 600; font-size: 13px;">${s.name}</div>
+          <div style="font-weight: 600; font-size: 13px; color: var(--text);">${s.name}</div>
+          <span style="font-size: 11px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; font-weight: 500;">
+            ${formatSvcDuration(s.duration)} • ${formatPrice(s.price)}
+          </span>
         </div>
       `;
     }).join('');
@@ -277,24 +333,24 @@ window.renderMasterDetailsModal = function() {
   const commission = Math.round(revenue * (parseFloat(m.percentage || 40) / 100));
 
   return `
-    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-      <div style="display: flex; align-items: flex-start; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+    <div class="scrollbar-hide" style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 85vh; overflow-y: auto;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 16px; overflow: hidden;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); flex-shrink: 0;">
             ${getInitials(m.name)}
           </div>
-          <div>
-            <h3 style="font-weight: 800; font-size: 20px; color: var(--text); margin: 0;">${m.name}</h3>
-            <p style="font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">${m.specialization}</p>
+          <div style="overflow: hidden;">
+            <h3 style="font-weight: 800; font-size: 20px; color: var(--text); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.name}</h3>
+            <p style="font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</p>
           </div>
         </div>
-        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-feather="x"></i></button>
       </div>
 
-      <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Телефон</div>
-          <a href="tel:${m.phone}" style="font-size: 14px; font-weight: 600; color: var(--primary); text-decoration: none;">${formatClientPhone(m.phone)}</a>
+          <a href="tel:${m.phone}" style="font-size: 14px; font-weight: 600; color: var(--primary); text-decoration: none; word-break: break-all;">${formatClientPhone(m.phone)}</a>
         </div>
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Рабочие часы</div>
@@ -312,13 +368,13 @@ window.renderMasterDetailsModal = function() {
 
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <h4 style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px;">Оказываемые услуги</h4>
-        <div style="padding: 12px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
+        <div style="padding: 12px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px;">
           ${(() => {
             let mServicesArray = [];
             try { mServicesArray = typeof m.services === 'string' ? JSON.parse(m.services) : (m.services || []); } catch(e) {}
             const providedServices = (state.services || []).filter(s => mServicesArray.includes(s.id));
             return providedServices.length > 0 
-              ? providedServices.map(s => `<span style="display: inline-block; padding: 4px 8px; background: rgba(99,102,241,0.1); color: var(--primary); font-size: 11px; font-weight: 700; border-radius: 6px; margin: 0 4px 4px 0;">${s.name}</span>`).join('')
+              ? providedServices.map(s => `<span style="display: inline-block; padding: 4px 8px; background: rgba(99,102,241,0.1); color: var(--primary); font-size: 11px; font-weight: 700; border-radius: 6px;">${s.name}</span>`).join('')
               : '<span style="color: var(--text-secondary); font-size: 12px;">Услуги не назначены</span>';
           })()}
         </div>
@@ -341,6 +397,5 @@ window.renderMasterDetailsModal = function() {
           <i data-feather="edit-2" style="width: 16px; height: 16px;"></i> Редактировать профиль
         </button>
       </div>
-    </div>
-  `;
+    </div>`;
 };

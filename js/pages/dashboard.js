@@ -218,7 +218,7 @@ window.renderDashboard = function () {
                     <div>
                       <div style="font-weight: 700; color: var(--text);">Кассовая смена открыта</div>
                       <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                        <i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена №${activeShift.id.substring(0, 5)}
+                        <i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена за ${formatDate(activeShift.openedAt || new Date().toISOString())}
                       </div>
                     </div>
                   </div>
@@ -233,10 +233,10 @@ window.renderDashboard = function () {
             let closedDesc = 'Финансовые операции приостановлены. Откройте смену.';
             
             if (lastShift) {
-              closedTitle = `Кассовая смена №${lastShift.id.substring(0, 5)} закрыта`;
+              closedTitle = `Кассовая смена за ${formatDate(lastShift.openedAt || todayStr)} закрыта`;
               try {
                 if (lastShift.closedAt) {
-                  const closedTimeStr = formatTime(lastShift.closedAt.split('T')[1]);
+                  const closedTimeStr = formatTime(lastShift.closedAt.split('T')[1] || lastShift.closedAt.split(' ')[1]);
                   closedDesc = `Смена закрыта в ${closedTimeStr}. Финансовые операции приостановлены.`;
                 }
               } catch(e) {}

@@ -135,7 +135,11 @@ window.formatSvcDuration = function(durationStr) {
 
 window.toggleMasterCategory = function(typeName) {
   const svcs = state.services || [];
-  const categoryServices = svcs.filter(s => (s.categoryName || 'Другое') === typeName);
+  const categoryServices = svcs.filter(s => {
+    let t = s.categoryName;
+    if (!t && s.categoryId) t = state.categories.find(c => c.id === s.categoryId)?.name;
+    return (t || 'Другое') === typeName;
+  });
   const categorySvcIds = categoryServices.map(s => s.id);
   
   const current = state.ui.modalData.services || [];
@@ -172,7 +176,9 @@ window.renderMasterModal = function () {
   const svcs = state.services || [];
   const grouped = {};
   svcs.forEach(s => {
-    const t = s.categoryName || 'Другое';
+    let t = s.categoryName;
+    if (!t && s.categoryId) t = state.categories.find(c => c.id === s.categoryId)?.name;
+    t = t || 'Другое';
     if (!grouped[t]) grouped[t] = [];
     grouped[t].push(s);
   });
@@ -185,10 +191,12 @@ window.renderMasterModal = function () {
     const allSelected = categorySvcIds.every(id => selectedServices.includes(id));
     const isSomeSelected = selectedCount > 0 && !allSelected;
 
+    const catSafeId = typeName.replace(/[^a-zA-Z0-9]/g, '');
+
     svcsHtml += `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 16px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
-        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleMasterCategory('${typeName}')">
-          <input type="checkbox" ${allSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; pointer-events: none; ${isSomeSelected ? 'opacity: 0.7;' : ''}">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex-grow: 1;" onclick="toggleMasterCategory('${typeName}')">
+          <input type="checkbox" id="chk-cat-${catSafeId}" ${allSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; pointer-events: none; ${isSomeSelected ? 'opacity: 0.7;' : ''}">
           <span style="font-size: 13px; font-weight: 700; color: var(--text);">${typeName}</span>
         </div>
         <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">
@@ -201,10 +209,11 @@ window.renderMasterModal = function () {
       const isSelected = selectedServices.includes(s.id);
       return `
         <div onclick="toggleMasterService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'}; transition: all 0.2s ease;">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; pointer-events: none;">
-          <div style="font-weight: 600; font-size: 13px; color: var(--text);">${s.name}</div>
-          <span style="font-size: 11px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; font-weight: 500;">
-            ${formatSvcDuration(s.duration)} • ${formatPrice(s.price)}
+          <input type="checkbox" id="chk-svc-${s.id}" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; pointer-events: none;">
+          <div style="font-weight: 600; font-size: 13px; color: var(--text); flex-grow: 1;">${s.name}</div>
+          <span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; font-weight: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+            <span>${formatSvcDuration(s.duration)}</span>
+            <span style="color: var(--primary); font-weight: 700;">${formatPrice(s.price)}</span>
           </span>
         </div>
       `;
@@ -219,7 +228,7 @@ window.renderMasterModal = function () {
         <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
       </div>
 
-      <form id="master-form" onsubmit="event.preventDefault(); handleMasterSubmit('${isEdit ? m.id : ''}');" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 60vh; padding-right: 4px;">
+      <form id="master-form" onsubmit="event.preventDefault(); handleMasterSubmit('${isEdit ? m.id : ''}');" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 70vh; padding-right: 4px;">
         <div class="form-group">
           <label class="form-label">ФИО мастера</label>
           <input type="text" id="m-name" class="form-input" placeholder="Алина Бакиева" value="${m.name || ''}" oninput="state.ui.modalData.name = this.value" required>
@@ -247,12 +256,12 @@ window.renderMasterModal = function () {
           <input type="number" id="m-percentage" class="form-input" placeholder="40" min="0" max="100" value="${m.percentage !== undefined ? m.percentage : '40'}" oninput="state.ui.modalData.percentage = this.value" required>
         </div>
         
-        <div style="display: flex; gap: 12px; width: 100%;">
-          <div class="form-group" style="flex: 1;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; width: 100%;">
+          <div class="form-group">
             <label class="form-label">Начало работы</label>
             <input type="time" id="m-hours-start" class="form-input" value="${formatMasterTime(m.workHoursStart || '09:00')}" onchange="state.ui.modalData.workHoursStart = this.value" required>
           </div>
-          <div class="form-group" style="flex: 1;">
+          <div class="form-group">
             <label class="form-label">Конец работы</label>
             <input type="time" id="m-hours-end" class="form-input" value="${formatMasterTime(m.workHoursEnd || '20:00')}" onchange="state.ui.modalData.workHoursEnd = this.value" required>
           </div>
@@ -347,7 +356,7 @@ window.renderMasterDetailsModal = function() {
         <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-feather="x"></i></button>
       </div>
 
-      <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+      <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border); display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px;">
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Телефон</div>
           <a href="tel:${m.phone}" style="font-size: 14px; font-weight: 600; color: var(--primary); text-decoration: none; word-break: break-all;">${formatClientPhone(m.phone)}</a>

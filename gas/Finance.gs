@@ -78,7 +78,9 @@ function handleOpenShift(data) {
   
   // Проверка, была ли уже открыта смена на эту дату
   var existingShifts = getSheetData("Shifts");
-  var duplicate = existingShifts.filter(function(s) { return s.date === dateStr; })[0];
+  var duplicate = existingShifts.filter(function(s) { 
+    return getShiftDateOnlyRU(s) === dateStr; 
+  })[0];
   if (duplicate) {
     throw new Error("Смена за дату " + dateStr + " уже существует (№" + duplicate.id.substring(0, 5) + ")");
   }
@@ -309,6 +311,32 @@ function formatDateTimeRU(dateObj) {
   var minutes = ("0" + d.getMinutes()).slice(-2);
   var seconds = ("0" + d.getSeconds()).slice(-2);
   return day + "." + month + "." + year + " " + hours + ":" + minutes + ":" + seconds;
+}
+
+function getShiftDateOnlyRU(shift) {
+  if (shift.date) {
+    if (shift.date.indexOf("-") !== -1) {
+      var parts = shift.date.split("-");
+      return parts[2] + "." + parts[1] + "." + parts[0];
+    }
+    return shift.date;
+  }
+  
+  var openedAt = shift.openedAt;
+  if (!openedAt) return "";
+  
+  if (openedAt.indexOf(".") !== -1) {
+    var parts = openedAt.split(" ");
+    return parts[0];
+  }
+  
+  if (openedAt.indexOf("-") !== -1) {
+    var datePart = openedAt.split("T")[0];
+    var parts = datePart.split("-");
+    return parts[2] + "." + parts[1] + "." + parts[0];
+  }
+  
+  return "";
 }
 
 function parseShiftDate(dateStr) {

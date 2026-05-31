@@ -579,6 +579,29 @@ window.handleOpenShiftSubmit = async function () {
   const dParts = date.split('-');
   const dateRU = `${dParts[2]}.${dParts[1]}.${dParts[0]}`;
   
+  // Проверка на дубликат на фронтенде перед отправкой запроса
+  const duplicate = (state.shifts || []).find(s => {
+    const parseShiftDateStr = (dateStr) => {
+      if (!dateStr) return '';
+      const parts = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+      if (parts) {
+        return `${parts[1]}.${parts[2]}.${parts[3]}`;
+      }
+      // If ISO
+      const partsISO = dateStr.split('T')[0].split('-');
+      if (partsISO.length === 3) {
+        return `${partsISO[2]}.${partsISO[1]}.${partsISO[0]}`;
+      }
+      return dateStr;
+    };
+    return parseShiftDateStr(s.openedAt) === dateRU || parseShiftDateStr(s.date) === dateRU;
+  });
+
+  if (duplicate) {
+    showToast(`Смена за дату ${dateRU} уже существует (№${duplicate.id.substring(0, 5)})`, 'error', 5000);
+    return;
+  }
+  
   const now = new Date();
   const hours = now.getHours().toString().padStart(2, '0');
   const minutes = now.getMinutes().toString().padStart(2, '0');

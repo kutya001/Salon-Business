@@ -195,11 +195,11 @@ window.renderServices = function () {
   const fabAction = activeTab === 'services' ? 'showCreateServiceModal()' : `document.getElementById('cat-name-input')?.focus()`;
 
   return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px;">
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px; padding-bottom: 80px;">
       <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div class="hidden md-flex" style="align-items: center; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Виды и Услуги</h1>
-          <button onclick="${fabAction}" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+          <button onclick="${fabAction}" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
             <i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}
           </button>
         </div>
@@ -210,8 +210,8 @@ window.renderServices = function () {
       ${contentHtml}
 
       <!-- Плавающая кнопка (FAB) -->
-      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 110px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;">
-        <i data-feather="plus" style="width: 28px; height: 28px;"></i>
+      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
       </button>
     </div>
   `;

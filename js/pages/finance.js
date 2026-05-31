@@ -43,7 +43,7 @@ window.renderFinance = function () {
   }
 
   return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column;">
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; padding-bottom: 80px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; width: 100%; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 16px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
@@ -73,8 +73,8 @@ window.renderFinance = function () {
       
       ${activeTab !== 'shifts' ? `
       <!-- Плавающая кнопка (FAB) -->
-      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 110px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;">
-        <i data-feather="plus" style="width: 28px; height: 28px;"></i>
+      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
       </button>
       ` : ''}
     </div>
@@ -427,16 +427,16 @@ window.renderFinanceTransactions = function () {
   return `
     <div style="display: flex; flex-direction: column; gap: 16px;">
       <!-- Кнопка управления фильтрами -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <button onclick="setUI({ showTxFilters: !state.ui.showTxFilters })" class="btn btn-secondary animate-scale-in" style="width: auto; padding: 8px 14px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-color: var(--border); background: var(--bg-secondary); color: var(--text);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 8px;">
+        <button onclick="setUI({ showTxFilters: !state.ui.showTxFilters })" class="btn btn-secondary animate-scale-in" style="width: auto; padding: 6px 12px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; border-color: var(--border); background: var(--bg-secondary); color: var(--text);">
           <i data-feather="sliders" style="width: 14px; height: 14px; color: ${showTxFilters ? 'var(--primary)' : 'var(--text-secondary)'};"></i>
-          <span>${showTxFilters ? 'Скрыть фильтры' : 'Показать фильтры'}</span>
-          ${activeFiltersCount > 0 ? `<span style="background: var(--primary); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 4px;">${activeFiltersCount}</span>` : ''}
+          <span>Фильтры</span>
+          ${activeFiltersCount > 0 ? `<span style="background: var(--primary); color: white; font-size: 10px; font-weight: 800; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-left: 2px;">${activeFiltersCount}</span>` : ''}
         </button>
         
         ${activeFiltersCount > 0 ? `
-          <button onclick="window.setTxFilters({ search: '', type: '', categoryId: '', paymentMethod: '', dateFrom: '', dateTo: '' })" class="btn btn-secondary animate-scale-in" style="padding: 8px 14px; font-size: 13px; width: auto; display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
-            <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Сбросить фильтры
+          <button onclick="window.setTxFilters({ search: '', type: '', categoryId: '', paymentMethod: '', dateFrom: '', dateTo: '' })" class="btn btn-secondary animate-scale-in" style="padding: 6px 10px; font-size: 13px; width: auto; display: inline-flex; align-items: center; gap: 4px; border-radius: 12px; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);" title="Сбросить фильтры">
+            <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> <span class="hidden md-inline">Сбросить</span>
           </button>
         ` : ''}
       </div>

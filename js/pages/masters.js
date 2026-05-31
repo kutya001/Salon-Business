@@ -76,7 +76,7 @@ window.renderMasters = function () {
       }).join('');
 
   return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px;">
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px; padding-bottom: 80px;">
       
       <!-- Заголовок -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
@@ -84,7 +84,7 @@ window.renderMasters = function () {
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="star" style="width: 28px; height: 28px;"></i> Мастера и расписание</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Управление командой профессионалов и расчетом заработных плат</p>
         </div>
-        <button onclick="showCreateMasterModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+        <button onclick="showCreateMasterModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
           <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить
         </button>
       </div>
@@ -93,6 +93,11 @@ window.renderMasters = function () {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         ${masterCardsHtml}
       </div>
+      
+      <!-- Плавающая кнопка (FAB) -->
+      <button onclick="showCreateMasterModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+      </button>
 
     </div>
   `;

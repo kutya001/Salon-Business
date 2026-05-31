@@ -266,7 +266,7 @@ window.renderDashboard = function () {
             <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Главное</h1>
             <p style="color: var(--text-secondary); font-size: 14px;">Обзор показателей вашего салона на сегодня</p>
           </div>
-          <button onclick="showCreateBookingModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+          <button onclick="showCreateBookingModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px;">
             <i data-feather="plus" style="width: 18px; height: 18px;"></i> Создать запись
           </button>
         </div>
@@ -341,6 +341,11 @@ window.renderDashboard = function () {
           ${todayBookingsListHtml}
         </div>
       </div>
+      
+      <!-- Плавающая кнопка (FAB) -->
+      <button onclick="showCreateBookingModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+      </button>
 
     </div>
   `;

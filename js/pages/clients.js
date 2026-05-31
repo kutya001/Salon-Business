@@ -35,7 +35,7 @@ window.renderClients = function () {
     `).join('');
 
   return `
-    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px;">
+    <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px; padding-bottom: 80px;">
       
       <!-- Заголовок страницы -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
@@ -43,7 +43,7 @@ window.renderClients = function () {
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="users" style="width: 28px; height: 28px;"></i> База клиентов</h1>
           <p style="color: var(--text-secondary); font-size: 14px;">Список гостей, история процедур и суммарные траты</p>
         </div>
-        <button onclick="showCreateClientModal()" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+        <button onclick="showCreateClientModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
           <i data-feather="user-plus" style="width: 16px; height: 16px;"></i> Новый клиент
         </button>
       </div>
@@ -73,6 +73,11 @@ window.renderClients = function () {
           </table>
         </div>
       </div>
+      
+      <!-- Плавающая кнопка (FAB) -->
+      <button onclick="showCreateClientModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 90px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+      </button>
 
     </div>
   `;

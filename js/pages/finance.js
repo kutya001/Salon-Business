@@ -87,6 +87,57 @@ window.renderFinance = function () {
 window.renderFinanceShifts = function () {
   const activeShift = state.shifts.find(s => s.status === 'open');
 
+  window.parseShiftDateTimeStr = (dateStr, timeStr) => {
+    if (!dateStr) return new Date(0);
+    let day = 1, month = 0, year = 1970;
+    const parts = dateStr.match(/^(\d{2})[-.](\d{2})[-.](\d{4})/);
+    if (parts) {
+      day = parseInt(parts[1], 10);
+      month = parseInt(parts[2], 10) - 1;
+      year = parseInt(parts[3], 10);
+    } else {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+    }
+    
+    let h = 0, m = 0, s = 0;
+    if (timeStr && timeStr.includes(':')) {
+      const tParts = timeStr.split(':');
+      h = parseInt(tParts[0], 10) || 0;
+      m = parseInt(tParts[1], 10) || 0;
+      s = parseInt(tParts[2], 10) || 0;
+    }
+    return new Date(year, month, day, h, m, s);
+  };
+
+  window.getShiftPrettyName = (s) => {
+    if (s.date) {
+      return `Смена ${s.date.replace(/-/g, '.')}`;
+    }
+    if (s.openedAt && s.openedAt.includes('T')) {
+      const datePart = s.openedAt.split('T')[0];
+      const parts = datePart.split('-');
+      return `Смена ${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return `Смена №${s.id.substring(0, 5)}`;
+  };
+
+  window.getShiftDuration = (shift) => {
+    if (shift.status === 'open') return 'Смена открыта';
+    const openDate = window.parseShiftDateTimeStr(shift.date || shift.openedAt, shift.openedAt);
+    const closeDate = window.parseShiftDateTimeStr(shift.date || shift.closedAt, shift.closedAt);
+    const diffMs = closeDate - openDate;
+    if (isNaN(diffMs) || diffMs < 0) return '—';
+    
+    const diffMins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    if (hours > 0) {
+      return `${hours} ч ${mins} мин`;
+    }
+    return `${mins} мин`;
+  };
+
   window.formatShiftDateTime = (dateVal, timeVal) => {
     if (!dateVal) return '—';
     try {
@@ -183,8 +234,8 @@ window.renderFinanceShifts = function () {
       const badgeColor = isOpen ? 'badge-success' : 'badge-danger';
       const statusText = isOpen ? '🟢 Открыта' : '🔴 Закрыта';
       
-      const openedTime = window.formatShiftDateTime(s.date || s.openedAt, s.openedAt);
-      const closedTime = window.formatShiftDateTime(s.date || s.closedAt, s.closedAt);
+      const openedTimeOnly = s.openedAt ? (s.openedAt.includes(':') ? s.openedAt.substring(0, 5) : formatTime(s.openedAt.split('T')[1])) : '—';
+      const closedTimeOnly = s.closedAt ? (s.closedAt.includes(':') ? s.closedAt.substring(0, 5) : formatTime(s.closedAt.split('T')[1])) : '—';
       
       let actionBtn = '';
       if (isOpen) {
@@ -197,9 +248,12 @@ window.renderFinanceShifts = function () {
         <div class="card p-4" onclick="showShiftDetailsModal('${s.id}')" style="cursor: pointer; margin-bottom: 12px; display: flex; flex-direction: column; gap: 12px; border-left: 4px solid ${isOpen ? '#10b981' : '#ef4444'}; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <div style="font-weight: 800; font-size: 15px; color: var(--text);">Смена №${s.id.substring(0, 5)}</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Открыта: ${openedTime}</div>
-              ${!isOpen ? `<div style="font-size: 12px; color: var(--text-secondary);">Закрыта: ${closedTime}</div>` : ''}
+              <div style="font-weight: 800; font-size: 15px; color: var(--text);">${window.getShiftPrettyName(s)}</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                <span>⏱️ <b>Открыта:</b> ${openedTimeOnly}</span>
+                ${!isOpen ? `<span>🔒 <b>Закрыта:</b> ${closedTimeOnly}</span>` : ''}
+                <span>⏳ <b>Длительность:</b> ${window.getShiftDuration(s)}</span>
+              </div>
             </div>
             <span class="badge ${badgeColor}">${statusText}</span>
           </div>
@@ -480,32 +534,8 @@ window.getSuggestedOpeningCash = function(selectedDateStr) {
   const closedShifts = (state.shifts || []).filter(s => s.status === 'closed');
   if (closedShifts.length === 0) return 0;
   
-  const parseShiftDateTimeStr = (dateStr, timeStr) => {
-    if (!dateStr) return new Date(0);
-    let day = 1, month = 0, year = 1970;
-    // Парсим DD-MM-YYYY или DD.MM.YYYY
-    const parts = dateStr.match(/^(\d{2})[-.](\d{2})[-.](\d{4})/);
-    if (parts) {
-      day = parseInt(parts[1], 10);
-      month = parseInt(parts[2], 10) - 1;
-      year = parseInt(parts[3], 10);
-    } else {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) return d;
-    }
-    
-    let h = 0, m = 0, s = 0;
-    if (timeStr && timeStr.includes(':')) {
-      const tParts = timeStr.split(':');
-      h = parseInt(tParts[0], 10) || 0;
-      m = parseInt(tParts[1], 10) || 0;
-      s = parseInt(tParts[2], 10) || 0;
-    }
-    return new Date(year, month, day, h, m, s);
-  };
-  
   // Сортируем закрытые смены хронологически (по возрастанию)
-  closedShifts.sort((a, b) => parseShiftDateTimeStr(a.date || a.openedAt, a.openedAt) - parseShiftDateTimeStr(b.date || b.openedAt, b.openedAt));
+  closedShifts.sort((a, b) => window.parseShiftDateTimeStr(a.date || a.openedAt, a.openedAt) - window.parseShiftDateTimeStr(b.date || b.openedAt, b.openedAt));
   
   const selectedDate = new Date(selectedDateStr);
   selectedDate.setHours(0, 0, 0, 0);
@@ -514,7 +544,7 @@ window.getSuggestedOpeningCash = function(selectedDateStr) {
   let foundPrior = false;
   
   for (const s of closedShifts) {
-    const sDate = parseShiftDateTimeStr(s.date || s.openedAt, s.openedAt);
+    const sDate = window.parseShiftDateTimeStr(s.date || s.openedAt, s.openedAt);
     sDate.setHours(0, 0, 0, 0);
     if (sDate < selectedDate) {
       lastClosingCash = parseFloat(s.closingCash) || 0;
@@ -1000,8 +1030,53 @@ window.renderShiftDetailsModal = function () {
   if (!shift) return `<div>Смена не найдена</div>`;
   
   const shiftTxs = state.transactions.filter(t => t.shiftId === shiftId);
-  
   const isOpen = shift.status === 'open';
+  
+  // Подсчет статистики наличных/безналичных операций
+  const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
+  const cashWalletId = cashWallet ? cashWallet.id : 'cash';
+  
+  const cashTxs = shiftTxs.filter(t => t.paymentMethod === cashWalletId || t.paymentMethod === 'cash');
+  const cashOpsCount = cashTxs.length;
+  
+  const cashIncomeTxs = cashTxs.filter(t => t.type === 'income');
+  const cashIncomeSum = cashIncomeTxs.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  
+  const cashExpenseTxs = cashTxs.filter(t => t.type === 'expense');
+  const cashExpenseSum = cashExpenseTxs.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  
+  const cashOpsSum = parseFloat(shift.openingCash || 0) + cashIncomeSum - cashExpenseSum;
+
+  const cashlessTxs = shiftTxs.filter(t => t.paymentMethod !== cashWalletId && t.paymentMethod !== 'cash');
+  const cashlessOpsCount = cashlessTxs.length;
+  const cashlessOpsSum = cashlessTxs.reduce((sum, t) => {
+    const amt = parseFloat(t.amount) || 0;
+    return sum + (t.type === 'income' ? amt : -amt);
+  }, 0);
+
+  // Подсчет записей по статусам
+  const getBookingShiftDate = (bDate) => {
+    if (!bDate) return '';
+    const parts = bDate.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+    }
+    return bDate;
+  };
+  
+  const shiftBookings = (state.bookings || []).filter(b => {
+    const bShiftDate = getBookingShiftDate(b.date);
+    const sDate = shift.date || '';
+    return bShiftDate === sDate || bShiftDate.replace(/-/g, '.') === sDate.replace(/-/g, '.');
+  });
+
+  const completedBookings = shiftBookings.filter(b => b.status === 'completed');
+  const completedCount = completedBookings.length;
+  const completedSum = completedBookings.reduce((sum, b) => sum + (parseFloat(b.price) || 0), 0);
+
+  const cancelledBookings = shiftBookings.filter(b => b.status === 'cancelled');
+  const cancelledCount = cancelledBookings.length;
+  const cancelledSum = cancelledBookings.reduce((sum, b) => sum + (parseFloat(b.price) || 0), 0);
   
   let incomeCash = 0;
   let incomeCard = 0;
@@ -1052,14 +1127,14 @@ window.renderShiftDetailsModal = function () {
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 80vh; overflow-y: auto;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Детали смены №${shift.id.substring(0, 5)}</h3>
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">${window.getShiftPrettyName(shift)}</h3>
         <div style="display: flex; align-items: center; gap: 12px;">
           <button onclick="window.showEditShiftCashModal('${shift.id}')" style="background: none; border: none; cursor: pointer; color: var(--primary); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Остатки</button>
           <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
         </div>
       </div>
       
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-secondary); padding: 16px; border-radius: 12px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; background: var(--bg-secondary); padding: 16px; border-radius: 12px;">
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">В кассе сейчас</div>
           <div style="font-size: 16px; font-weight: 800; color: var(--text);">${formatPrice(currentCashInDrawer)}</div>
@@ -1069,12 +1144,53 @@ window.renderShiftDetailsModal = function () {
           <div style="font-size: 13px; font-weight: 600; color: var(--text);">${window.formatShiftDateTime(shift.date || shift.openedAt, shift.openedAt)}</div>
         </div>
         <div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Длительность</div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text);">${window.getShiftDuration(shift)}</div>
+        </div>
+        <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Расход наличных</div>
           <div style="font-size: 16px; font-weight: 800; color: #ef4444;">-${formatPrice(expenseCash)}</div>
         </div>
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Безнал (Карты)</div>
           <div style="font-size: 16px; font-weight: 800; color: var(--primary);">${formatPrice(incomeCard)}</div>
+        </div>
+      </div>
+      
+      <!-- Статистика смены -->
+      <div>
+        <h4 style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">📊 Статистика смены</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <!-- Наличные -->
+          <div class="glass-interactive-card p-4" style="display: flex; flex-direction: column; gap: 4px; background: rgba(99, 102, 241, 0.05); border: 1px solid var(--border);">
+            <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">💵 Наличные операции</div>
+            <div style="font-size: 16px; font-weight: 800; color: var(--text);">${formatPrice(cashIncomeSum - cashExpenseSum)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${cashOpsCount} транз. (Приход: ${formatPrice(cashIncomeSum)}, Расход: ${formatPrice(cashExpenseSum)})</div>
+          </div>
+          
+          <!-- Безналичные -->
+          <div class="glass-interactive-card p-4" style="display: flex; flex-direction: column; gap: 4px; background: rgba(99, 102, 241, 0.05); border: 1px solid var(--border);">
+            <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">💳 Безналичные операции</div>
+            <div style="font-size: 16px; font-weight: 800; color: var(--text);">${formatPrice(cashlessOpsSum)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${cashlessOpsCount} транз.</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <!-- Записи: Выполнено -->
+          <div class="glass-interactive-card p-4" style="display: flex; flex-direction: column; gap: 4px; border-left: 4px solid #10b981; background: rgba(16,185,129,0.03);">
+            <div style="font-size: 11px; color: #10b981; text-transform: uppercase; font-weight: 700;">✅ Выполненные записи</div>
+            <div style="font-size: 16px; font-weight: 800; color: var(--text);">${formatPrice(completedSum)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${completedCount} зап.</div>
+          </div>
+          
+          <!-- Записи: Отменено -->
+          <div class="glass-interactive-card p-4" style="display: flex; flex-direction: column; gap: 4px; border-left: 4px solid #ef4444; background: rgba(239,68,68,0.03);">
+            <div style="font-size: 11px; color: #ef4444; text-transform: uppercase; font-weight: 700;">❌ Отмененные записи</div>
+            <div style="font-size: 16px; font-weight: 800; color: var(--text);">${formatPrice(cancelledSum)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${cancelledCount} зап.</div>
+          </div>
         </div>
       </div>
       

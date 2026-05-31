@@ -170,15 +170,38 @@ function initializeDatabase() {
 }
 
 /**
- * Проверяет наличие листа и устанавливает заголовки, если лист пуст
+ * Проверяет наличие листа и устанавливает заголовки, а также добавляет недостающие колонки
  * @param {string} sheetName
  * @param {string[]} headers
  */
 function ensureSheetHeaders(sheetName, headers) {
   var sheet = getSheet(sheetName);
-  if (sheet.getLastRow() === 0) {
+  var lastRow = sheet.getLastRow();
+  
+  if (lastRow === 0) {
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    return;
+  }
+  
+  // Если лист уже содержит данные, проверяем заголовки на наличие недостающих колонок
+  var lastCol = sheet.getLastColumn();
+  if (lastCol > 0) {
+    var currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(c) { return String(c).trim(); });
+    var missingCols = [];
+    
+    headers.forEach(function(col) {
+      if (currentHeaders.indexOf(col) === -1) {
+        missingCols.push(col);
+      }
+    });
+    
+    if (missingCols.length > 0) {
+      var startCol = lastCol + 1;
+      var range = sheet.getRange(1, startCol, 1, missingCols.length);
+      range.setValues([missingCols]);
+      range.setFontWeight("bold");
+    }
   }
 }
 

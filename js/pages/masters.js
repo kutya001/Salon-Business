@@ -188,7 +188,7 @@ window.renderMasterModal = function () {
     svcsHtml += `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 16px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
         <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleMasterCategory('${typeName}')">
-          <input type="checkbox" onchange="event.stopPropagation(); toggleMasterCategory('${typeName}');" ${allSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; ${isSomeSelected ? 'opacity: 0.7;' : ''}">
+          <input type="checkbox" ${allSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; pointer-events: none; ${isSomeSelected ? 'opacity: 0.7;' : ''}">
           <span style="font-size: 13px; font-weight: 700; color: var(--text);">${typeName}</span>
         </div>
         <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">
@@ -201,7 +201,7 @@ window.renderMasterModal = function () {
       const isSelected = selectedServices.includes(s.id);
       return `
         <div onclick="toggleMasterService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'}; transition: all 0.2s ease;">
-          <input type="checkbox" onchange="event.stopPropagation(); toggleMasterService('${s.id}');" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer;">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px; pointer-events: none;">
           <div style="font-weight: 600; font-size: 13px; color: var(--text);">${s.name}</div>
           <span style="font-size: 11px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; font-weight: 500;">
             ${formatSvcDuration(s.duration)} • ${formatPrice(s.price)}

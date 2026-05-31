@@ -289,9 +289,48 @@ window.renderFinanceShifts = function () {
 // Вкладка: Транзакции
 // ============================================
 window.renderFinanceTransactions = function () {
-  const transactionsRows = state.transactions.length === 0
-    ? `<tr><td colspan="5" style="text-align: center; padding: 30px; color: var(--text-secondary);">Транзакций пока нет</td></tr>`
-    : state.transactions.map(t => {
+  const filters = state.ui.txFilters || { search: '', type: '', categoryId: '', paymentMethod: '', dateFrom: '', dateTo: '' };
+  
+  let filteredTxs = [...state.transactions];
+  
+  if (filters.search) {
+    const q = filters.search.toLowerCase().trim();
+    filteredTxs = filteredTxs.filter(t => 
+      (t.description && t.description.toLowerCase().includes(q)) || 
+      String(t.amount).includes(q)
+    );
+  }
+  
+  if (filters.type) {
+    filteredTxs = filteredTxs.filter(t => t.type === filters.type);
+  }
+  
+  if (filters.categoryId) {
+    filteredTxs = filteredTxs.filter(t => t.categoryId === filters.categoryId);
+  }
+  
+  if (filters.paymentMethod) {
+    filteredTxs = filteredTxs.filter(t => t.paymentMethod === filters.paymentMethod);
+  }
+  
+  if (filters.dateFrom) {
+    filteredTxs = filteredTxs.filter(t => {
+      const tDate = t.createdAt.split('T')[0];
+      return tDate >= filters.dateFrom;
+    });
+  }
+  
+  if (filters.dateTo) {
+    filteredTxs = filteredTxs.filter(t => {
+      const tDate = t.createdAt.split('T')[0];
+      return tDate <= filters.dateTo;
+    });
+  }
+
+  // Отрисовка строк таблицы для десктопа
+  const pcTransactionsRows = filteredTxs.length === 0
+    ? `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">Ничего не найдено</td></tr>`
+    : filteredTxs.map(t => {
         const isIncome = t.type === 'income';
         const color = isIncome ? '#10b981' : '#ef4444';
         const sign = isIncome ? '+' : '—';
@@ -306,35 +345,154 @@ window.renderFinanceTransactions = function () {
         const wallet = wallets.find(w => w.id === t.paymentMethod) || {name: t.paymentMethod, icon: '💰'};
 
         return `
-          <tr>
+          <tr onclick="window.showTransactionDetailsModal('${t.id}')" style="cursor: pointer; transition: all 0.2s ease;">
             <td data-label="Дата">${formatDate(t.createdAt)}</td>
             <td data-label="Тип">
               <span class="badge ${isIncome ? 'badge-success' : 'badge-danger'}">${catName}</span>
             </td>
-            <td data-label="Назначение" style="font-weight: 600; text-align: left;">${t.description}</td>
+            <td data-label="Назначение" style="font-weight: 600; text-align: left; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.description}</td>
             <td data-label="Оплата">${wallet.icon} ${wallet.name}</td>
             <td data-label="Сумма" style="font-weight: 800; color: ${color};">${sign}${formatPrice(t.amount)}</td>
+            <td style="text-align: right;" onclick="event.stopPropagation();">
+              <div style="display: inline-flex; gap: 4px;">
+                <button onclick="window.showTransactionDetailsModal('${t.id}')" class="btn" style="padding: 4px; color: var(--text-secondary); background: none; border: none; cursor: pointer;" title="Просмотр">
+                  <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button onclick="window.showEditTransactionModal('${t.id}')" class="btn" style="padding: 4px; color: var(--primary); background: none; border: none; cursor: pointer;" title="Редактировать">
+                  <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button onclick="window.handleDeleteTransaction('${t.id}')" class="btn" style="padding: 4px; color: #ef4444; background: none; border: none; cursor: pointer;" title="Удалить">
+                  <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+                </button>
+              </div>
+            </td>
           </tr>
         `;
       }).join('');
 
+  // Отрисовка карточек для мобильных
+  const mobileTransactionsCards = filteredTxs.length === 0
+    ? `<div style="text-align: center; padding: 30px; color: var(--text-secondary);">Ничего не найдено</div>`
+    : filteredTxs.map(t => {
+        const isIncome = t.type === 'income';
+        const color = isIncome ? '#10b981' : '#ef4444';
+        const sign = isIncome ? '+' : '—';
+        
+        // Find category name
+        const cats = state.transactionCategories || [];
+        const cat = cats.find(c => c.id === t.categoryId);
+        const catName = cat ? cat.name : (isIncome ? 'Приход' : 'Расход');
+        
+        // Find wallet name
+        const wallets = state.wallets || [];
+        const wallet = wallets.find(w => w.id === t.paymentMethod) || {name: t.paymentMethod, icon: '💰'};
+
+        return `
+          <div class="card p-4" onclick="window.showTransactionDetailsModal('${t.id}')" style="cursor: pointer; display: flex; flex-direction: column; gap: 8px; border-left: 4px solid ${color}; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: transform 0.2s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge ${isIncome ? 'badge-success' : 'badge-danger'}">${catName}</span>
+              <span style="font-size: 11px; color: var(--text-secondary);">${formatDate(t.createdAt)}</span>
+            </div>
+            <div style="font-weight: 700; color: var(--text); font-size: 14px; line-height: 1.3;">${t.description}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px;">
+              <span style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                <span>${wallet.icon}</span> <span>${wallet.name}</span>
+              </span>
+              <span style="font-weight: 800; color: ${color}; font-size: 15px;">${sign}${formatPrice(t.amount)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
   return `
-    <div class="glass-interactive-card p-6">
-      <div class="data-table-container">
-        <table class="data-table mobile-table-card">
-          <thead>
-            <tr>
-              <th>Дата</th>
-              <th>Категория</th>
-              <th style="text-align: left;">Назначение</th>
-              <th>Кошелек</th>
-              <th>Сумма</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${transactionsRows}
-          </tbody>
-        </table>
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Панель фильтров -->
+      <div class="glass-interactive-card p-4" style="display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--border);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <!-- Поиск -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Поиск</label>
+            <div style="position: relative; margin-top: 4px;">
+              <input type="text" placeholder="Описание или сумма..." class="form-input" style="padding-left: 32px;" value="${filters.search || ''}" oninput="window.setTxFilters({ search: this.value })">
+              <i data-feather="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-secondary);"></i>
+            </div>
+          </div>
+          
+          <!-- Тип -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Тип</label>
+            <select class="form-select" style="margin-top: 4px;" onchange="window.setTxFilters({ type: this.value })">
+              <option value="">Все операции</option>
+              <option value="income" ${filters.type === 'income' ? 'selected' : ''}>📈 Приходы</option>
+              <option value="expense" ${filters.type === 'expense' ? 'selected' : ''}>📉 Расходы</option>
+            </select>
+          </div>
+          
+          <!-- Статья -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Статья</label>
+            <select class="form-select" style="margin-top: 4px;" onchange="window.setTxFilters({ categoryId: this.value })">
+              <option value="">Все статьи</option>
+              ${(state.transactionCategories || []).map(c => `<option value="${c.id}" ${filters.categoryId === c.id ? 'selected' : ''}>${c.type === 'income' ? '📈' : '📉'} ${c.name}</option>`).join('')}
+            </select>
+          </div>
+          
+          <!-- Кошелек -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Кошелек</label>
+            <select class="form-select" style="margin-top: 4px;" onchange="window.setTxFilters({ paymentMethod: this.value })">
+              <option value="">Все кошельки</option>
+              ${(state.wallets || []).map(w => `<option value="${w.id}" ${filters.paymentMethod === w.id ? 'selected' : ''}>${w.icon} ${w.name}</option>`).join('')}
+            </select>
+          </div>
+          
+          <!-- Дата С -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Дата с</label>
+            <input type="date" class="form-input" style="margin-top: 4px;" value="${filters.dateFrom || ''}" onchange="window.setTxFilters({ dateFrom: this.value })">
+          </div>
+          
+          <!-- Дата По -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Дата по</label>
+            <input type="date" class="form-input" style="margin-top: 4px;" value="${filters.dateTo || ''}" onchange="window.setTxFilters({ dateTo: this.value })">
+          </div>
+        </div>
+        
+        <!-- Кнопка очистки -->
+        ${(filters.search || filters.type || filters.categoryId || filters.paymentMethod || filters.dateFrom || filters.dateTo) ? `
+          <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+            <button onclick="window.setTxFilters({ search: '', type: '', categoryId: '', paymentMethod: '', dateFrom: '', dateTo: '' })" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto; display: flex; align-items: center; gap: 6px; border-radius: 8px;">
+              <i data-feather="x" style="width: 12px; height: 12px;"></i> Сбросить фильтры
+            </button>
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Десктопная таблица -->
+      <div class="hidden md-block glass-interactive-card p-6">
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Категория</th>
+                <th style="text-align: left;">Назначение</th>
+                <th>Кошелек</th>
+                <th>Сумма</th>
+                <th style="width: 100px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pcTransactionsRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Мобильная лента карточек -->
+      <div class="md-hidden" style="display: flex; flex-direction: column; gap: 12px;">
+        ${mobileTransactionsCards}
       </div>
     </div>
   `;
@@ -420,8 +578,16 @@ window.showCreateTransactionModal = function () {
   setUI({ modal: 'createTransaction', modalData: { type: 'income', paymentMethod: 'cash', categoryId: '', amount: '', description: '' } });
 };
 
+window.showEditTransactionModal = function (id) {
+  const t = state.transactions.find(tx => tx.id === id);
+  if (t) {
+    setUI({ modal: 'createTransaction', modalData: { ...t } });
+  }
+};
+
 window.renderTransactionModal = function () {
   const md = state.ui.modalData || { type: 'income', paymentMethod: 'cash', categoryId: '', amount: '', description: '' };
+  const isEdit = !!md.id;
   
   const wallets = state.wallets || [];
   const categories = state.transactionCategories || [];
@@ -429,9 +595,9 @@ window.renderTransactionModal = function () {
   const filteredCats = categories.filter(c => c.type === md.type);
 
   return `
-    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 450px; width: 100%;">
       <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Ввод транзакции</h3>
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">${isEdit ? 'Редактирование операции' : 'Ввод транзакции'}</h3>
         <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
       </div>
 
@@ -472,7 +638,7 @@ window.renderTransactionModal = function () {
         </div>
 
         <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
-          Подтвердить и внести
+          ${isEdit ? 'Сохранить изменения' : 'Подтвердить и внести'}
         </button>
       </form>
     </div>
@@ -480,6 +646,9 @@ window.renderTransactionModal = function () {
 };
 
 window.handleTransactionSubmit = async function () {
+  const id = state.ui.modalData.id;
+  const isEdit = !!id;
+  
   const type = state.ui.modalData.type;
   const amount = parseFloat(state.ui.modalData.amount) || 0;
   const paymentMethod = state.ui.modalData.paymentMethod;
@@ -500,30 +669,155 @@ window.handleTransactionSubmit = async function () {
   }
 
   const activeShift = state.shifts.find(s => s.status === 'open');
-  const shiftId = activeShift ? activeShift.id : '';
+  const shiftId = isEdit ? (state.ui.modalData.shiftId || '') : (activeShift ? activeShift.id : '');
+  const createdAt = isEdit ? (state.ui.modalData.createdAt || new Date().toISOString()) : new Date().toISOString();
 
   const optimisticTx = {
-    id: 'tx_tmp_' + Date.now(),
+    id: isEdit ? id : 'tx_tmp_' + Date.now(),
     type,
     amount,
     description,
     paymentMethod,
     categoryId,
     shiftId,
-    createdAt: new Date().toISOString()
+    createdAt
   };
 
   // Мгновенное обновление UI (Optimistic Update)
-  state.transactions.unshift(optimisticTx);
-  setUI({ modal: null });
-  showToast('Транзакция успешно зафиксирована', 'success');
+  let oldTx = null;
+  if (isEdit) {
+    const idx = state.transactions.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      oldTx = { ...state.transactions[idx] };
+      state.transactions[idx] = optimisticTx;
+    }
+  } else {
+    state.transactions.unshift(optimisticTx);
+  }
+  
+  setUI({ modal: null, modalData: null });
+  showToast(isEdit ? 'Операция успешно изменена' : 'Транзакция успешно зафиксирована', 'success');
 
-  // Запрос в фоне
-  api.createTransaction({ type, amount, description, paymentMethod, categoryId }, { background: true })
-    .catch(e => {
-      showToast('Не удалось сохранить транзакцию', 'error');
-      // Откат при ошибке
+  const apiCall = isEdit
+    ? api.updateTransaction(id, { type, amount, description, paymentMethod, categoryId }, { background: true })
+    : api.createTransaction({ type, amount, description, paymentMethod, categoryId }, { background: true });
+
+  apiCall.then(savedTx => {
+    if (!isEdit && savedTx && savedTx.id) {
+      const idx = state.transactions.findIndex(t => t.id === optimisticTx.id);
+      if (idx !== -1) {
+        state.transactions[idx].id = savedTx.id;
+        if (window.render) window.render();
+      }
+    }
+  }).catch(e => {
+    showToast(isEdit ? 'Не удалось изменить транзакцию на сервере' : 'Не удалось сохранить транзакцию', 'error');
+    if (isEdit && oldTx) {
+      const idx = state.transactions.findIndex(t => t.id === id);
+      if (idx !== -1) {
+        state.transactions[idx] = oldTx;
+      }
+    } else {
       state.transactions = state.transactions.filter(t => t.id !== optimisticTx.id);
+    }
+    if (window.render) window.render();
+  });
+};
+
+window.showTransactionDetailsModal = function (id) {
+  setUI({ modal: 'viewTransaction', modalData: { id } });
+};
+
+window.renderTransactionDetailsModal = function () {
+  const id = state.ui.modalData?.id;
+  const t = state.transactions.find(tx => tx.id === id);
+  if (!t) return `<div>Операция не найдена</div>`;
+  
+  const isIncome = t.type === 'income';
+  const color = isIncome ? '#10b981' : '#ef4444';
+  const sign = isIncome ? '+' : '—';
+  const cat = state.transactionCategories?.find(c => c.id === t.categoryId);
+  const catName = cat ? cat.name : (isIncome ? 'Приход' : 'Расход');
+  const wallet = state.wallets?.find(w => w.id === t.paymentMethod) || {name: t.paymentMethod, icon: '💰'};
+  
+  let shiftInfo = 'Вне кассовой смены';
+  if (t.shiftId) {
+    const shift = state.shifts.find(s => s.id === t.shiftId);
+    if (shift) {
+      shiftInfo = `Смена №${shift.id.substring(0, 5)} (${shift.date})`;
+    }
+  }
+
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 450px; width: 100%;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text);">Детали операции</h3>
+        <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
+      </div>
+      
+      <div style="text-align: center; padding: 16px 0; border-bottom: 1px solid var(--border);">
+        <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Сумма операции</div>
+        <div style="font-size: 32px; font-weight: 800; color: ${color}; margin-top: 6px;">${sign}${formatPrice(t.amount)}</div>
+        <span class="badge ${isIncome ? 'badge-success' : 'badge-danger'}" style="margin-top: 8px; font-size: 12px; padding: 4px 10px;">${catName}</span>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+          <span style="color: var(--text-secondary);">Дата и время:</span>
+          <span style="font-weight: 600; color: var(--text);">${formatDate(t.createdAt)} в ${new Date(t.createdAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+          <span style="color: var(--text-secondary);">Кошелек:</span>
+          <span style="font-weight: 600; color: var(--text);">${wallet.icon} ${wallet.name}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+          <span style="color: var(--text-secondary);">Смена:</span>
+          <span style="font-weight: 600; color: var(--text);">${shiftInfo}</span>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="color: var(--text-secondary);">Описание / Комментарий:</span>
+          <div style="background: var(--bg-secondary); padding: 12px; border-radius: 8px; font-weight: 600; color: var(--text); min-height: 50px;">
+            ${t.description || '—'}
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 12px; margin-top: 10px;">
+        <button onclick="window.handleDeleteTransaction('${t.id}')" class="btn btn-secondary" style="flex: 1; border-color: rgba(239,68,68,0.3); color: #ef4444; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Удалить
+        </button>
+        <button onclick="window.showEditTransactionModal('${t.id}')" class="btn btn-primary" style="flex: 1; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Изменить
+        </button>
+      </div>
+    </div>
+  `;
+};
+
+window.handleDeleteTransaction = async function (id) {
+  const t = state.transactions.find(tx => tx.id === id);
+  if (!t) return;
+  
+  if (!confirm('Вы действительно хотите удалить эту операцию?')) return;
+  
+  const oldIdx = state.transactions.findIndex(tx => tx.id === id);
+  if (oldIdx === -1) return;
+  
+  const deletedTx = { ...state.transactions[oldIdx] };
+  
+  // Optimistic UI
+  state.transactions.splice(oldIdx, 1);
+  setUI({ modal: null, modalData: null });
+  showToast('Операция удалена', 'success');
+  
+  api.deleteTransaction(id, { background: true })
+    .catch(e => {
+      showToast('Не удалось удалить операцию на сервере', 'error');
+      // Откат
+      state.transactions.splice(oldIdx, 0, deletedTx);
       if (window.render) window.render();
     });
 };

@@ -160,6 +160,12 @@ function doPost(e) {
       case "createTransaction":
         result = handleCreateTransaction(data);
         break;
+      case "updateTransaction":
+        result = handleUpdateTransaction(data.id, data);
+        break;
+      case "deleteTransaction":
+        result = handleDeleteTransaction(data.id);
+        break;
       case "getShifts":
         result = handleGetShifts();
         break;

@@ -51,6 +51,14 @@ window.state = {
       dateTo: new Date().toISOString().split('T')[0],
       searchQuery: ''
     },
+    txFilters: {
+      search: '',
+      type: '',
+      categoryId: '',
+      paymentMethod: '',
+      dateFrom: '',
+      dateTo: ''
+    },
     selectedDate: new Date().toISOString().split('T')[0],
     toasts: [],
     viewMode: 'table', // 'table' или 'timeline' для записей
@@ -77,6 +85,22 @@ window.setUI = function (updates) {
 // Функция обновления фильтров
 window.setFilters = function (updates) {
   Object.assign(window.state.ui.filters, updates);
+  if (window.render) window.render();
+};
+
+// Функция обновления фильтров транзакций
+window.setTxFilters = function (updates) {
+  if (!window.state.ui.txFilters) {
+    window.state.ui.txFilters = {
+      search: '',
+      type: '',
+      categoryId: '',
+      paymentMethod: '',
+      dateFrom: '',
+      dateTo: ''
+    };
+  }
+  Object.assign(window.state.ui.txFilters, updates);
   if (window.render) window.render();
 };
 

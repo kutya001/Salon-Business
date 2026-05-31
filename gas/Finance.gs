@@ -51,6 +51,38 @@ function handleCreateTransaction(data) {
 }
 
 /**
+ * Обновляет существующую транзакцию
+ * @param {string} id
+ * @param {object} data
+ * @returns {object}
+ */
+function handleUpdateTransaction(id, data) {
+  if (!id) throw new Error("Не указан ID транзакции");
+  
+  var updates = {};
+  if (data.amount !== undefined) updates.amount = parseFloat(data.amount) || 0;
+  if (data.description !== undefined) updates.description = data.description.trim();
+  if (data.paymentMethod !== undefined) updates.paymentMethod = data.paymentMethod;
+  if (data.categoryId !== undefined) updates.categoryId = data.categoryId;
+  if (data.type !== undefined) updates.type = data.type;
+  
+  var updated = updateRow("Transactions", id, updates);
+  if (!updated) throw new Error("Транзакция не найдена");
+  return updated;
+}
+
+/**
+ * Удаляет транзакцию
+ * @param {string} id
+ * @returns {object}
+ */
+function handleDeleteTransaction(id) {
+  if (!id) throw new Error("Не указан ID транзакции");
+  var success = deleteRow("Transactions", id);
+  return { success: success };
+}
+
+/**
  * Получает все смены
  * @returns {object[]}
  */

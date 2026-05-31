@@ -207,6 +207,14 @@ class GASClient {
     return await this.request('createTransaction', data, options);
   }
 
+  async updateTransaction(id, data, options = {}) {
+    return await this.request('updateTransaction', { id, ...data }, options);
+  }
+
+  async deleteTransaction(id, options = {}) {
+    return await this.request('deleteTransaction', { id }, options);
+  }
+
   async getShifts() {
     return await this.request('getShifts');
   }

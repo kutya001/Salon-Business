@@ -104,6 +104,7 @@ window.renderLayout = function () {
     }
     else if (state.ui.modal === 'createWallet' && window.renderWalletModal) modalContent = renderWalletModal();
     else if (state.ui.modal === 'createTransaction' && window.renderTransactionModal) modalContent = renderTransactionModal();
+    else if (state.ui.modal === 'viewTransaction' && window.renderTransactionDetailsModal) modalContent = renderTransactionDetailsModal();
     else if (state.ui.modal === 'openShift' && window.renderOpenShiftModal) modalContent = renderOpenShiftModal();
     else if (state.ui.modal === 'closeShift' && window.renderCloseShiftModal) modalContent = renderCloseShiftModal();
     else if (state.ui.modal === 'viewShift' && window.renderShiftDetailsModal) modalContent = renderShiftDetailsModal();

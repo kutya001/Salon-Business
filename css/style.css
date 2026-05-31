@@ -241,7 +241,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  height: 80px;
+  height: 64px;
   position: fixed;
   bottom: 16px;
   left: 16px;

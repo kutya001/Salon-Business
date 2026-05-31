@@ -15,9 +15,23 @@ window.renderAuth = function () {
 
     // Стеклянный спиннер загрузки
     const spinnerHtml = loading ? `
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;animation:fadeIn 0.3s forwards;">
-        <span class="spinner" style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#764ba2;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;"></span>
-        <div style="font-weight:800;color:#1a1a2e;font-size:15px;animation:pulse 1.5s infinite;">Авторизация...</div>
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:20;animation:fadeIn 0.3s forwards;padding:24px;box-sizing:border-box;text-align:center;">
+        <div style="font-size: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); animation: pulse 1.5s infinite;">💎</div>
+        
+        <div>
+          <h2 style="font-weight: 800; font-size: 22px; color: #1a1a2e; margin-bottom: 4px; letter-spacing: -0.02em;">Suluu Business</h2>
+          <p style="font-size: 12px; color: #555; line-height: 1.4; font-weight: 500;">Управление и учет для студий красоты</p>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 8px 0;">
+          <span class="spinner" style="width: 36px; height: 36px; border: 3.5px solid #e2e8f0; border-top-color: #764ba2; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block;"></span>
+          <div style="font-weight: 700; color: #764ba2; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Авторизация...</div>
+        </div>
+        
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; width: 100%; font-size: 10px; color: #999; display: flex; flex-direction: column; gap: 2px;">
+          <div>Версия: <span style="font-weight: 600; color: #666;">2.2.0-PRO</span></div>
+          <div>Обновление: <span style="font-weight: 600; color: #666;">31.05.2026</span></div>
+        </div>
     </div>
     ` : '';
 
@@ -257,9 +271,23 @@ window.renderSetup = function () {
             
             <!-- Спиннер загрузки -->
             ${loading ? `
-            <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;animation:fadeIn 0.3s forwards;">
-                <span class="spinner" style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#764ba2;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;"></span>
-                <div style="font-weight:800;color:#1a1a2e;font-size:15px;animation:pulse 1.5s infinite;">Подключение к Google...</div>
+            <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:20;animation:fadeIn 0.3s forwards;padding:24px;box-sizing:border-box;text-align:center;">
+                <div style="font-size: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); animation: pulse 1.5s infinite;">💎</div>
+                
+                <div>
+                  <h2 style="font-weight: 800; font-size: 22px; color: #1a1a2e; margin-bottom: 4px; letter-spacing: -0.02em;">Suluu Business</h2>
+                  <p style="font-size: 12px; color: #555; line-height: 1.4; font-weight: 500;">Управление и учет для студий красоты</p>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 8px 0;">
+                  <span class="spinner" style="width: 36px; height: 36px; border: 3.5px solid #e2e8f0; border-top-color: #764ba2; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block;"></span>
+                  <div style="font-weight: 700; color: #764ba2; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Подключение...</div>
+                </div>
+                
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; width: 100%; font-size: 10px; color: #999; display: flex; flex-direction: column; gap: 2px;">
+                  <div>Версия: <span style="font-weight: 600; color: #666;">2.2.0-PRO</span></div>
+                  <div>Обновление: <span style="font-weight: 600; color: #666;">31.05.2026</span></div>
+                </div>
             </div>
             ` : ''}
 

@@ -45,13 +45,32 @@
   
   <!-- Единственный контейнер для morphdom SPA -->
   <div id="app" class="min-h-screen">
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: transparent; color: white;">
-      <div style="text-align: center;">
-        <span style="font-size: 48px; display: block; margin-bottom: 16px; animation: pulse 1.5s infinite;">💎</span>
-        <div style="font-weight: 700; font-size: 18px;">Инициализация Suluu Business...</div>
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: transparent; padding: 20px; box-sizing: border-box;">
+      <div style="padding: 40px 32px; display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(255, 255, 255, 0.96); border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); max-width: 340px; width: 100%; text-align: center; border: 1px solid rgba(255,255,255,0.2); animation: fadeIn 0.3s ease-out;">
+        <div style="font-size: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); animation: pulse 1.5s infinite;">💎</div>
+        
+        <div>
+          <h2 style="font-weight: 800; font-size: 22px; color: #1a1a2e; margin-bottom: 4px; letter-spacing: -0.02em;">Suluu Business</h2>
+          <p style="font-size: 12px; color: #555; line-height: 1.4; font-weight: 500;">Управление и учет для студий красоты</p>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 8px 0;">
+          <span style="width: 36px; height: 36px; border: 3.5px solid #e2e8f0; border-top-color: #764ba2; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block;"></span>
+          <div style="font-weight: 700; color: #764ba2; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Инициализация...</div>
+        </div>
+        
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; width: 100%; font-size: 10px; color: #999; display: flex; flex-direction: column; gap: 2px;">
+          <div>Версия: <span style="font-weight: 600; color: #666;">2.2.0-PRO</span></div>
+          <div>Обновление: <span style="font-weight: 600; color: #666;">31.05.2026</span></div>
+        </div>
       </div>
     </div>
   </div>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.95); } }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  </style>
 
   <noscript>
     <div style="padding: 40px; text-align: center; font-family: sans-serif;">

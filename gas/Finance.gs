@@ -56,9 +56,9 @@ function handleCreateTransaction(data) {
  */
 function handleGetShifts() {
   var shifts = getSheetData("Shifts");
-  // Новые смены вверху (по дате открытия)
+  // Новые смены вверху (по дате и времени открытия)
   shifts.sort(function(a, b) {
-    return parseShiftDate(b.openedAt).getTime() - parseShiftDate(a.openedAt).getTime();
+    return parseShiftDateTime(b.date || b.openedAt, b.openedAt).getTime() - parseShiftDateTime(a.date || a.openedAt, a.openedAt).getTime();
   });
   return shifts;
 }
@@ -93,7 +93,7 @@ function handleOpenShift(data) {
   
   var shift = {
     date: dateStr,
-    openedAt: formatDateTimeRU(new Date()),
+    openedAt: formatTimeRU(new Date()), // Записываем только ЧЧ:ММ:СС
     closedAt: "",
     openingCash: openingCash,
     closingCash: 0,
@@ -156,7 +156,7 @@ function handleCloseShift(id, data) {
   }
   
   var updates = {
-    closedAt: formatDateTimeRU(new Date()),
+    closedAt: formatTimeRU(new Date()), // Записываем только ЧЧ:ММ:СС
     closingCash: declaredCash,
     totalCash: totalCash,
     totalCard: nonCashIncome,
@@ -298,26 +298,27 @@ function formatDateRU(dateObj) {
   var day = ("0" + d.getDate()).slice(-2);
   var month = ("0" + (d.getMonth() + 1)).slice(-2);
   var year = d.getFullYear();
-  return day + "." + month + "." + year;
+  return day + "-" + month + "-" + year;
 }
 
-function formatDateTimeRU(dateObj) {
+function formatTimeRU(dateObj) {
   if (!dateObj) return "";
   var d = dateObj;
-  var day = ("0" + d.getDate()).slice(-2);
-  var month = ("0" + (d.getMonth() + 1)).slice(-2);
-  var year = d.getFullYear();
   var hours = ("0" + d.getHours()).slice(-2);
   var minutes = ("0" + d.getMinutes()).slice(-2);
   var seconds = ("0" + d.getSeconds()).slice(-2);
-  return day + "." + month + "." + year + " " + hours + ":" + minutes + ":" + seconds;
+  return hours + ":" + minutes + ":" + seconds;
 }
 
 function getShiftDateOnlyRU(shift) {
   if (shift.date) {
-    if (shift.date.indexOf("-") !== -1) {
-      var parts = shift.date.split("-");
-      return parts[2] + "." + parts[1] + "." + parts[0];
+    if (shift.date.indexOf(".") !== -1) {
+      return shift.date.replace(/\./g, "-");
+    }
+    // Если уже в формате YYYY-MM-DD
+    var parts = shift.date.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      return parts[2] + "-" + parts[1] + "-" + parts[0];
     }
     return shift.date;
   }
@@ -325,35 +326,52 @@ function getShiftDateOnlyRU(shift) {
   var openedAt = shift.openedAt;
   if (!openedAt) return "";
   
+  // Если openedAt - это дата и время в старом формате "DD.MM.YYYY HH:mm:ss"
   if (openedAt.indexOf(".") !== -1) {
     var parts = openedAt.split(" ");
-    return parts[0];
+    return parts[0].replace(/\./g, "-");
   }
   
-  if (openedAt.indexOf("-") !== -1) {
+  // Если openedAt - это ISO строка "YYYY-MM-DDTHH:mm:ss"
+  if (openedAt.indexOf("T") !== -1 || openedAt.indexOf("-") !== -1) {
     var datePart = openedAt.split("T")[0];
     var parts = datePart.split("-");
-    return parts[2] + "." + parts[1] + "." + parts[0];
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+      return parts[0] + "-" + parts[1] + "-" + parts[2];
+    }
   }
   
   return "";
 }
 
-function parseShiftDate(dateStr) {
+function parseShiftDateTime(dateStr, timeStr) {
   if (!dateStr) return new Date(0);
-  // Проверяем формат ДД.ММ.ГГГГ ЧЧ:ММ:СС или ДД.ММ.ГГГГ
-  var parts = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
+  
+  var day = 1, month = 0, year = 1970;
+  // Парсим DD-MM-YYYY или DD.MM.YYYY
+  var parts = dateStr.match(/^(\d{2})[-.](\d{2})[-.](\d{4})/);
   if (parts) {
-    var day = parseInt(parts[1], 10);
-    var month = parseInt(parts[2], 10) - 1;
-    var year = parseInt(parts[3], 10);
-    var hours = parts[4] ? parseInt(parts[4], 10) : 0;
-    var minutes = parts[5] ? parseInt(parts[5], 10) : 0;
-    var seconds = parts[6] ? parseInt(parts[6], 10) : 0;
-    return new Date(year, month, day, hours, minutes, seconds);
+    day = parseInt(parts[1], 10);
+    month = parseInt(parts[2], 10) - 1;
+    year = parseInt(parts[3], 10);
+  } else {
+    // legacy ISO
+    var d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d;
   }
-  // fallback на стандартный ISO парсинг
-  return new Date(dateStr);
+  
+  var hours = 0, minutes = 0, seconds = 0;
+  if (timeStr && timeStr.indexOf(":") !== -1) {
+    var tParts = timeStr.split(":");
+    hours = parseInt(tParts[0], 10) || 0;
+    minutes = parseInt(tParts[1], 10) || 0;
+    seconds = parseInt(tParts[2], 10) || 0;
+  }
+  
+  return new Date(year, month, day, hours, minutes, seconds);
 }
 
 function getPreviousShiftClosingCash(targetDateStr) {
@@ -362,17 +380,17 @@ function getPreviousShiftClosingCash(targetDateStr) {
   
   // Хронологическая сортировка
   shifts.sort(function(a, b) {
-    return parseShiftDate(a.openedAt).getTime() - parseShiftDate(b.openedAt).getTime();
+    return parseShiftDateTime(a.date || a.openedAt, a.openedAt).getTime() - parseShiftDateTime(b.date || b.openedAt, b.openedAt).getTime();
   });
   
-  var parts = targetDateStr.split(".");
+  var parts = targetDateStr.split("-");
   var targetDate = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
   
   var lastClosingCash = 0;
   var foundPrior = false;
   
   for (var i = 0; i < shifts.length; i++) {
-    var sDate = parseShiftDate(shifts[i].openedAt);
+    var sDate = parseShiftDateTime(shifts[i].date || shifts[i].openedAt, shifts[i].openedAt);
     sDate.setHours(0, 0, 0, 0);
     if (sDate.getTime() < targetDate.getTime()) {
       lastClosingCash = parseFloat(shifts[i].closingCash) || 0;

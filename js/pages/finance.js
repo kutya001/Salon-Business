@@ -87,6 +87,26 @@ window.renderFinance = function () {
 window.renderFinanceShifts = function () {
   const activeShift = state.shifts.find(s => s.status === 'open');
 
+  window.formatShiftDateTime = (dateVal, timeVal) => {
+    if (!dateVal) return '—';
+    try {
+      // Если это новая структура (дата содержит дефис и не содержит T)
+      if (dateVal.includes('-') && !dateVal.includes('T')) {
+        const prettyDate = dateVal.replace(/-/g, '.');
+        if (timeVal) {
+          return `${prettyDate} в ${timeVal.substring(0, 5)}`;
+        }
+        return prettyDate;
+      }
+      
+      // Если это старая структура (dateVal - это openedAt в ISO формате)
+      const partsISO = dateVal.split('T');
+      return `${formatDate(partsISO[0])} в ${formatTime(partsISO[1])}`;
+    } catch (e) {
+      return dateVal;
+    }
+  };
+
   let shiftBlockHtml = '';
   if (activeShift) {
     const shiftTxs = state.transactions.filter(t => t.shiftId === activeShift.id);
@@ -112,7 +132,7 @@ window.renderFinanceShifts = function () {
           <div>
             <span class="badge" style="background: rgba(16,185,129,0.3); color: #34d399; font-size: 10px;">🟢 СМЕНА ОТКРЫТА</span>
             <h3 style="font-weight: 800; font-size: 18px; margin-top: 4px; color: var(--text);">Кассовая смена №${activeShift.id.substring(0, 5)}</h3>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Открыта: ${formatDate(activeShift.openedAt.split('T')[0])} в ${formatTime(activeShift.openedAt.split('T')[1])}</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Открыта: ${formatShiftDateTime(activeShift.date || activeShift.openedAt, activeShift.openedAt)}</p>
           </div>
           <button onclick="showCloseShiftModal('${activeShift.id}')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.3); padding: 10px 18px; border-radius: 12px; width: auto;">
             🔒 Закрыть смену
@@ -154,31 +174,6 @@ window.renderFinanceShifts = function () {
     `;
   }
 
-  const formatShiftDateTime = (dateStr) => {
-    if (!dateStr) return '—';
-    try {
-      // Проверяем формат ДД.ММ.ГГГГ ЧЧ:ММ:СС или ДД.ММ.ГГГГ
-      const partsRU = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
-      if (partsRU) {
-        const day = parseInt(partsRU[1], 10);
-        const monthIdx = parseInt(partsRU[2], 10) - 1;
-        const year = partsRU[3];
-        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-        const dateFormatted = `${day} ${months[monthIdx]} ${year}`;
-        if (partsRU[4] && partsRU[5]) {
-          return `${dateFormatted} в ${partsRU[4]}:${partsRU[5]}`;
-        }
-        return dateFormatted;
-      }
-      
-      // Fallback на стандартный ISO
-      const partsISO = dateStr.split('T');
-      return `${formatDate(partsISO[0])} в ${formatTime(partsISO[1])}`;
-    } catch (e) {
-      return dateStr;
-    }
-  };
-
   let shiftsRowsHtml = '';
   if (state.shifts.length === 0) {
     shiftsRowsHtml = `<div style="text-align: center; padding: 30px; color: var(--text-secondary);">Смен пока не зарегистрировано</div>`;
@@ -188,8 +183,8 @@ window.renderFinanceShifts = function () {
       const badgeColor = isOpen ? 'badge-success' : 'badge-danger';
       const statusText = isOpen ? '🟢 Открыта' : '🔴 Закрыта';
       
-      const openedTime = formatShiftDateTime(s.openedAt);
-      const closedTime = formatShiftDateTime(s.closedAt);
+      const openedTime = window.formatShiftDateTime(s.date || s.openedAt, s.openedAt);
+      const closedTime = window.formatShiftDateTime(s.date || s.closedAt, s.closedAt);
       
       let actionBtn = '';
       if (isOpen) {
@@ -485,17 +480,32 @@ window.getSuggestedOpeningCash = function(selectedDateStr) {
   const closedShifts = (state.shifts || []).filter(s => s.status === 'closed');
   if (closedShifts.length === 0) return 0;
   
-  const parseShiftDateStr = (dateStr) => {
+  const parseShiftDateTimeStr = (dateStr, timeStr) => {
     if (!dateStr) return new Date(0);
-    const parts = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    let day = 1, month = 0, year = 1970;
+    // Парсим DD-MM-YYYY или DD.MM.YYYY
+    const parts = dateStr.match(/^(\d{2})[-.](\d{2})[-.](\d{4})/);
     if (parts) {
-      return new Date(parts[3], parts[2] - 1, parts[1]);
+      day = parseInt(parts[1], 10);
+      month = parseInt(parts[2], 10) - 1;
+      year = parseInt(parts[3], 10);
+    } else {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
     }
-    return new Date(dateStr);
+    
+    let h = 0, m = 0, s = 0;
+    if (timeStr && timeStr.includes(':')) {
+      const tParts = timeStr.split(':');
+      h = parseInt(tParts[0], 10) || 0;
+      m = parseInt(tParts[1], 10) || 0;
+      s = parseInt(tParts[2], 10) || 0;
+    }
+    return new Date(year, month, day, h, m, s);
   };
   
   // Сортируем закрытые смены хронологически (по возрастанию)
-  closedShifts.sort((a, b) => parseShiftDateStr(a.openedAt) - parseShiftDateStr(b.openedAt));
+  closedShifts.sort((a, b) => parseShiftDateTimeStr(a.date || a.openedAt, a.openedAt) - parseShiftDateTimeStr(b.date || b.openedAt, b.openedAt));
   
   const selectedDate = new Date(selectedDateStr);
   selectedDate.setHours(0, 0, 0, 0);
@@ -504,7 +514,7 @@ window.getSuggestedOpeningCash = function(selectedDateStr) {
   let foundPrior = false;
   
   for (const s of closedShifts) {
-    const sDate = parseShiftDateStr(s.openedAt);
+    const sDate = parseShiftDateTimeStr(s.date || s.openedAt, s.openedAt);
     sDate.setHours(0, 0, 0, 0);
     if (sDate < selectedDate) {
       lastClosingCash = parseFloat(s.closingCash) || 0;
@@ -1056,7 +1066,7 @@ window.renderShiftDetailsModal = function () {
         </div>
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Открыта</div>
-          <div style="font-size: 13px; font-weight: 600; color: var(--text);">${shift.openedAt ? formatDate(shift.openedAt.split('T')[0]) + ' ' + formatTime(shift.openedAt.split('T')[1]) : '—'}</div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text);">${window.formatShiftDateTime(shift.date || shift.openedAt, shift.openedAt)}</div>
         </div>
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Расход наличных</div>

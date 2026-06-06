@@ -1,5 +1,5 @@
 // ============================================
-// api.js — Клиент для интеграции с Supabase (Ролевая модель + Мультитеннантность)
+// api.js — Клиент для интеграции с Supabase (Маппинг данных + Мультитеннантность)
 // ============================================
 
 const SUPABASE_URL = 'https://etmjmgugfvbwaqjzvnyn.supabase.co';
@@ -7,6 +7,59 @@ const SUPABASE_KEY = 'sb_publishable_vI28QpLgQw-sSxJja_SmOA_pthfQHjp';
 
 // Инициализируем глобальный клиент
 window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Мапперы для согласования snake_case СУБД и camelCase фронтенда
+const mapDbServiceToFrontend = (s) => {
+  if (!s) return s;
+  return {
+    ...s,
+    categoryId: s.category_id,
+    genderCategory: s.gender_category,
+    globalServiceId: s.global_service_id
+  };
+};
+
+const mapFrontendServiceToDb = (s) => {
+  if (!s) return s;
+  return {
+    name: s.name,
+    category_id: s.categoryId,
+    gender_category: s.genderCategory,
+    price: s.price,
+    duration: s.duration,
+    description: s.description,
+    global_service_id: s.globalServiceId
+  };
+};
+
+const mapDbBookingToFrontend = (b, clients = [], services = []) => {
+  if (!b) return b;
+  const client = clients.find(c => c.id === b.client_id) || {};
+  const service = services.find(s => s.id === b.service_id) || {};
+  return {
+    ...b,
+    masterId: b.master_id,
+    clientId: b.client_id,
+    serviceId: b.service_id,
+    clientName: client.name || 'Неизвестный клиент',
+    clientPhone: client.phone || '',
+    serviceName: service.name || 'Неизвестная услуга'
+  };
+};
+
+const mapFrontendBookingToDb = (b) => {
+  if (!b) return b;
+  return {
+    master_id: b.masterId,
+    client_id: b.clientId,
+    service_id: b.serviceId,
+    date: b.date,
+    time: b.time,
+    status: b.status,
+    price: b.price,
+    services: b.services || null
+  };
+};
 
 class SupabaseAPI {
   constructor() {
@@ -183,7 +236,6 @@ class SupabaseAPI {
       if (profileErr) throw profileErr;
 
       if (!profile) {
-        // Если профиль не найден (пользователь удален), принудительно разлогиниваем
         await this.client.auth.signOut();
         throw new Error('Учетная запись не найдена или была удалена. Пожалуйста, войдите снова.');
       }
@@ -203,13 +255,14 @@ class SupabaseAPI {
         shifts: [],
         wallets: [],
         transactionCategories: [],
-        allUsers: [], // только для super_admin
-        allBusinesses: [], // только для super_admin
-        jobApplications: [] // только для owner/manager
+        allUsers: [],
+        allBusinesses: [],
+        jobApplications: [],
+        globalCategories: [],
+        globalServices: []
       };
 
       if (profile.role === 'super_admin') {
-        // Суперадмин загружает все салоны и всех пользователей
         const [businessesRes, profilesRes] = await Promise.all([
           this.client.from('business').select('*, profiles(username)'),
           this.client.from('profiles').select('*')
@@ -217,7 +270,6 @@ class SupabaseAPI {
         result.allBusinesses = businessesRes.data || [];
         result.allUsers = profilesRes.data || [];
       } else if (profile.role === 'owner') {
-        // Владелец загружает свои салоны
         const { data: businesses, error: bizErr } = await this.client
           .from('business')
           .select('*')
@@ -226,7 +278,6 @@ class SupabaseAPI {
         if (bizErr) throw bizErr;
         result.myBusinesses = businesses || [];
 
-        // Выбираем активный салон (если не установлен, берем первый)
         let activeId = window.state?.ui?.activeBusinessId;
         if (!activeId && result.myBusinesses.length > 0) {
           activeId = result.myBusinesses[0].id;
@@ -254,17 +305,18 @@ class SupabaseAPI {
           result.business = businessRes.data || null;
           result.categories = categoriesRes.data || [];
           result.masters = mastersRes.data || [];
-          result.services = servicesRes.data || [];
           result.clients = clientsRes.data || [];
-          result.bookings = bookingsRes.data || [];
           result.transactions = transactionsRes.data || [];
           result.shifts = shiftsRes.data || [];
           result.wallets = walletsRes.data || [];
           result.transactionCategories = tCatRes.data || [];
           result.jobApplications = membersRes.data || [];
+
+          // Применяем мапперы для локальных услуг и записей
+          result.services = (servicesRes.data || []).map(mapDbServiceToFrontend);
+          result.bookings = (bookingsRes.data || []).map(b => mapDbBookingToFrontend(b, result.clients, result.services));
         }
       } else {
-        // Менеджер / Мастер загружает свои трудоустройства
         const { data: employments, error: empErr } = await this.client
           .from('business_members')
           .select('*, business(*)')
@@ -273,7 +325,6 @@ class SupabaseAPI {
         if (empErr) throw empErr;
         result.myEmployments = employments || [];
 
-        // Ищем первый одобренный салон
         const approved = result.myEmployments.find(e => e.status === 'approved');
         let activeId = window.state?.ui?.activeBusinessId;
         if (!activeId && approved) {
@@ -296,11 +347,11 @@ class SupabaseAPI {
           result.business = businessRes.data || null;
           result.categories = categoriesRes.data || [];
           result.masters = mastersRes.data || [];
-          result.services = servicesRes.data || [];
           result.clients = clientsRes.data || [];
-          result.bookings = bookingsRes.data || [];
 
-          // Если менеджер, подгружаем еще финансовые разделы
+          result.services = (servicesRes.data || []).map(mapDbServiceToFrontend);
+          result.bookings = (bookingsRes.data || []).map(b => mapDbBookingToFrontend(b, result.clients, result.services));
+
           const approvedMember = result.myEmployments.find(e => e.business_id === activeId && e.status === 'approved');
           if (approvedMember && approvedMember.role === 'manager') {
             const [transactionsRes, shiftsRes, walletsRes, tCatRes] = await Promise.all([
@@ -316,11 +367,11 @@ class SupabaseAPI {
           }
         }
 
-        // Также загружаем все салоны, чтобы они могли искать и подавать заявки
         const allBiz = await this.searchBusinesses();
         result.allSalons = allBiz || [];
       }
 
+      // Догружаем шаблоны для владельца и менеджера
       if (profile.role === 'owner' || profile.role === 'manager') {
         const [globalCatsRes, globalServicesRes] = await Promise.all([
           this.client.from('global_categories').select('*').order('name'),
@@ -360,7 +411,7 @@ class SupabaseAPI {
     return data;
   }
 
-  // Generic Helpers (автоматически прикрепляем activeBusinessId к создаваемым записям)
+  // Generic Helpers
   async _insert(table, data) {
     const activeId = window.state?.ui?.activeBusinessId;
     if (table !== 'business' && table !== 'profiles' && table !== 'business_members' && activeId) {
@@ -394,8 +445,14 @@ class SupabaseAPI {
   async deleteMaster(id) { return this._delete('masters', id); }
 
   // Услуги
-  async createService(data) { return this._insert('services', data); }
-  async updateService(id, data) { return this._update('services', id, data); }
+  async createService(data) { 
+    return this._insert('services', mapFrontendServiceToDb(data))
+      .then(mapDbServiceToFrontend); 
+  }
+  async updateService(id, data) { 
+    return this._update('services', id, mapFrontendServiceToDb(data))
+      .then(mapDbServiceToFrontend); 
+  }
   async deleteService(id) { return this._delete('services', id); }
 
   // Клиенты
@@ -403,8 +460,14 @@ class SupabaseAPI {
   async updateClient(id, data) { return this._update('clients', id, data); }
 
   // Записи
-  async createBooking(data) { return this._insert('bookings', data); }
-  async updateBooking(id, data) { return this._update('bookings', id, data); }
+  async createBooking(data) { 
+    return this._insert('bookings', mapFrontendBookingToDb(data))
+      .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services)); 
+  }
+  async updateBooking(id, data) { 
+    return this._update('bookings', id, mapFrontendBookingToDb(data))
+      .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services)); 
+  }
   async deleteBooking(id) { return this._delete('bookings', id); }
 
   // Транзакции
@@ -439,6 +502,7 @@ class SupabaseAPI {
     });
   }
 
+  // Переключение шаблона услуги (Импорт / Удаление)
   async toggleGlobalService(globalServiceId, isEnabled) {
     const activeId = window.state?.ui?.activeBusinessId;
     if (!activeId) throw new Error('Салон не выбран');
@@ -480,7 +544,9 @@ class SupabaseAPI {
           name: gs.name,
           price: gs.price,
           duration: gs.duration,
-          global_service_id: gs.id
+          global_service_id: gs.id,
+          gender_category: gs.gender_category,
+          description: gs.description
         }]);
       if (sErr) throw sErr;
     } else {

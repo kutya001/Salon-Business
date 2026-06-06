@@ -93,7 +93,9 @@ CREATE TABLE public.global_services (
     category_id UUID REFERENCES public.global_categories(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    duration INTEGER NOT NULL
+    duration INTEGER NOT NULL,
+    gender_category TEXT,
+    description TEXT
 );
 
 -- 5. Masters
@@ -116,6 +118,8 @@ CREATE TABLE public.services (
     name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL DEFAULT 0,
     duration INTEGER NOT NULL DEFAULT 60,
+    gender_category TEXT,
+    description TEXT,
     global_service_id UUID REFERENCES public.global_services(id) ON DELETE SET NULL, -- link to templates
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );

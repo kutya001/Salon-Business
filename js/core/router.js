@@ -329,11 +329,15 @@ window.renderLayout = function () {
           ${sidebarLinks}
         </nav>
 
-        <div class="sidebar-footer" style="padding: 16px; border-top: 1px solid var(--border); overflow-x: hidden; display: flex; flex-direction: column; gap: 8px;">
+        <div class="sidebar-footer" style="padding: 16px; border-top: 1px solid var(--border); overflow-x: hidden; display: flex; flex-direction: column; gap: 6px;">
           <div class="sidebar-business-name" style="font-size: 12px; font-weight: 600; padding: 0 12px 8px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px;">
             <i data-feather="user" style="width: 16px; height: 16px; min-width: 16px;"></i> 
             <span>${state.userProfile?.username} (${role === 'owner' ? 'Владелец' : role === 'manager' ? 'Менеджер' : role === 'super_admin' ? 'Админ' : 'Мастер'})</span>
           </div>
+          <button onclick="window.forceAppUpdate()" title="Обновить приложение" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--primary); border-color: var(--theme-200); background: rgba(99,102,241,0.05);">
+            <i data-feather="refresh-cw" style="width: 16px; height: 16px; min-width: 16px;"></i>
+            <span class="sidebar-action-text" style="flex-grow: 1; text-align: left;">Обновить приложение</span>
+          </button>
           <button onclick="api.logout()" title="Выйти" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
             <i data-feather="log-out" style="width: 16px; height: 16px; min-width: 16px;"></i>
             <span class="sidebar-action-text" style="flex-grow: 1; text-align: left;">Выйти</span>
@@ -381,6 +385,10 @@ window.renderLayout = function () {
               <i data-feather="user" style="width: 18px; height: 18px;"></i> 
               <span>${state.userProfile?.username} (${role === 'owner' ? 'Владелец' : role === 'manager' ? 'Менеджер' : role === 'super_admin' ? 'Админ' : 'Мастер'})</span>
             </div>
+            <button onclick="window.forceAppUpdate()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: var(--primary); border-color: var(--theme-200); background: rgba(99,102,241,0.05); cursor: pointer; margin-bottom: 8px;">
+              <i data-feather="refresh-cw" style="width: 18px; height: 18px;"></i>
+              <span style="flex-grow: 1; text-align: left;">Обновить приложение</span>
+            </button>
             <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
               <i data-feather="log-out" style="width: 18px; height: 18px;"></i>
               <span style="flex-grow: 1; text-align: left;">Выйти из аккаунта</span>

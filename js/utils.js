@@ -279,3 +279,24 @@ window.getServicesInfo = function (serviceIdsStr) {
     durationMins: totalDurationMins || 60
   };
 };
+
+window.forceAppUpdate = async function() {
+  showToast('Обновление приложения...', 'info');
+  try {
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(reg => reg.update()));
+    }
+    showToast('Приложение успешно обновлено!', 'success');
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 1000);
+  } catch (err) {
+    console.error('Ошибка очистки кэша:', err);
+    window.location.reload(true);
+  }
+};

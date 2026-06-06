@@ -1,273 +1,197 @@
 // ============================================
-// api.js — Клиент для интеграции с Google Apps Script
+// api.js — Клиент для интеграции с Supabase
 // ============================================
 
-class GASClient {
+const SUPABASE_URL = 'https://etmjmgugfvbwaqjzvnyn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_vI28QpLgQw-sSxJja_SmOA_pthfQHjp';
+
+// Инициализируем глобальный клиент
+window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+class SupabaseAPI {
   constructor() {
-    this.gasUrl = localStorage.getItem('gas_url') || '';
-    this.token = localStorage.getItem('auth_token') || '';
+    this.client = window.supabaseClient;
   }
 
   isConfigured() {
-    return !!this.gasUrl;
+    return true; // Supabase всегда настроен (hardcoded keys)
   }
 
-  setGasUrl(url) {
-    this.gasUrl = url;
-    localStorage.setItem('gas_url', url);
-  }
-
-  setToken(token) {
-    this.token = token;
-    localStorage.setItem('auth_token', token);
-  }
-
-  logout() {
-    this.token = '';
-    localStorage.removeItem('auth_token');
+  async logout() {
+    await this.client.auth.signOut();
     setState({ isAuthenticated: false });
     navigate('auth');
     showToast('Вы вышли из системы', 'info');
   }
 
-  async request(action, data = {}, options = { background: false }) {
-    if (!this.gasUrl) {
-      if (!options.background) showToast('Служба бэкенда не настроена', 'error');
-      throw new Error('GAS URL not configured');
+  async authenticate(email, password) {
+    const { data, error } = await this.client.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) {
+      if (window.logApiCall) window.logApiCall('error', 'authenticate', error.message);
+      throw new Error('Неверный логин или пароль');
     }
+    
+    if (window.logApiCall) window.logApiCall('recv', 'authenticate', data);
+    return { token: data.session.access_token, user: data.user };
+  }
+  
+  async register(email, password) {
+    const { data, error } = await this.client.auth.signUp({
+      email,
+      password
+    });
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    return { token: data?.session?.access_token, user: data.user };
+  }
 
-    // Логируем отправку
-    if (window.logApiCall) window.logApiCall('send', action, data);
-
-    // Увеличиваем счетчик синхронизации (для спиннера), если это не фоновый запрос
+  // Общий метод для получения всех данных
+  async getAll(options = {}) {
     if (!options.background && window.state && window.state.ui) {
       window.setUI({ syncingCount: (window.state.ui.syncingCount || 0) + 1 });
     }
-
+    
     try {
-      const response = await fetch(this.gasUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8' // Решает проблему preflight CORS на стороне GAS
-        },
-        body: JSON.stringify({
-          action,
-          token: this.token,
-          data
-        })
-      });
+      const [
+        businessRes, categoriesRes, mastersRes, servicesRes, clientsRes,
+        bookingsRes, transactionsRes, shiftsRes, walletsRes, tCatRes
+      ] = await Promise.all([
+        this.client.from('business').select('*').limit(1).single(),
+        this.client.from('categories').select('*'),
+        this.client.from('masters').select('*'),
+        this.client.from('services').select('*'),
+        this.client.from('clients').select('*'),
+        this.client.from('bookings').select('*'),
+        this.client.from('transactions').select('*'),
+        this.client.from('shifts').select('*'),
+        this.client.from('wallets').select('*'),
+        this.client.from('transaction_categories').select('*')
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`Ошибка сети: ${response.status}`);
-      }
+      const allData = {
+        business: businessRes.data || { name: 'Мой Салон', currency: 'сом' },
+        categories: categoriesRes.data || [],
+        masters: mastersRes.data || [],
+        services: servicesRes.data || [],
+        clients: clientsRes.data || [],
+        bookings: bookingsRes.data || [],
+        transactions: transactionsRes.data || [],
+        shifts: shiftsRes.data || [],
+        wallets: walletsRes.data || [],
+        transactionCategories: tCatRes.data || []
+      };
 
-      const result = await response.json();
-      
-      if (!result.success) {
-        if (result.code === 401) {
-          if (window.logApiCall) window.logApiCall('error', action, result.error || 'Сессия истекла');
-          this.logout();
-          throw new Error(result.error || 'Сессия истекла');
-        }
-        if (window.logApiCall) window.logApiCall('error', action, result.error || 'Произошла ошибка');
-        throw new Error(result.error || 'Произошла неизвестная ошибка');
-      }
-
-      // Логируем успешный прием
-      if (window.logApiCall) window.logApiCall('recv', action, result.data);
-
-      return result.data;
-    } catch (error) {
-      console.error(`API Error (${action}):`, error);
-      if (window.logApiCall && !error.message.includes('Сессия истекла')) {
-        window.logApiCall('error', action, error.message);
-      }
-      if (!options.background) showToast(error.message || 'Ошибка подключения к бэкенду', 'error');
-      throw error;
+      if (window.logApiCall) window.logApiCall('recv', 'getAll', allData);
+      return allData;
+    } catch (err) {
+      console.error('API Error (getAll):', err);
+      if (!options.background) showToast('Ошибка получения данных', 'error');
+      throw err;
     } finally {
-      // Уменьшаем счетчик синхронизации
       if (!options.background && window.state && window.state.ui) {
         window.setUI({ syncingCount: Math.max(0, (window.state.ui.syncingCount || 0) - 1) });
       }
     }
   }
 
-  // Методы-обертки
-  async isPinConfigured() {
-    return await this.request('isPinConfigured');
-  }
-
-  async authenticate(password) {
-    const data = await this.request('authenticate', { password });
-    if (data.token) {
-      this.setToken(data.token);
-    }
+  // Настройки бизнеса
+  async getSettings() {
+    const { data, error } = await this.client.from('business').select('*').limit(1).single();
+    if (error) throw error;
     return data;
   }
 
-  async getAll(options = {}) {
-    return await this.request('getAll', {}, options);
+  async updateSettings(dataToUpdate) {
+    const { data: business } = await this.client.from('business').select('id').limit(1).single();
+    if (business) {
+      const { data, error } = await this.client.from('business').update(dataToUpdate).eq('id', business.id).select().single();
+      if (error) throw error;
+      return data;
+    }
+    return null;
   }
 
-  async getSettings() {
-    return await this.request('getSettings');
+  // Generic Helpers
+  async _insert(table, data) {
+    const { data: res, error } = await this.client.from(table).insert([data]).select().single();
+    if (error) throw error;
+    return res;
   }
 
-  async updateSettings(data, options = {}) {
-    return await this.request('updateSettings', data, options);
+  async _update(table, id, data) {
+    const { data: res, error } = await this.client.from(table).update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return res;
   }
 
-  async changePassword(oldPassword, newPassword) {
-    return await this.request('changePassword', { oldPassword, newPassword });
+  async _delete(table, id) {
+    const { error } = await this.client.from(table).delete().eq('id', id);
+    if (error) throw error;
+    return true;
   }
 
-  // Категории
-  async getCategories() {
-    return await this.request('getCategories');
-  }
+  // Категории (Services)
+  async createCategory(data) { return this._insert('categories', data); }
+  async updateCategory(id, data) { return this._update('categories', id, data); }
+  async deleteCategory(id) { return this._delete('categories', id); }
 
-  async createCategory(data) {
-    return await this.request('createCategory', data);
-  }
+  // Мастера
+  async createMaster(data) { return this._insert('masters', data); }
+  async updateMaster(id, data) { return this._update('masters', id, data); }
+  async deleteMaster(id) { return this._delete('masters', id); }
 
-  async updateCategory(id, data) {
-    return await this.request('updateCategory', { id, ...data });
-  }
+  // Услуги
+  async createService(data) { return this._insert('services', data); }
+  async updateService(id, data) { return this._update('services', id, data); }
+  async deleteService(id) { return this._delete('services', id); }
 
-  async deleteCategory(id) {
-    return await this.request('deleteCategory', { id });
-  }
+  // Клиенты
+  async createClient(data) { return this._insert('clients', data); }
+  async updateClient(id, data) { return this._update('clients', id, data); }
 
-  async getMasters() {
-    return await this.request('getMasters');
-  }
+  // Записи
+  async createBooking(data) { return this._insert('bookings', data); }
+  async updateBooking(id, data) { return this._update('bookings', id, data); }
+  async deleteBooking(id) { return this._delete('bookings', id); }
 
-  async createMaster(data) {
-    return await this.request('createMaster', data);
-  }
+  // Транзакции
+  async createTransaction(data) { return this._insert('transactions', data); }
+  async updateTransaction(id, data) { return this._update('transactions', id, data); }
+  async deleteTransaction(id) { return this._delete('transactions', id); }
 
-  async updateMaster(id, data) {
-    return await this.request('updateMaster', { id, ...data });
-  }
-
-  async deleteMaster(id) {
-    return await this.request('deleteMaster', { id });
-  }
-
-  async getServices() {
-    return await this.request('getServices');
-  }
-
-  async createService(data) {
-    return await this.request('createService', data);
-  }
-
-  async updateService(id, data) {
-    return await this.request('updateService', { id, ...data });
-  }
-
-  async deleteService(id) {
-    return await this.request('deleteService', { id });
-  }
-
-  async getClients() {
-    return await this.request('getClients');
-  }
-
-  async createClient(data) {
-    return await this.request('createClient', data);
-  }
-
-  async updateClient(id, data) {
-    return await this.request('updateClient', { id, ...data });
-  }
-
-  async getBookings(filters = {}) {
-    return await this.request('getBookings', filters);
-  }
-
-  async createBooking(data, options = {}) {
-    return await this.request('createBooking', data, options);
-  }
-
-  async updateBooking(id, data, options = {}) {
-    return await this.request('updateBooking', { id, ...data }, options);
-  }
-
-  async deleteBooking(id) {
-    return await this.request('deleteBooking', { id });
-  }
-
-  async getTransactions(filters = {}) {
-    return await this.request('getTransactions', filters);
-  }
-
-  async createTransaction(data, options = {}) {
-    return await this.request('createTransaction', data, options);
-  }
-
-  async updateTransaction(id, data, options = {}) {
-    return await this.request('updateTransaction', { id, ...data }, options);
-  }
-
-  async deleteTransaction(id, options = {}) {
-    return await this.request('deleteTransaction', { id }, options);
-  }
-
-  async getShifts() {
-    return await this.request('getShifts');
-  }
-
-  async openShift(openingCash, date = null, options = {}) {
-    return await this.request('openShift', { openingCash, date }, options);
-  }
-
-  async closeShift(id, closingCash, options = {}) {
-    return await this.request('closeShift', { id, closingCash }, options);
-  }
-
-  async reopenShift(id, options = {}) {
-    return await this.request('reopenShift', { id }, options);
-  }
-
-  async updateShiftCash(id, data, options = {}) {
-    return await this.request('updateShiftCash', { id, ...data }, options);
-  }
+  // Категории транзакций
+  async createTransactionCategory(data) { return this._insert('transaction_categories', data); }
+  async updateTransactionCategory(id, data) { return this._update('transaction_categories', id, data); }
+  async deleteTransactionCategory(id) { return this._delete('transaction_categories', id); }
 
   // Кошельки
-  async getWallets() {
-    return await this.request('getWallets');
+  async createWallet(data) { return this._insert('wallets', data); }
+  async updateWallet(id, data) { return this._update('wallets', id, data); }
+  async deleteWallet(id) { return this._delete('wallets', id); }
+
+  // Смены
+  async openShift(opening_cash, date = null) {
+    return this._insert('shifts', {
+      status: 'open',
+      opening_cash: opening_cash,
+      date: date || new Date().toISOString().split('T')[0]
+    });
   }
 
-  async createWallet(data) {
-    return await this.request('createWallet', data);
-  }
-
-  async updateWallet(id, data) {
-    return await this.request('updateWallet', { id, ...data });
-  }
-
-  async deleteWallet(id) {
-    return await this.request('deleteWallet', { id });
-  }
-
-  // Статьи транзакций
-  async getTransactionCategories() {
-    return await this.request('getTransactionCategories');
-  }
-
-  async createTransactionCategory(data) {
-    return await this.request('createTransactionCategory', data);
-  }
-
-  async updateTransactionCategory(id, data) {
-    return await this.request('updateTransactionCategory', { id, ...data });
-  }
-
-  async deleteTransactionCategory(id) {
-    return await this.request('deleteTransactionCategory', { id });
+  async closeShift(id, closing_cash) {
+    return this._update('shifts', id, {
+      status: 'closed',
+      closing_cash: closing_cash,
+      closed_at: new Date().toISOString()
+    });
   }
 }
 
-window.api = new GASClient();
+window.api = new SupabaseAPI();

@@ -1294,8 +1294,11 @@ window.renderBookingModal = function () {
         <button type="button" onclick="setBookingWizardStep(1)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
       </div>
     `;
-  } else if (step === 3) {
-    const svcs = (state.services || []).filter(s => s.genderCategory === draft.genderCategory);
+    const svcs = (state.services || []).filter(s => {
+      const sGC = s.genderCategory || 'any';
+      if (draft.genderCategory === 'any') return true;
+      return sGC === draft.genderCategory || sGC === 'any';
+    });
     const selectedServiceIds = draft.serviceId ? draft.serviceId.split(',') : [];
     
     const grouped = {};

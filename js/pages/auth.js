@@ -162,7 +162,9 @@ window.handleAuthSubmit = async function(e) {
             transactions: allData.transactions || [], 
             shifts: allData.shifts || [], 
             wallets: allData.wallets || [],
-            transactionCategories: allData.transactionCategories || []
+            transactionCategories: allData.transactionCategories || [],
+            globalCategories: allData.globalCategories || [],
+            globalServices: allData.globalServices || []
         };
 
         // Роутинг в зависимости от роли

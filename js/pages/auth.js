@@ -15,8 +15,20 @@ window.renderAuth = function () {
     const isRegister = state.ui.isRegisterMode;
 
     const spinnerHtml = loading ? `
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:20;animation:fadeIn 0.3s forwards;padding:24px;box-sizing:border-box;text-align:center;">
-        <div style="font-size: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); animation: pulse 1.5s infinite;">💎</div>
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.75);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:20;animation:fadeIn 0.3s forwards;padding:24px;box-sizing:border-box;text-align:center;">
+        <div style="animation: pulse 1.5s infinite; display: flex; justify-content: center; align-items: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#gem-grad-auth)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 6px rgba(118, 75, 162, 0.2));">
+                <defs>
+                    <linearGradient id="gem-grad-auth" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#667eea" />
+                        <stop offset="100%" stop-color="#764ba2" />
+                    </linearGradient>
+                </defs>
+                <path d="M6 3h12l4 6-10 12L2 9z"></path>
+                <path d="M11 3 8 9l4 12 4-12-3-6"></path>
+                <path d="M2 9h20"></path>
+            </svg>
+        </div>
         <div>
           <h2 style="font-weight: 800; font-size: 22px; color: #1a1a2e; margin-bottom: 4px; letter-spacing: -0.02em;">Suluu Business</h2>
         </div>
@@ -29,12 +41,18 @@ window.renderAuth = function () {
 
     return `
     <div class="auth-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;box-sizing:border-box;">
-        <div class="card animate-scale-in" style="width:100%;max-width:380px;padding:32px 24px;backdrop-filter:blur(20px);background:rgba(255,255,255,0.96);border-radius:28px;box-shadow:0 20px 60px rgba(0,0,0,0.35);position:relative;overflow:hidden;box-sizing:border-box;">
+        <div class="card animate-scale-in" style="width:100%;max-width:380px;padding:32px 24px;backdrop-filter:blur(20px);background:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.45);border-radius:28px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;overflow:hidden;box-sizing:border-box;">
             
             ${spinnerHtml}
 
             <div style="text-align:center; margin-bottom:24px;">
-                <div style="font-size:44px;margin-bottom:8px;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15));">💎</div>
+                <div style="margin-bottom:8px; display: flex; justify-content: center; align-items: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="url(#gem-grad-auth)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 6px rgba(118, 75, 162, 0.2));">
+                        <path d="M6 3h12l4 6-10 12L2 9z"></path>
+                        <path d="M11 3 8 9l4 12 4-12-3-6"></path>
+                        <path d="M2 9h20"></path>
+                    </svg>
+                </div>
                 <h1 style="font-size:24px;font-weight:800;color:#1a1a2e;margin:0 0 4px;letter-spacing:-0.02em;">Suluu Business</h1>
                 <p style="color:#666;font-size:13px;margin:0;">${isRegister ? 'Создайте новый аккаунт' : 'Войдите в свою учетную запись'}</p>
             </div>

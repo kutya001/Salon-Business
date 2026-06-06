@@ -176,6 +176,41 @@ async function apiDelete(client, table, id) {
   return true;
 }
 
+async function findOrCreateClient(client, activeId, name, phone) {
+  if (!phone) return null;
+  const { data: existing, error: findErr } = await client
+    .from('clients')
+    .select('id')
+    .eq('business_id', activeId)
+    .eq('phone', phone)
+    .limit(1);
+
+  if (!findErr && existing && existing.length > 0) {
+    return existing[0].id;
+  }
+
+  const { data: newClient, error: createErr } = await client
+    .from('clients')
+    .insert([{
+      business_id: activeId,
+      name: name || 'Новый клиент',
+      phone: phone
+    }])
+    .select()
+    .single();
+
+  if (createErr) {
+    console.error('Ошибка создания клиента:', createErr);
+    return null;
+  }
+  
+  if (window.state && window.state.clients && newClient) {
+    window.state.clients.push(newClient);
+  }
+  
+  return newClient.id;
+}
+
 class SupabaseAPI {
   constructor() {
     this.client = window.supabaseClient;
@@ -673,13 +708,38 @@ class SupabaseAPI {
   async createClient(data) { return apiInsert(this.client, 'clients', data); }
   async updateClient(id, data) { return apiUpdate(this.client, 'clients', id, data); }
 
-  // Записи
   async createBooking(data) { 
-    return apiInsert(this.client, 'bookings', mapFrontendBookingToDb(data))
+    const activeId = window.state?.ui?.activeBusinessId;
+    if (!activeId) throw new Error('Салон не выбран');
+
+    let clientId = data.clientId;
+    if (!clientId && data.clientPhone) {
+      clientId = await findOrCreateClient(this.client, activeId, data.clientName, data.clientPhone);
+    }
+
+    const dbBooking = mapFrontendBookingToDb(data);
+    if (clientId) {
+      dbBooking.client_id = clientId;
+    }
+
+    return apiInsert(this.client, 'bookings', dbBooking)
       .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services, window.state.masters)); 
   }
   async updateBooking(id, data) { 
-    return apiUpdate(this.client, 'bookings', id, mapFrontendBookingToDb(data))
+    const activeId = window.state?.ui?.activeBusinessId;
+    if (!activeId) throw new Error('Салон не выбран');
+
+    let clientId = data.clientId;
+    if (!clientId && data.clientPhone) {
+      clientId = await findOrCreateClient(this.client, activeId, data.clientName, data.clientPhone);
+    }
+
+    const dbBooking = mapFrontendBookingToDb(data);
+    if (clientId) {
+      dbBooking.client_id = clientId;
+    }
+
+    return apiUpdate(this.client, 'bookings', id, dbBooking)
       .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services, window.state.masters)); 
   }
   async deleteBooking(id) { return apiDelete(this.client, 'bookings', id); }

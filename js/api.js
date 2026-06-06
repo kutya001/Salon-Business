@@ -137,19 +137,25 @@ const mapDbBookingToFrontend = (b, clients = [], services = [], masters = []) =>
 
 const mapFrontendBookingToDb = (b) => {
   if (!b) return b;
-  const isMultiple = b.serviceId && b.serviceId.includes(',');
-  const mainServiceId = isMultiple ? b.serviceId.split(',')[0].trim() : b.serviceId;
-  const serviceList = b.serviceId ? b.serviceId.split(',').map(id => id.trim()).filter(Boolean) : [];
-
-  return {
-    master_id: b.masterId,
-    client_id: b.clientId,
-    service_id: mainServiceId || null,
-    date: b.date,
-    time: b.time,
-    status: b.status,
-    price: b.price,
-  };
+  const dbBooking = {};
+  
+  if (b.masterId !== undefined) dbBooking.master_id = b.masterId || null;
+  if (b.clientId !== undefined) dbBooking.client_id = b.clientId || null;
+  if (b.date !== undefined) dbBooking.date = b.date;
+  if (b.time !== undefined) dbBooking.time = b.time;
+  if (b.status !== undefined) dbBooking.status = b.status;
+  if (b.price !== undefined) dbBooking.price = b.price;
+  
+  if (b.serviceId !== undefined) {
+    const isMultiple = b.serviceId && b.serviceId.includes(',');
+    const mainServiceId = isMultiple ? b.serviceId.split(',')[0].trim() : b.serviceId;
+    const serviceList = b.serviceId ? b.serviceId.split(',').map(id => id.trim()).filter(Boolean) : [];
+    
+    dbBooking.service_id = mainServiceId || null;
+    dbBooking.services = serviceList;
+  }
+  
+  return dbBooking;
 };
 
 const mapDbTransactionToFrontend = (t) => {

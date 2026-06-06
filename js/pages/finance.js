@@ -192,17 +192,22 @@ window.renderFinanceShifts = function () {
       const txDateClean = window.getCleanDate(t.transactionDateTime || t.createdAt);
       return txDateClean === activeShiftDateClean;
     });
+    const cashWallet = (state.wallets || []).find(w => w.type === 'cash' || w.name === 'Наличные');
+    const cashWalletId = cashWallet ? cashWallet.id : 'cash';
+
     let shiftCashIncome = 0;
     let shiftCashExpense = 0;
     let shiftCard = 0;
 
     shiftTxs.forEach(t => {
       const amt = parseFloat(t.amount) || 0;
+      const isCash = t.paymentMethod === cashWalletId || t.paymentMethod === 'cash';
+      
       if (t.type === 'income') {
-        if (t.paymentMethod === 'cash') shiftCashIncome += amt;
-        else if (t.paymentMethod === 'card') shiftCard += amt;
+        if (isCash) shiftCashIncome += amt;
+        else shiftCard += amt;
       } else if (t.type === 'expense') {
-        if (t.paymentMethod === 'cash') shiftCashExpense += amt;
+        if (isCash) shiftCashExpense += amt;
       }
     });
 
@@ -719,6 +724,9 @@ window.handleTransactionSubmit = async function () {
 
   const transactionDateTime = isEdit ? (state.ui.modalData.transactionDateTime || window.formatDateTimeRU(new Date())) : window.formatDateTimeRU(new Date());
 
+  const activeShift = state.shifts.find(s => s.status === 'open');
+  const shiftId = activeShift ? activeShift.id : null;
+
   const optimisticTx = {
     id: isEdit ? id : 'tx_tmp_' + Date.now(),
     type,
@@ -727,6 +735,7 @@ window.handleTransactionSubmit = async function () {
     paymentMethod,
     categoryId,
     bookingId: isEdit ? (state.ui.modalData.bookingId || '') : '',
+    shiftId: isEdit ? (state.ui.modalData.shiftId || shiftId) : shiftId,
     transactionDateTime,
     createdAt: isEdit ? (state.ui.modalData.createdAt || transactionDateTime) : transactionDateTime,
     updatedAt: window.formatDateTimeRU(new Date())
@@ -748,8 +757,8 @@ window.handleTransactionSubmit = async function () {
   showToast(isEdit ? 'Операция успешно изменена' : 'Транзакция успешно зафиксирована', 'success');
 
   const apiCall = isEdit
-    ? api.updateTransaction(id, { type, amount, description, paymentMethod, categoryId, transactionDateTime }, { background: true })
-    : api.createTransaction({ type, amount, description, paymentMethod, categoryId, transactionDateTime }, { background: true });
+    ? api.updateTransaction(id, { type, amount, description, paymentMethod, categoryId, transactionDateTime, shiftId: optimisticTx.shiftId }, { background: true })
+    : api.createTransaction({ type, amount, description, paymentMethod, categoryId, transactionDateTime, shiftId: optimisticTx.shiftId }, { background: true });
 
   apiCall.then(savedTx => {
     if (!isEdit && savedTx && savedTx.id) {
@@ -1025,7 +1034,7 @@ window.renderCloseShiftModal = function () {
     return txDateClean === shiftDateClean;
   });
   
-  const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
+  const cashWallet = (state.wallets || []).find(w => w.type === 'cash' || w.name === 'Наличные');
   const cashWalletId = cashWallet ? cashWallet.id : 'cash';
   
   let cashIncome = 0;
@@ -1100,7 +1109,7 @@ window.renderCloseShiftModal = function () {
 window.handleAutoAdjustShift = async function(deviation) {
   const md = state.ui.modalData || {};
   const shiftId = md.id;
-  const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
+  const cashWallet = (state.wallets || []).find(w => w.type === 'cash' || w.name === 'Наличные');
   const cashWalletId = cashWallet ? cashWallet.id : 'cash';
   
   const isSurplus = deviation > 0;
@@ -1389,7 +1398,7 @@ window.renderShiftDetailsModal = function () {
   const isOpen = shift.status === 'open';
   
   // Подсчет статистики наличных/безналичных операций
-  const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
+  const cashWallet = (state.wallets || []).find(w => w.type === 'cash' || w.name === 'Наличные');
   const cashWalletId = cashWallet ? cashWallet.id : 'cash';
   
   const cashTxs = shiftTxs.filter(t => t.paymentMethod === cashWalletId || t.paymentMethod === 'cash');

@@ -413,7 +413,7 @@ function renderBookingsTable(bookings) {
             <i data-feather="${iconStr}" style="width: 14px; height: 14px;"></i> ${statusLabel}
           </span>
         </td>
-        <td style="text-align: right;" onclick="event.stopPropagation()">
+        <td style="text-align: right; min-width: 140px; width: 140px;" onclick="event.stopPropagation()">
           <div style="display: flex; justify-content: flex-end; gap: 6px;">
             ${actionBtnHtml}
           </div>
@@ -437,7 +437,7 @@ function renderBookingsTable(bookings) {
                 ${getHeaderHtml('Мастер', 'masterName')}
                 ${getHeaderHtml('Сумма', 'price')}
                 ${getHeaderHtml('Статус', 'status')}
-                <th style="text-align: right; padding: 8px 12px; font-size: 13px;">Действия</th>
+                <th style="text-align: right; padding: 8px 12px; font-size: 13px; min-width: 140px; width: 140px;">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -1197,10 +1197,18 @@ window.handleEditBookingFullSubmit = async function() {
     return showToast('Выберите хотя бы одну процедуру', 'error');
   }
 
+  const clientName = document.getElementById('edit-b-name').value.trim();
   let cleanPhone = window.formatClientPhone(document.getElementById('edit-b-phone').value);
 
+  if (!clientName) {
+    return showToast('Пожалуйста, введите имя клиента', 'error');
+  }
+  if (!cleanPhone || cleanPhone === '+996') {
+    return showToast('Пожалуйста, введите корректный номер телефона', 'error');
+  }
+
   const payload = {
-    clientName: document.getElementById('edit-b-name').value.trim(),
+    clientName,
     clientPhone: cleanPhone,
     serviceId: serviceIds,
     masterId: document.getElementById('edit-b-master').value,

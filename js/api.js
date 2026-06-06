@@ -63,7 +63,7 @@ class SupabaseAPI {
         businessRes, categoriesRes, mastersRes, servicesRes, clientsRes,
         bookingsRes, transactionsRes, shiftsRes, walletsRes, tCatRes
       ] = await Promise.all([
-        this.client.from('business').select('*').limit(1).single(),
+        this.client.from('business').select('*').limit(1).maybeSingle(),
         this.client.from('categories').select('*'),
         this.client.from('masters').select('*'),
         this.client.from('services').select('*'),
@@ -103,13 +103,13 @@ class SupabaseAPI {
 
   // Настройки бизнеса
   async getSettings() {
-    const { data, error } = await this.client.from('business').select('*').limit(1).single();
+    const { data, error } = await this.client.from('business').select('*').limit(1).maybeSingle();
     if (error) throw error;
     return data;
   }
 
   async updateSettings(dataToUpdate) {
-    const { data: business } = await this.client.from('business').select('id').limit(1).single();
+    const { data: business } = await this.client.from('business').select('id').limit(1).maybeSingle();
     if (business) {
       const { data, error } = await this.client.from('business').update(dataToUpdate).eq('id', business.id).select().single();
       if (error) throw error;

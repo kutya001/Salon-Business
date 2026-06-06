@@ -2,7 +2,7 @@
 // sw.js — Service Worker для Suluu Business
 // ============================================
 
-const CACHE_NAME = 'suluu-business-v8';
+const CACHE_NAME = 'suluu-business-v9';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -21,6 +21,9 @@ const ASSETS_TO_CACHE = [
   './js/pages/services.js',
   './js/pages/finance.js',
   './js/pages/settings.js',
+  './js/pages/job_search.js',
+  './js/pages/members_control.js',
+  './js/pages/super_admin_panel.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

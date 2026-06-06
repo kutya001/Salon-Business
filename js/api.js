@@ -178,9 +178,15 @@ class SupabaseAPI {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileErr) throw profileErr;
+
+      if (!profile) {
+        // Если профиль не найден (пользователь удален), принудительно разлогиниваем
+        await this.client.auth.signOut();
+        throw new Error('Учетная запись не найдена или была удалена. Пожалуйста, войдите снова.');
+      }
 
       const result = {
         userProfile: profile,

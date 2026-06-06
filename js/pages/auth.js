@@ -178,6 +178,7 @@ window.handleAuthSubmit = async function(e) {
         }
 
         setState(updates);
+        setUI({ loading: false });
         
         // Setup Realtime 
         if (window.setupRealtime) {

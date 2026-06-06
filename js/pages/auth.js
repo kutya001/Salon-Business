@@ -44,8 +44,8 @@ window.renderAuth = function () {
 
             <form onsubmit="handleAuthSubmit(event)" style="display:flex; flex-direction:column; gap:16px;">
                 <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:6px;">Email</label>
-                    <input type="email" id="auth-email" required value="${state.ui.authEmail}" onchange="setUI({authEmail: this.value})"
+                    <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:6px;">Логин</label>
+                    <input type="text" id="auth-email" required value="${state.ui.authEmail}" onchange="setUI({authEmail: this.value})"
                         style="width:100%; padding:14px 16px; border-radius:14px; border:2px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.3s; background:#fff; color:#1a1a2e;"
                         onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#e2e8f0'">
                 </div>
@@ -82,12 +82,15 @@ window.toggleAuthMode = function() {
 
 window.handleAuthSubmit = async function(e) {
     e.preventDefault();
-    const email = document.getElementById('auth-email').value.trim();
+    const rawLogin = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     
-    if (!email || !password) return;
+    if (!rawLogin || !password) return;
 
-    setUI({ loading: true, authError: '', authEmail: email, authPassword: password });
+    // Supabase requires an email format, so we append a hidden domain to the username
+    const email = rawLogin.includes('@') ? rawLogin : `${rawLogin}@suluu.app`;
+
+    setUI({ loading: true, authError: '', authEmail: rawLogin, authPassword: password });
 
     try {
         if (state.ui.isRegisterMode) {

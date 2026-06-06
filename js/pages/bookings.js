@@ -701,20 +701,33 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   const oldStatus = state.bookings[idx].status;
   const b = state.bookings[idx];
   
+  // Если статус становится выполненным, обязательно проверяем наличие открытой кассовой смены
+  let activeShift = null;
+  if (newStatus === 'completed') {
+    activeShift = state.shifts.find(s => s.status === 'open');
+    if (!activeShift) {
+      return showToast('Невозможно завершить запись: нет открытой кассовой смены. Пожалуйста, сначала откройте кассовую смену в разделе Финансы.', 'error', 5000);
+    }
+  }
+
   // Optimistic UI update
   state.bookings[idx].status = newStatus;
   
   let optimisticTx = null;
-  if (newStatus === 'completed') {
+  const cashWallet = (state.wallets || []).find(w => w.name === 'Наличные' || w.type === 'cash') || state.wallets?.[0];
+  const revenueCat = (state.transactionCategories || []).find(c => c.name === 'Выручка от услуг' && c.type === 'income') || state.transactionCategories?.find(c => c.type === 'income');
+
+  if (newStatus === 'completed' && cashWallet && revenueCat && activeShift) {
     const nowStr = window.formatDateTimeRU(new Date());
     optimisticTx = {
       id: 'tx_tmp_' + Date.now(),
       type: 'income',
       amount: parseFloat(b.price) || 0,
       description: 'Оплата: ' + (b.serviceName || 'Услуга'),
-      paymentMethod: 'cash',
-      categoryId: 'income_general', // Значение по умолчанию, если нет точного ID
+      paymentMethod: cashWallet.id,
+      categoryId: revenueCat.id,
       bookingId: b.id,
+      shiftId: activeShift.id,
       transactionDateTime: nowStr,
       createdAt: nowStr,
       updatedAt: nowStr
@@ -726,33 +739,83 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   setUI({ modal: null, modalData: null });
   showToast('Статус записи успешно изменен', 'success');
 
-  // Отправка в фоне
-  api.updateBooking(id, { status: newStatus }, { background: true })
-    .catch(e => {
-      showToast('Не удалось обновить статус', 'error');
-      // Откат при ошибке
-      state.bookings[idx].status = oldStatus;
-      if (optimisticTx) {
-        state.transactions = state.transactions.filter(t => t.id !== optimisticTx.id);
+  try {
+    // 1. Обновляем статус записи на сервере
+    await api.updateBooking(id, { status: newStatus }, { background: true });
+
+    // 2. Управляем транзакциями в базе данных
+    if (newStatus === 'completed' && cashWallet && revenueCat && activeShift) {
+      const savedTx = await api.createTransaction({
+        type: 'income',
+        amount: parseFloat(b.price) || 0,
+        description: 'Оплата: ' + (b.serviceName || 'Услуга'),
+        paymentMethod: cashWallet.id,
+        categoryId: revenueCat.id,
+        bookingId: b.id,
+        shiftId: activeShift.id,
+        transactionDateTime: optimisticTx.transactionDateTime
+      }, { background: true });
+      
+      // Заменяем временный ID на серверный
+      if (savedTx && savedTx.id) {
+        const txIdx = state.transactions.findIndex(t => t.id === optimisticTx.id);
+        if (txIdx !== -1) {
+          state.transactions[txIdx].id = savedTx.id;
+          if (window.render) window.render();
+        }
       }
-      if (window.render) window.render();
-    });
+    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
+      const tx = state.transactions.find(t => t.bookingId === id);
+      if (tx) {
+        state.transactions = state.transactions.filter(t => t.id !== tx.id);
+        await api.deleteTransaction(tx.id, { background: true });
+        if (window.render) window.render();
+      }
+    }
+  } catch (e) {
+    console.error('Ошибка синхронизации статуса или оплаты:', e);
+    showToast('Не удалось обновить статус на сервере', 'error');
+    // Откат при ошибке
+    state.bookings[idx].status = oldStatus;
+    if (optimisticTx) {
+      state.transactions = state.transactions.filter(t => t.id !== optimisticTx.id);
+    }
+    if (window.render) window.render();
+  }
 };
 
 // Функция удаления записи
 window.handleDeleteBooking = function (id) {
   if (!confirm('Вы уверены, что хотите удалить эту запись? Действие необратимо.')) return;
   
+  const oldBookings = [...state.bookings];
   const bookings = state.bookings.filter(b => b.id !== id);
   setState({ bookings });
+  
+  // Optimistically remove associated transactions in UI
+  const oldTxs = [...state.transactions];
+  const deletedTx = state.transactions.find(t => t.bookingId === id);
+  if (deletedTx) {
+    state.transactions = state.transactions.filter(t => t.bookingId !== id);
+  }
+
   setUI({ modal: null, modalData: null });
   showToast('Удаление записи (синхронизация...)', 'info');
 
-  api.deleteBooking(id).then(() => {
-    showToast('Запись удалена', 'success');
-  }).catch(e => {
-    showToast('Не удалось удалить запись', 'error');
-  });
+  api.deleteBooking(id)
+    .then(async () => {
+      if (deletedTx) {
+        await api.deleteTransaction(deletedTx.id, { background: true });
+      }
+      showToast('Запись удалена', 'success');
+      if (window.forceSync) window.forceSync();
+    })
+    .catch(e => {
+      showToast('Не удалось удалить запись', 'error');
+      setState({ bookings: oldBookings });
+      state.transactions = oldTxs;
+      if (window.render) window.render();
+    });
 };
 
 // Модалка просмотра деталей записи
@@ -1120,9 +1183,11 @@ window.isMasterAvailable = function(masterId, dateStr, timeStr, durationMins, ex
   return true;
 };
 
-window.handleEditBookingFullSubmit = function() {
+window.handleEditBookingFullSubmit = async function() {
   const md = state.ui.modalData;
   const tempId = md.bookingId;
+  const oldBooking = state.bookings.find(b => b.id === tempId);
+  const oldStatus = oldBooking ? oldBooking.status : '';
   
   // Получаем выбранные сервисы
   const serviceCheckboxes = document.querySelectorAll('#edit-b-services input[type="checkbox"]:checked');
@@ -1145,6 +1210,15 @@ window.handleEditBookingFullSubmit = function() {
     notes: document.getElementById('edit-b-notes').value.trim(),
     status: document.getElementById('edit-b-status').value
   };
+
+  // Проверяем кассовую смену, если статус меняется на Выполнен
+  let activeShift = null;
+  if (payload.status === 'completed' && oldStatus !== 'completed') {
+    activeShift = state.shifts.find(s => s.status === 'open');
+    if (!activeShift) {
+      return showToast('Невозможно завершить запись: нет открытой кассовой смены. Пожалуйста, сначала откройте кассовую смену в разделе Финансы.', 'error', 5000);
+    }
+  }
 
   const serviceInfo = getServicesInfo(payload.serviceId);
   
@@ -1178,13 +1252,41 @@ window.handleEditBookingFullSubmit = function() {
   setUI({ modal: null, modalData: null });
   showToast('Изменения сохранены (синхронизация...)', 'info');
 
-  api.updateBooking(tempId, payload)
-    .then(result => {
-      // Игнорируем ответ, оптимистичный UI уже обновлен. При желании можно обновить ID.
-      showToast('Запись успешно синхронизирована!', 'success');
-    }).catch(e => {
-      showToast('Ошибка обновления записи на сервере', 'error');
-    });
+  try {
+    // 1. Сохраняем саму запись
+    await api.updateBooking(tempId, payload);
+    
+    // 2. Управляем автоматическими оплатами/транзакциями
+    const cashWallet = (state.wallets || []).find(w => w.name === 'Наличные' || w.type === 'cash') || state.wallets?.[0];
+    const revenueCat = (state.transactionCategories || []).find(c => c.name === 'Выручка от услуг' && c.type === 'income') || state.transactionCategories?.find(c => c.type === 'income');
+    activeShift = state.shifts.find(s => s.status === 'open');
+
+    if (payload.status === 'completed' && oldStatus !== 'completed' && cashWallet && revenueCat && activeShift) {
+      const nowStr = window.formatDateTimeRU(new Date());
+      await api.createTransaction({
+        type: 'income',
+        amount: parseFloat(serviceInfo.price) || 0,
+        description: `Оплата: ${payload.clientName || 'Клиент'} - ${serviceInfo.name || 'Услуга'}`,
+        paymentMethod: cashWallet.id,
+        categoryId: revenueCat.id,
+        bookingId: tempId,
+        shiftId: activeShift.id,
+        transactionDateTime: nowStr
+      }, { background: true });
+    } else if (oldStatus === 'completed' && payload.status !== 'completed') {
+      const tx = state.transactions.find(t => t.bookingId === tempId);
+      if (tx) {
+        state.transactions = state.transactions.filter(t => t.id !== tx.id);
+        await api.deleteTransaction(tx.id, { background: true });
+      }
+    }
+    
+    showToast('Запись успешно синхронизирована!', 'success');
+    if (window.forceSync) window.forceSync();
+  } catch (e) {
+    console.error('Ошибка сохранения измененной записи или транзакции:', e);
+    showToast('Ошибка обновления записи на сервере', 'error');
+  }
 };
 
 // Переход по шагам в модалке

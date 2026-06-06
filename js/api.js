@@ -149,8 +149,57 @@ const mapFrontendBookingToDb = (b) => {
     time: b.time,
     status: b.status,
     price: b.price,
-    services: serviceList // JSONB datatype is auto-serialized by Supabase client
   };
+};
+
+const mapDbTransactionToFrontend = (t) => {
+  if (!t) return t;
+  return {
+    ...t,
+    paymentMethod: t.payment_method,
+    categoryId: t.category_id,
+    bookingId: t.booking_id,
+    shiftId: t.shift_id,
+    transactionDateTime: t.transaction_date_time,
+    createdAt: t.created_at
+  };
+};
+
+const mapFrontendTransactionToDb = (t) => {
+  if (!t) return t;
+  const dbTx = {};
+  if (t.type !== undefined) dbTx.type = t.type;
+  if (t.amount !== undefined) dbTx.amount = t.amount;
+  if (t.description !== undefined) dbTx.description = t.description;
+  if (t.paymentMethod !== undefined) dbTx.payment_method = t.paymentMethod;
+  if (t.categoryId !== undefined) dbTx.category_id = t.categoryId;
+  if (t.bookingId !== undefined) dbTx.booking_id = t.bookingId;
+  if (t.shiftId !== undefined) dbTx.shift_id = t.shiftId;
+  if (t.transactionDateTime !== undefined) dbTx.transaction_date_time = t.transactionDateTime;
+  return dbTx;
+};
+
+const mapDbShiftToFrontend = (s) => {
+  if (!s) return s;
+  return {
+    ...s,
+    openingCash: s.opening_cash,
+    closingCash: s.closing_cash,
+    openedAt: s.opened_at,
+    closedAt: s.closed_at
+  };
+};
+
+const mapFrontendShiftToDb = (s) => {
+  if (!s) return s;
+  const dbShift = {};
+  if (s.status !== undefined) dbShift.status = s.status;
+  if (s.openingCash !== undefined) dbShift.opening_cash = s.openingCash;
+  if (s.closingCash !== undefined) dbShift.closing_cash = s.closingCash;
+  if (s.openedAt !== undefined) dbShift.opened_at = s.openedAt;
+  if (s.closedAt !== undefined) dbShift.closed_at = s.closedAt;
+  if (s.date !== undefined) dbShift.date = s.date;
+  return dbShift;
 };
 
 // Внутренние приватные хелперы для взаимодействия с таблицами Supabase (не доступны через window.api)
@@ -556,8 +605,8 @@ class SupabaseAPI {
           result.categories = categoriesRes.data || [];
           result.masters = (mastersRes.data || []).map(mapDbMasterToFrontend);
           result.clients = clientsRes.data || [];
-          result.transactions = transactionsRes.data || [];
-          result.shifts = shiftsRes.data || [];
+          result.transactions = (transactionsRes.data || []).map(mapDbTransactionToFrontend);
+          result.shifts = (shiftsRes.data || []).map(mapDbShiftToFrontend);
           result.wallets = walletsRes.data || [];
           result.transactionCategories = tCatRes.data || [];
           result.jobApplications = membersRes.data || [];
@@ -622,8 +671,8 @@ class SupabaseAPI {
               this.client.from('wallets').select('*').eq('business_id', activeId),
               this.client.from('transaction_categories').select('*').eq('business_id', activeId)
             ]);
-            result.transactions = transactionsRes.data || [];
-            result.shifts = shiftsRes.data || [];
+            result.transactions = (transactionsRes.data || []).map(mapDbTransactionToFrontend);
+            result.shifts = (shiftsRes.data || []).map(mapDbShiftToFrontend);
             result.wallets = walletsRes.data || [];
             result.transactionCategories = tCatRes.data || [];
           }
@@ -752,8 +801,14 @@ class SupabaseAPI {
   async deleteBooking(id) { return apiDelete(this.client, 'bookings', id); }
 
   // Транзакции
-  async createTransaction(data) { return apiInsert(this.client, 'transactions', data); }
-  async updateTransaction(id, data) { return apiUpdate(this.client, 'transactions', id, data); }
+  async createTransaction(data) { 
+    return apiInsert(this.client, 'transactions', mapFrontendTransactionToDb(data))
+      .then(mapDbTransactionToFrontend); 
+  }
+  async updateTransaction(id, data) { 
+    return apiUpdate(this.client, 'transactions', id, mapFrontendTransactionToDb(data))
+      .then(mapDbTransactionToFrontend); 
+  }
   async deleteTransaction(id) { return apiDelete(this.client, 'transactions', id); }
 
   // Категории транзакций
@@ -772,7 +827,7 @@ class SupabaseAPI {
       status: 'open',
       opening_cash: opening_cash,
       date: date || new Date().toISOString().split('T')[0]
-    });
+    }).then(mapDbShiftToFrontend);
   }
 
   async closeShift(id, closing_cash) {
@@ -780,7 +835,22 @@ class SupabaseAPI {
       status: 'closed',
       closing_cash: closing_cash,
       closed_at: new Date().toISOString()
-    });
+    }).then(mapDbShiftToFrontend);
+  }
+
+  async updateShiftCash(id, data) {
+    const dbData = {};
+    if (data.openingCash !== undefined) dbData.opening_cash = parseFloat(data.openingCash) || 0;
+    if (data.closingCash !== undefined) dbData.closing_cash = parseFloat(data.closingCash) || 0;
+    return apiUpdate(this.client, 'shifts', id, dbData).then(mapDbShiftToFrontend);
+  }
+
+  async reopenShift(id) {
+    return apiUpdate(this.client, 'shifts', id, {
+      status: 'open',
+      closed_at: null,
+      closing_cash: 0
+    }).then(mapDbShiftToFrontend);
   }
 
   // Переключение шаблона услуги (Импорт / Удаление)

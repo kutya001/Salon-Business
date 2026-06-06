@@ -2,6 +2,20 @@
 // finance.js — Касса, транзакции, статьи, кошельки
 // ============================================
 
+window.getCleanDate = function (dateVal) {
+  if (!dateVal) return '';
+  if (dateVal.includes('T')) return dateVal.split('T')[0];
+  const firstPart = dateVal.split(' ')[0];
+  if (firstPart.includes('.')) {
+    const p = firstPart.split('.');
+    if (p[0].length === 2) {
+      return `${p[2]}-${p[1]}-${p[0]}`; // DD.MM.YYYY -> YYYY-MM-DD
+    }
+    return firstPart.replace(/\./g, '-');
+  }
+  return firstPart;
+};
+
 window.renderFinance = function () {
   let activeTab = state.ui.financeTab || 'shifts';
 
@@ -172,10 +186,11 @@ window.renderFinanceShifts = function () {
 
   let shiftBlockHtml = '';
   if (activeShift) {
-    const shiftDateStr = activeShift.date ? activeShift.date.replace(/-/g, '.') : '';
+    const activeShiftDateClean = window.getCleanDate(activeShift.date || activeShift.openedAt);
     const shiftTxs = state.transactions.filter(t => {
-      const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0].replace(/-/g, '.') : '';
-      return txDate === shiftDateStr;
+      if (t.shiftId && activeShift.id) return t.shiftId === activeShift.id;
+      const txDateClean = window.getCleanDate(t.transactionDateTime || t.createdAt);
+      return txDateClean === activeShiftDateClean;
     });
     let shiftCashIncome = 0;
     let shiftCashExpense = 0;
@@ -331,21 +346,15 @@ window.renderFinanceTransactions = function () {
   
   if (filters.dateFrom) {
     filteredTxs = filteredTxs.filter(t => {
-      const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0] : '';
-      if (!txDate) return false;
-      const p = txDate.split('.');
-      const formattedTxDate = `${p[2]}-${p[1]}-${p[0]}`;
-      return formattedTxDate >= filters.dateFrom;
+      const txDateClean = window.getCleanDate(t.transactionDateTime || t.createdAt);
+      return txDateClean && txDateClean >= filters.dateFrom;
     });
   }
   
   if (filters.dateTo) {
     filteredTxs = filteredTxs.filter(t => {
-      const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0] : '';
-      if (!txDate) return false;
-      const p = txDate.split('.');
-      const formattedTxDate = `${p[2]}-${p[1]}-${p[0]}`;
-      return formattedTxDate <= filters.dateTo;
+      const txDateClean = window.getCleanDate(t.transactionDateTime || t.createdAt);
+      return txDateClean && txDateClean <= filters.dateTo;
     });
   }
 
@@ -1009,10 +1018,11 @@ window.renderCloseShiftModal = function () {
   const shiftId = md.id;
   const shift = state.shifts.find(s => s.id === shiftId);
   
-  const shiftDateStr = shift && shift.date ? shift.date.replace(/-/g, '.') : '';
+  const shiftDateClean = shift ? window.getCleanDate(shift.date || shift.openedAt) : '';
   const shiftTxs = (state.transactions || []).filter(t => {
-    const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0].replace(/-/g, '.') : '';
-    return txDate === shiftDateStr;
+    if (t.shiftId && shift.id) return t.shiftId === shift.id;
+    const txDateClean = window.getCleanDate(t.transactionDateTime || t.createdAt);
+    return txDateClean === shiftDateClean;
   });
   
   const cashWallet = (state.wallets || []).find(w => w.type === 'cash');
@@ -1118,14 +1128,16 @@ window.handleAutoAdjustShift = async function(deviation) {
 };
 
 window.handleCloseShiftSubmit = async function (id) {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const activeTodayBookings = state.bookings.filter(b => 
-    b.date === todayStr && 
-    (b.status === 'pending' || b.status === 'confirmed')
-  );
+  const shift = state.shifts.find(s => s.id === id);
+  const shiftDateClean = shift ? window.getCleanDate(shift.date || shift.openedAt) : new Date().toISOString().split('T')[0];
+  const activeTodayBookings = state.bookings.filter(b => {
+    const bDateClean = window.getCleanDate(b.date);
+    return bDateClean === shiftDateClean && (b.status === 'pending' || b.status === 'confirmed');
+  });
 
   if (activeTodayBookings.length > 0) {
-    return showToast('Нельзя закрыть смену: на сегодня есть необработанные записи (в статусе "Записан" или "Подтверждён")', 'error', 5000);
+    const prettyDate = shiftDateClean.split('-').reverse().join('.');
+    return showToast(`Нельзя закрыть смену: на дату ${prettyDate} есть необработанные записи (в статусе "Записан" или "Подтверждён")`, 'error', 5000);
   }
 
   const closingCash = parseFloat(state.ui.modalData.closingCash) || 0;
@@ -1368,10 +1380,11 @@ window.renderShiftDetailsModal = function () {
   
   if (!shift) return `<div>Смена не найдена</div>`;
   
-  const shiftDateStr = shift.date ? shift.date.replace(/-/g, '.') : '';
+  const shiftDateClean = window.getCleanDate(shift.date || shift.openedAt);
   const shiftTxs = state.transactions.filter(t => {
-    const txDate = t.transactionDateTime ? t.transactionDateTime.split(' ')[0].replace(/-/g, '.') : '';
-    return txDate === shiftDateStr;
+    if (t.shiftId && shift.id) return t.shiftId === shift.id;
+    const txDateClean = window.getCleanDate(t.transactionDateTime || t.createdAt);
+    return txDateClean === shiftDateClean;
   });
   const isOpen = shift.status === 'open';
   

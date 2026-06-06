@@ -44,7 +44,7 @@ window.renderSettings = function () {
   ];
 
   // Профиль бизнеса и график доступны только Владельцам и Менеджерам
-  if (role === 'owner' || role === 'manager') {
+  if (role === 'owner') {
     tabs.push({ id: 'business_profile', label: 'Профиль салона', icon: 'briefcase' });
     tabs.push({ id: 'schedule', label: 'График салона', icon: 'calendar' });
   }

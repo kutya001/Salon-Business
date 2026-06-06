@@ -3,7 +3,7 @@
 // ============================================
 
 window.renderFinance = function () {
-  const activeTab = state.ui.financeTab || 'shifts';
+  let activeTab = state.ui.financeTab || 'shifts';
 
   const tabs = [
     { id: 'shifts', label: 'КАССОВЫЕ СМЕНЫ', icon: 'briefcase' },
@@ -11,6 +11,18 @@ window.renderFinance = function () {
     { id: 'categories', label: 'СТАТЬИ РАСХОДА/ПРИХОДА', icon: 'layers' },
     { id: 'wallets', label: 'КОШЕЛЬКИ', icon: 'credit-card' }
   ];
+
+  const allowedTabs = tabs.filter(tab => {
+    if (tab.id === 'shifts') return hasPermission('finance_shifts');
+    if (tab.id === 'transactions') return hasPermission('finance_transactions');
+    if (tab.id === 'categories') return hasPermission('finance_categories');
+    if (tab.id === 'wallets') return hasPermission('finance_wallets');
+    return true;
+  });
+
+  if (allowedTabs.length > 0 && !allowedTabs.find(t => t.id === activeTab)) {
+    activeTab = allowedTabs[0].id;
+  }
 
   let contentHtml = '';
   let fabAction = '';
@@ -49,7 +61,7 @@ window.renderFinance = function () {
           <div style="display: flex; align-items: center; gap: 16px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
             <h1 class="hidden md-block" style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin: 0; flex-shrink: 0;">Финансы</h1>
             <div class="segment-tabs-container" style="display: inline-flex; flex-wrap: nowrap;">
-              ${tabs.map(tab => {
+              ${allowedTabs.map(tab => {
                 const isActive = activeTab === tab.id;
                 return `
                   <button onclick="setUI({ financeTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
@@ -60,7 +72,7 @@ window.renderFinance = function () {
               }).join('')}
             </div>
             <span class="md-hidden animate-fade-in" style="font-size: 12px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.05em; margin-left: 10px; white-space: nowrap; text-transform: uppercase;">
-              ${tabs.find(t => t.id === activeTab)?.label || ''}
+              ${allowedTabs.find(t => t.id === activeTab)?.label || ''}
             </span>
           </div>
           <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">

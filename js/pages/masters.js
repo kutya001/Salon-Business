@@ -5,7 +5,7 @@
 window.renderMasters = function () {
   const userRole = state.userProfile?.role || 'master';
   const isOwnerOrManager = userRole === 'owner' || userRole === 'manager';
-  const activeTab = state.ui.mastersActiveTab || 'masters';
+  const activeTab = state.ui.mastersActiveTab || 'employees';
 
   const currentMonthStr = new Date().toISOString().substring(0, 7); // 'YYYY-MM'
 
@@ -114,22 +114,27 @@ window.renderMasters = function () {
       <p style="font-size: 13px; margin: 0;">В салоне пока нет одобренных сотрудников</p>
     </div>
   ` : approvedApps.map(app => {
+    const isOwnerEmployee = app.user_id === state.business?.owner_id;
     return `
       <div class="card glass-island" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border);">
         <div>
           <div style="font-weight: 800; font-size: 15px; color: var(--text);">${app.profiles?.username || 'Сотрудник'}</div>
           <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
             <span style="font-size: 12px; color: var(--text-secondary);">Доступ / Роль:</span>
-            <select onchange="handleUpdateEmployeeRole('${app.id}', '${app.user_id}', this.value, '${app.profiles?.username}')" style="padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); cursor: pointer; outline: none;">
+            ${isOwnerEmployee
+              ? `<span style="padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--primary); background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15);">👑 Владелец салона</span>`
+              : `<select onchange="handleUpdateEmployeeRole('${app.id}', '${app.user_id}', this.value, '${app.profiles?.username}')" style="padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); cursor: pointer; outline: none;">
               <option value="master" ${app.role === 'master' ? 'selected' : ''}>Мастер (исполнитель)</option>
               <option value="manager" ${app.role === 'manager' ? 'selected' : ''}>Менеджер (администратор)</option>
-            </select>
+            </select>`
+            }
           </div>
         </div>
-        <div>
-          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          ${app.role === 'manager' && !isOwnerEmployee ? `<button onclick="event.stopPropagation(); showEmployeePermissionsModal('${app.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--primary); border-color: var(--theme-200);">⚙️ Права доступа</button>` : ''}
+          ${!isOwnerEmployee ? `<button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">
             Исключить
-          </button>
+          </button>` : ''}
         </div>
       </div>
     `;
@@ -163,14 +168,13 @@ window.renderMasters = function () {
     `;
   }
 
-  // --- Переключатели вкладок ---
   const tabsHtml = isOwnerOrManager ? `
     <div style="display: flex; gap: 8px; border-bottom: 2px solid var(--border); padding-bottom: 0; margin-bottom: 8px;">
+      <button onclick="setMastersTab('employees')" style="padding: 10px 16px; font-weight: 700; font-size: 14px; border: none; background: none; color: ${activeTab === 'employees' ? 'var(--primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid ${activeTab === 'employees' ? 'var(--primary)' : 'transparent'}; margin-bottom: -2px; cursor: pointer; transition: all 0.2s;">
+        Сотрудники
+      </button>
       <button onclick="setMastersTab('masters')" style="padding: 10px 16px; font-weight: 700; font-size: 14px; border: none; background: none; color: ${activeTab === 'masters' ? 'var(--primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid ${activeTab === 'masters' ? 'var(--primary)' : 'transparent'}; margin-bottom: -2px; cursor: pointer; transition: all 0.2s;">
         Мастера
-      </button>
-      <button onclick="setMastersTab('employees')" style="padding: 10px 16px; font-weight: 700; font-size: 14px; border: none; background: none; color: ${activeTab === 'employees' ? 'var(--primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid ${activeTab === 'employees' ? 'var(--primary)' : 'transparent'}; margin-bottom: -2px; cursor: pointer; transition: all 0.2s;">
-        Управление доступом
       </button>
     </div>
   ` : '';
@@ -465,6 +469,10 @@ window.handleMasterSubmit = function (id) {
 
 // Мягкое удаление мастера
 window.handleDeleteMaster = function (id) {
+  const master = state.masters.find(m => m.id === id);
+  if (master && master.user_id === state.business?.owner_id) {
+    return showToast('Владелец салона не может быть удален из списка мастеров', 'error');
+  }
   if (!confirm('Вы уверены, что хотите удалить этого мастера? Это действие нельзя отменить.')) return;
   
   const masters = state.masters.filter(m => m.id !== id);
@@ -557,4 +565,89 @@ window.renderMasterDetailsModal = function() {
         </button>
       </div>
     </div>`;
+};
+
+// ============================================
+// Employee Permissions Modal (RBAC)
+// ============================================
+
+window.showEmployeePermissionsModal = function(memberId) {
+  const app = (state.jobApplications || []).find(a => a.id === memberId);
+  if (!app) return;
+  const permissions = app.permissions || {};
+  setUI({ modal: 'employeePermissions', modalData: { memberId, username: app.profiles?.username || 'Сотрудник', permissions: { ...permissions } } });
+};
+
+window.handleTogglePermission = function(key) {
+  const perms = state.ui.modalData.permissions || {};
+  perms[key] = perms[key] === false ? true : false; // default is true (allowed)
+  setUI({ modalData: { ...state.ui.modalData, permissions: perms } });
+};
+
+window.handleSaveEmployeePermissions = async function() {
+  const { memberId, permissions } = state.ui.modalData;
+  setUI({ loading: true });
+  try {
+    await api.updateEmployeePermissions(memberId, permissions);
+    // Update local state
+    const idx = (state.jobApplications || []).findIndex(a => a.id === memberId);
+    if (idx !== -1) state.jobApplications[idx].permissions = permissions;
+    showToast('Права доступа обновлены', 'success');
+    setUI({ modal: null, modalData: null, loading: false });
+  } catch (err) {
+    showToast(err.message || 'Ошибка сохранения прав', 'error');
+    setUI({ loading: false });
+  }
+};
+
+window.renderEmployeePermissionsModal = function() {
+  const md = state.ui.modalData;
+  if (!md) return '';
+  const p = md.permissions || {};
+  
+  const permList = [
+    { key: 'dashboard_view', label: 'Главная (дашборд)', icon: 'grid' },
+    { key: 'bookings_view', label: 'Просмотр записей', icon: 'calendar' },
+    { key: 'bookings_edit', label: 'Редактирование записей', icon: 'edit' },
+    { key: 'employees_view', label: 'Просмотр сотрудников', icon: 'users' },
+    { key: 'clients_view', label: 'Просмотр клиентов', icon: 'user' },
+    { key: 'clients_edit', label: 'Редактирование клиентов', icon: 'user-plus' },
+    { key: 'services_view', label: 'Просмотр услуг', icon: 'scissors' },
+    { key: 'services_edit', label: 'Редактирование услуг', icon: 'edit-3' },
+    { key: 'services_delete', label: 'Удаление услуг', icon: 'trash-2' },
+    { key: 'finance_view', label: 'Просмотр финансов', icon: 'dollar-sign' },
+    { key: 'finance_shifts', label: 'Кассовые смены', icon: 'briefcase' },
+    { key: 'finance_transactions', label: 'Транзакции', icon: 'trending-up' },
+    { key: 'finance_categories', label: 'Статьи расхода/прихода', icon: 'layers' },
+    { key: 'finance_wallets', label: 'Кошельки', icon: 'credit-card' }
+  ];
+  
+  const toggleHtml = permList.map(item => {
+    const isAllowed = p[item.key] !== false;
+    return `
+      <div onclick="handleTogglePermission('${item.key}')" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i data-feather="${item.icon}" style="width: 16px; height: 16px; color: ${isAllowed ? 'var(--primary)' : 'var(--text-secondary)'};"></i>
+          <span style="font-weight: 600; font-size: 13px; color: var(--text);">${item.label}</span>
+        </div>
+        <div style="width: 44px; height: 24px; border-radius: 24px; background: ${isAllowed ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; border: 1px solid var(--border); position: relative; transition: background 0.3s; cursor: pointer;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background: white; position: absolute; top: 3px; left: ${isAllowed ? '23px' : '3px'}; transition: left 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  return `
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px; max-height: 85vh;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <h3 style="font-weight: 800; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="shield" style="width: 20px; height: 20px; color: var(--primary);"></i> Права доступа: ${md.username}</h3>
+        <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
+      </div>
+      <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">Управляйте доступами менеджера. По умолчанию все разрешения включены. Отключите ненужные.</p>
+      <div class="scrollbar-hide" style="overflow-y: auto; max-height: 55vh; border: 1px solid var(--border); border-radius: 12px;">
+        ${toggleHtml}
+      </div>
+      <button onclick="handleSaveEmployeePermissions()" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить права доступа</button>
+    </div>
+  `;
 };

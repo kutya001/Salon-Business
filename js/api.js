@@ -57,6 +57,33 @@ const mapFrontendServiceToDb = (s) => {
   };
 };
 
+const mapDbMasterToFrontend = (m) => {
+  if (!m) return m;
+  return {
+    ...m,
+    workHoursStart: m.work_hours_start,
+    workHoursEnd: m.work_hours_end
+  };
+};
+
+const mapFrontendMasterToDb = (m) => {
+  if (!m) return m;
+  const dbMaster = {};
+  if (m.name !== undefined) dbMaster.name = m.name;
+  if (m.phone !== undefined) dbMaster.phone = m.phone;
+  if (m.specialization !== undefined) dbMaster.specialization = m.specialization;
+  if (m.avatar !== undefined) dbMaster.avatar = m.avatar;
+  if (m.percentage !== undefined) dbMaster.percentage = m.percentage;
+  if (m.workHoursStart !== undefined) dbMaster.work_hours_start = m.workHoursStart;
+  if (m.workHoursEnd !== undefined) dbMaster.work_hours_end = m.workHoursEnd;
+  if (m.services !== undefined) {
+    dbMaster.services = typeof m.services === 'string' ? JSON.parse(m.services) : m.services;
+  }
+  if (m.user_id !== undefined) dbMaster.user_id = m.user_id;
+  if (m.business_id !== undefined) dbMaster.business_id = m.business_id;
+  return dbMaster;
+};
+
 const mapDbBookingToFrontend = (b, clients = [], services = [], masters = []) => {
   if (!b) return b;
   const client = b.client || clients.find(c => c.id === b.client_id) || {};
@@ -485,7 +512,7 @@ class SupabaseAPI {
 
           result.business = mapDbBusinessToFrontend(businessRes.data) || null;
           result.categories = categoriesRes.data || [];
-          result.masters = mastersRes.data || [];
+          result.masters = (mastersRes.data || []).map(mapDbMasterToFrontend);
           result.clients = clientsRes.data || [];
           result.transactions = transactionsRes.data || [];
           result.shifts = shiftsRes.data || [];
@@ -539,7 +566,7 @@ class SupabaseAPI {
 
           result.business = mapDbBusinessToFrontend(businessRes.data) || null;
           result.categories = categoriesRes.data || [];
-          result.masters = mastersRes.data || [];
+          result.masters = (mastersRes.data || []).map(mapDbMasterToFrontend);
           result.clients = clientsRes.data || [];
 
           result.services = (servicesRes.data || []).map(mapDbServiceToFrontend);
@@ -611,9 +638,25 @@ class SupabaseAPI {
   async deleteCategory(id) { return apiDelete(this.client, 'categories', id); }
 
   // Мастера
-  async createMaster(data) { return apiInsert(this.client, 'masters', data); }
-  async updateMaster(id, data) { return apiUpdate(this.client, 'masters', id, data); }
+  async createMaster(data) { 
+    return apiInsert(this.client, 'masters', mapFrontendMasterToDb(data))
+      .then(mapDbMasterToFrontend); 
+  }
+  async updateMaster(id, data) { 
+    return apiUpdate(this.client, 'masters', id, mapFrontendMasterToDb(data))
+      .then(mapDbMasterToFrontend); 
+  }
   async deleteMaster(id) { return apiDelete(this.client, 'masters', id); }
+
+  // Обновление прав доступа сотрудника
+  async updateEmployeePermissions(memberId, permissions) {
+    const { error } = await this.client
+      .from('business_members')
+      .update({ permissions })
+      .eq('id', memberId);
+    if (error) throw error;
+    return true;
+  }
 
   // Услуги
   async createService(data) { 

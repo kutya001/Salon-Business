@@ -1,23 +1,33 @@
 // ============================================
 // dashboard.js — Панель управления и аналитика
-// ============================================
-
-window.renderDashboard = function () {
+// ==================window.renderDashboard = function () {
   const todayStr = new Date().toISOString().split('T')[0];
+  const userRole = state.userProfile?.role || 'master';
+  const loggedInMaster = state.masters.find(m => m.user_id === state.userProfile?.id);
+  const masterId = loggedInMaster?.id;
+
+  // Если мастер, показываем только его записи
+  const dashboardBookings = userRole === 'master' 
+    ? state.bookings.filter(b => b.masterId === masterId)
+    : state.bookings;
   
   // 1. Расчет метрик
-  const todayBookings = state.bookings.filter(b => b.date === todayStr);
+  const todayBookings = dashboardBookings.filter(b => b.date === todayStr);
   const activeTodayBookings = todayBookings.filter(b => b.status === 'confirmed' || b.status === 'completed');
   
-  const completedBookings = state.bookings.filter(b => b.status === 'completed');
+  const completedBookings = dashboardBookings.filter(b => b.status === 'completed');
   
   // Выручка за сегодня
-  const todayRevenue = state.transactions
-    .filter(t => t.type === 'income' && t.createdAt.split('T')[0] === todayStr)
-    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  const todayRevenue = userRole === 'master'
+    ? todayBookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + (parseFloat(b.price) || 0), 0)
+    : state.transactions
+        .filter(t => t.type === 'income' && t.createdAt.split('T')[0] === todayStr)
+        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
   // Общее количество клиентов
-  const totalClients = state.clients.length;
+  const totalClients = userRole === 'master'
+    ? new Set(dashboardBookings.map(b => b.clientId).filter(Boolean)).size
+    : state.clients.length;
 
   // Средний чек
   const avgCheck = completedBookings.length > 0 
@@ -33,9 +43,11 @@ window.renderDashboard = function () {
     const dateStr = d.toISOString().split('T')[0];
     const label = d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
     
-    const dayRev = state.transactions
-      .filter(t => t.type === 'income' && t.createdAt.split('T')[0] === dateStr)
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    const dayRev = userRole === 'master'
+      ? dashboardBookings.filter(b => b.status === 'completed' && b.date === dateStr).reduce((sum, b) => sum + (parseFloat(b.price) || 0), 0)
+      : state.transactions
+          .filter(t => t.type === 'income' && t.createdAt.split('T')[0] === dateStr)
+          .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
       
     chartDays.push(label);
     chartRevenues.push(dayRev);
@@ -78,7 +90,7 @@ window.renderDashboard = function () {
         <div style="font-size: 16px; font-weight: 800; color: var(--text);">${statusStats.confirmed.count} <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">зап.</span></div>
         <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">${formatPrice(statusStats.confirmed.sum)}</div>
       </div>
-
+ 
       <!-- Completed (Выполнен) -->
       <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
         <div style="font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
@@ -87,7 +99,7 @@ window.renderDashboard = function () {
         <div style="font-size: 16px; font-weight: 800; color: var(--text);">${statusStats.completed.count} <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">зап.</span></div>
         <div style="font-size: 12px; font-weight: 700; color: #10b981;">${formatPrice(statusStats.completed.sum)}</div>
       </div>
-
+ 
       <!-- Cancelled (Отмена) -->
       <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
         <div style="font-size: 11px; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
@@ -98,7 +110,7 @@ window.renderDashboard = function () {
       </div>
     </div>
   `;
-
+ 
   const todayBookingsListHtml = todayBookings.length === 0 
     ? `
       <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1; background: transparent; border: none;">
@@ -114,20 +126,22 @@ window.renderDashboard = function () {
         const statusLabel = getStatusLabel(b.status);
         
         let actionBtnHtml = '';
-        if (b.status === 'pending') {
-          actionBtnHtml = `
-            <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; font-weight: 700; white-space: nowrap;">
-              Подтвердить
-            </button>
-          `;
-        } else if (b.status === 'confirmed') {
-          actionBtnHtml = `
-            <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: #10b981; border-color: #10b981; font-weight: 700; white-space: nowrap;">
-              Завершить
-            </button>
-          `;
+        if (userRole !== 'master') {
+          if (b.status === 'pending') {
+            actionBtnHtml = `
+              <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; font-weight: 700; white-space: nowrap;">
+                Подтвердить
+              </button>
+            `;
+          } else if (b.status === 'confirmed') {
+            actionBtnHtml = `
+              <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; background: #10b981; border-color: #10b981; font-weight: 700; white-space: nowrap;">
+                Завершить
+              </button>
+            `;
+          }
         }
-
+ 
         return `
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 8px;">
             <!-- Левая часть: Время, Клиент и Услуга в одну строку -->
@@ -151,7 +165,7 @@ window.renderDashboard = function () {
                 </p>
               </div>
             </div>
-
+ 
             <!-- Правая часть: Цена, статус и действие в одну компактную строку -->
             <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
               <!-- Цена и статус в одну линию на мобильном, колонкой на десктопе -->
@@ -166,112 +180,123 @@ window.renderDashboard = function () {
           </div>
         `;
       }).join('');
-
-  // 4. Рейтинг мастеров за все время
-  const masterStats = {};
-  state.bookings.filter(b => b.status === 'completed').forEach(b => {
-    if (!masterStats[b.masterId]) {
-      masterStats[b.masterId] = { name: b.masterName || 'Любой мастер', count: 0, revenue: 0 };
+ 
+  // 4. Рейтинг мастеров за все время (показываем только владельцам и менеджерам)
+  let topMastersHtml = '';
+  if (userRole !== 'master') {
+    const masterStats = {};
+    state.bookings.filter(b => b.status === 'completed').forEach(b => {
+      if (!masterStats[b.masterId]) {
+        masterStats[b.masterId] = { name: b.masterName || 'Любой мастер', count: 0, revenue: 0 };
+      }
+      masterStats[b.masterId].count += 1;
+      masterStats[b.masterId].revenue += parseFloat(b.price) || 0;
+    });
+ 
+    const topMasters = Object.values(masterStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+ 
+    topMastersHtml = topMasters.length === 0
+      ? `
+        <div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13px;">
+          Здесь появится рейтинг лучших мастеров
+        </div>
+      `
+      : topMasters.map((m, idx) => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-weight: 800; font-size: 13px; color: var(--primary); min-width: 16px;">#${idx + 1}</span>
+            <span style="font-weight: 600; font-size: 13px; color: var(--text);">${m.name}</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--text);">${formatPrice(m.revenue)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${m.count} вып. услуг</div>
+          </div>
+        </div>
+      `).join('');
+  }
+ 
+  // Смена кассы отображается только владельцу или менеджеру
+  let shiftBannerHtml = '';
+  if (userRole === 'owner' || userRole === 'manager') {
+    const activeShift = state.shifts.find(s => s.status === 'open');
+    if (activeShift) {
+      shiftBannerHtml = `
+        <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(16,185,129,0.1); border-radius: 50%; color: #10b981;">
+                <i data-feather="check-circle" style="width: 20px; height: 20px;"></i>
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text);">Кассовая смена открыта</div>
+                <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                  <i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена за ${formatDate(activeShift.openedAt || new Date().toISOString())}
+                </div>
+              </div>
+            </div>
+            <button onclick="showCloseShiftModal('${activeShift.id}')" class="btn btn-secondary" style="width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2);">Закрыть смену</button>
+          </div>
+        </div>
+      `;
+    } else {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const lastShift = state.shifts.find(s => s.openedAt && s.openedAt.startsWith(todayStr));
+      let closedTitle = 'Кассовая смена закрыта';
+      let closedDesc = 'Финансовые операции приостановлены. Откройте смену.';
+      
+      if (lastShift) {
+        closedTitle = `Кассовая смена за ${formatDate(lastShift.openedAt || todayStr)} закрыта`;
+        try {
+          if (lastShift.closedAt) {
+            const closedTimeStr = formatTime(lastShift.closedAt.split('T')[1] || lastShift.closedAt.split(' ')[1]);
+            closedDesc = `Смена закрыта в ${closedTimeStr}. Финансовые операции приостановлены.`;
+          }
+        } catch(e) {}
+      }
+      shiftBannerHtml = `
+        <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px; border-left: 4px solid #ef4444;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(239,68,68,0.1); border-radius: 50%; color: #ef4444;">
+                <i data-feather="x-circle" style="width: 20px; height: 20px;"></i>
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text);">${closedTitle}</div>
+                <div style="font-size: 12px; color: #ef4444; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                  <i data-feather="lock" style="width: 12px; height: 12px;"></i> ${closedDesc}
+                </div>
+              </div>
+            </div>
+            <button onclick="showOpenShiftModal()" class="btn btn-primary" style="background: #10b981; border-color: #10b981; width: auto;">Открыть смену</button>
+          </div>
+        </div>
+      `;
     }
-    masterStats[b.masterId].count += 1;
-    masterStats[b.masterId].revenue += parseFloat(b.price) || 0;
-  });
-
-  const topMasters = Object.values(masterStats)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
-
-  const topMastersHtml = topMasters.length === 0
-    ? `
-      <div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13px;">
-        Здесь появится рейтинг лучших мастеров
-      </div>
-    `
-    : topMasters.map((m, idx) => `
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-weight: 800; font-size: 13px; color: var(--primary); min-width: 16px;">#${idx + 1}</span>
-          <span style="font-weight: 600; font-size: 13px; color: var(--text);">${m.name}</span>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-weight: 700; font-size: 13px; color: var(--text);">${formatPrice(m.revenue)}</div>
-          <div style="font-size: 11px; color: var(--text-secondary);">${m.count} вып. услуг</div>
-        </div>
-      </div>
-    `).join('');
-
+  }
+ 
   return `
     <div class="animate-slide-up" style="display: flex; flex-direction: column; gap: 28px;">
       
       <!-- Приветствие и кнопка новой записи -->
       <div style="display: flex; flex-direction: column; gap: 16px;">
-        ${(() => {
-          const activeShift = state.shifts.find(s => s.status === 'open');
-          if (activeShift) {
-            return `
-              <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                  <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(16,185,129,0.1); border-radius: 50%; color: #10b981;">
-                      <i data-feather="check-circle" style="width: 20px; height: 20px;"></i>
-                    </div>
-                    <div>
-                      <div style="font-weight: 700; color: var(--text);">Кассовая смена открыта</div>
-                      <div style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                        <i data-feather="clock" style="width: 12px; height: 12px;"></i> Идет рабочая смена за ${formatDate(activeShift.openedAt || new Date().toISOString())}
-                      </div>
-                    </div>
-                  </div>
-                  <button onclick="showCloseShiftModal('${activeShift.id}')" class="btn btn-secondary" style="width: auto; color: #ef4444; border-color: rgba(239,68,68,0.2);">Закрыть смену</button>
-                </div>
-              </div>
-            `;
-          } else {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const lastShift = state.shifts.find(s => s.openedAt && s.openedAt.startsWith(todayStr));
-            let closedTitle = 'Кассовая смена закрыта';
-            let closedDesc = 'Финансовые операции приостановлены. Откройте смену.';
-            
-            if (lastShift) {
-              closedTitle = `Кассовая смена за ${formatDate(lastShift.openedAt || todayStr)} закрыта`;
-              try {
-                if (lastShift.closedAt) {
-                  const closedTimeStr = formatTime(lastShift.closedAt.split('T')[1] || lastShift.closedAt.split(' ')[1]);
-                  closedDesc = `Смена закрыта в ${closedTimeStr}. Финансовые операции приостановлены.`;
-                }
-              } catch(e) {}
-            }
-            return `
-              <div class="card p-6 animate-scale-in" style="display: flex; flex-direction: column; gap: 16px; border-left: 4px solid #ef4444;">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                  <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(239,68,68,0.1); border-radius: 50%; color: #ef4444;">
-                      <i data-feather="x-circle" style="width: 20px; height: 20px;"></i>
-                    </div>
-                    <div>
-                      <div style="font-weight: 700; color: var(--text);">${closedTitle}</div>
-                      <div style="font-size: 12px; color: #ef4444; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                        <i data-feather="lock" style="width: 12px; height: 12px;"></i> ${closedDesc}
-                      </div>
-                    </div>
-                  </div>
-                  <button onclick="showOpenShiftModal()" class="btn btn-primary" style="background: #10b981; border-color: #10b981; width: auto;">Открыть смену</button>
-                </div>
-              </div>
-            `;
-          }
-        })()}
+        ${shiftBannerHtml}
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
           <div>
             <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Главное</h1>
-            <p style="color: var(--text-secondary); font-size: 14px;">Обзор показателей вашего салона на сегодня</p>
+            <p style="color: var(--text-secondary); font-size: 14px;">
+              ${userRole === 'master' ? 'Обзор ваших показателей на сегодня' : 'Обзор показателей вашего салона на сегодня'}
+            </p>
           </div>
-          <button onclick="showCreateBookingModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px;">
-            <i data-feather="plus" style="width: 18px; height: 18px;"></i> Создать запись
-          </button>
+          ${userRole !== 'master' ? `
+            <button onclick="showCreateBookingModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px;">
+              <i data-feather="plus" style="width: 18px; height: 18px;"></i> Создать запись
+            </button>
+          ` : ''}
         </div>
       </div>
-
+ 
       <!-- Строка основных показателей -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
         <div class="stat-card">
@@ -298,12 +323,12 @@ window.renderDashboard = function () {
           <div class="text-[10px] md:text-[11px] lg:text-[12px]" style="color: var(--text-secondary); font-weight: 600; margin-top: 1px;">💳 За сеанс</div>
         </div>
       </div>
-
+ 
       <!-- График и Список записей -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- График выручки -->
-        <div class="card p-6 lg:col-span-2" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card p-6 ${userRole === 'master' ? 'lg:col-span-3' : 'lg:col-span-2'}" style="display: flex; flex-direction: column; gap: 20px;">
           <h3 style="font-weight: 800; font-size: 17px; color: var(--text);">Статистика выручки за 7 дней</h3>
           
           <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 180px; padding: 10px 0; border-bottom: 2px solid var(--border);">
@@ -320,7 +345,8 @@ window.renderDashboard = function () {
             }).join('')}
           </div>
         </div>
-
+ 
+        ${userRole !== 'master' ? `
         <!-- Рейтинг мастеров -->
         <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
           <h3 style="font-weight: 800; font-size: 17px; color: var(--text);">Рейтинг мастеров</h3>
@@ -328,8 +354,9 @@ window.renderDashboard = function () {
             ${topMastersHtml}
           </div>
         </div>
+        ` : ''}
       </div>
-
+ 
       <!-- Список записей на сегодня -->
       <div class="card p-6">
         <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 14px;">
@@ -343,10 +370,12 @@ window.renderDashboard = function () {
       </div>
       
       <!-- Плавающая кнопка (FAB) -->
-      <button onclick="showCreateBookingModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
-        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
-      </button>
-
+      ${userRole !== 'master' ? `
+        <button onclick="showCreateBookingModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+          <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+        </button>
+      ` : ''}
+ 
     </div>
   `;
 };

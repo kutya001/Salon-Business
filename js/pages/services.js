@@ -47,22 +47,22 @@ window.renderServices = function () {
         <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 12px; transition: all 0.2s;">
           <span style="font-weight: 800; font-size: 15px; color: var(--text);">${c.name}</span>
           <div style="display: flex; gap: 8px;">
-            <button onclick="const n = prompt('Новое название:', '${c.name}'); if(n && n.trim()) { const idx = state.categories.findIndex(x=>x.id==='${c.id}'); if(idx!==-1) { state.categories[idx].name=n.trim(); setState({categories: state.categories}); showToast('Синхронизация...', 'info'); } api.updateCategory('${c.id}', {name: n.trim()}).then(()=>showToast('Сохранено', 'success')).catch(()=>showToast('Ошибка', 'error')); }" class="btn btn-secondary" style="padding: 8px; border-radius: 8px;" title="Редактировать">
+            ${hasPermission('services_edit') ? `<button onclick="const n = prompt('Новое название:', '${c.name}'); if(n && n.trim()) { const idx = state.categories.findIndex(x=>x.id==='${c.id}'); if(idx!==-1) { state.categories[idx].name=n.trim(); setState({categories: state.categories}); showToast('Синхронизация...', 'info'); } api.updateCategory('${c.id}', {name: n.trim()}).then(()=>showToast('Сохранено', 'success')).catch(()=>showToast('Ошибка', 'error')); }" class="btn btn-secondary" style="padding: 8px; border-radius: 8px;" title="Редактировать">
               <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
-            </button>
-            <button onclick="handleDeleteCategory('${c.id}')" class="btn btn-secondary" style="color: #ef4444; background: rgba(239,68,68,0.1); border: none; padding: 8px; border-radius: 8px;" title="Удалить">
+            </button>` : ''}
+            ${hasPermission('services_edit') ? `<button onclick="handleDeleteCategory('${c.id}')" class="btn btn-secondary" style="color: #ef4444; background: rgba(239,68,68,0.1); border: none; padding: 8px; border-radius: 8px;" title="Удалить">
               <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-            </button>
+            </button>` : ''}
           </div>
         </div>
       `).join('');
 
     contentHtml = `
       <div class="animate-fade-in">
-        <form onsubmit="event.preventDefault(); handleCreateCategory();" style="display: flex; gap: 12px; margin-bottom: 24px; max-width: 600px;">
+        ${hasPermission('services_edit') ? `<form onsubmit="event.preventDefault(); handleCreateCategory();" style="display: flex; gap: 12px; margin-bottom: 24px; max-width: 600px;">
           <input type="text" id="cat-name-input" class="form-input" placeholder="Введите название нового вида (например: Стрижки, Массаж)..." required style="flex-grow: 1;">
           <button type="submit" class="btn btn-primary" style="white-space: nowrap; padding: 0 24px;"><i data-feather="plus" style="width: 16px; height: 16px; margin-right: 8px;"></i> Создать вид</button>
-        </form>
+        </form>` : ''}
         <div style="max-width: 600px;">
           ${catsHtml}
         </div>
@@ -194,8 +194,8 @@ window.renderServices = function () {
                         <span style="font-weight: 800; font-size: 18px; color: var(--primary);">${formatPrice(s.price)}</span>
                       </div>
                       <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i></button>
-                        <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);"><i data-feather="trash-2" style="width: 14px; height: 14px;"></i></button>
+                        ${hasPermission('services_edit') ? `<button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto;"><i data-feather="edit-2" style="width: 14px; height: 14px;"></i></button>` : ''}
+                        ${hasPermission('services_delete') ? `<button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15);"><i data-feather="trash-2" style="width: 14px; height: 14px;"></i></button>` : ''}
                       </div>
                     </div>
                   </div>
@@ -233,12 +233,12 @@ window.renderServices = function () {
                           </td>
                           <td style="padding: 16px; text-align: right;">
                             <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                              <button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto;" title="Редактировать">
+                              ${hasPermission('services_edit') ? `<button onclick="showEditServiceModal('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto;" title="Редактировать">
                                 <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
-                              </button>
-                              <button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); background: rgba(239,68,68,0.05);" title="Удалить">
+                              </button>` : ''}
+                              ${hasPermission('services_delete') ? `<button onclick="handleDeleteService('${s.id}')" class="btn btn-secondary" style="padding: 8px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); background: rgba(239,68,68,0.05);" title="Удалить">
                                 <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
-                              </button>
+                              </button>` : ''}
                             </div>
                           </td>
                         </tr>
@@ -271,7 +271,7 @@ window.renderServices = function () {
       <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div style="display: flex; align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Виды и Услуги</h1>
-          ${activeTab !== 'templates' ? `
+          ${activeTab !== 'templates' && hasPermission('services_edit') ? `
             <button onclick="${fabAction}" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
               <i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}
             </button>
@@ -284,7 +284,8 @@ window.renderServices = function () {
       ${contentHtml}
 
       <!-- Плавающая кнопка (FAB) -->
-      ${activeTab !== 'templates' ? `
+      <!-- Плавающая кнопка (FAB) -->
+      ${activeTab !== 'templates' && hasPermission('services_edit') ? `
         <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
           <i data-feather="plus" style="width: 24px; height: 24px;"></i>
         </button>

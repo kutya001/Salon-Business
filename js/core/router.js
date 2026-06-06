@@ -2,8 +2,34 @@
 // router.js — Упрощенный роутер и макет (Layout) с поддержкой ролей
 // ============================================
 
+window.hasPermission = function(permissionName) {
+  const role = state.userProfile?.role || 'master';
+  if (role === 'owner' || role === 'super_admin') return true;
+  if (role === 'master') {
+    if (permissionName === 'dashboard_view') return true;
+    if (permissionName === 'bookings_view') return true;
+    if (permissionName === 'settings_view_profile') return true;
+    return false;
+  }
+  if (role === 'manager') {
+    const activeEmployment = (state.myEmployments || []).find(e => e.business_id === state.ui.activeBusinessId && e.status === 'approved');
+    const permissions = activeEmployment?.permissions || {};
+    return permissions[permissionName] !== false;
+  }
+  return false;
+};
+
 window.navigate = function (page) {
   setUI({ sidebarOpen: false });
+  
+  if (page === 'dashboard' && !hasPermission('dashboard_view')) return;
+  if (page === 'bookings' && !hasPermission('bookings_view')) return;
+  if (page === 'masters' && !hasPermission('employees_view')) return;
+  if (page === 'clients' && !hasPermission('clients_view')) return;
+  if (page === 'services' && !hasPermission('services_view')) return;
+  if (page === 'finance' && !hasPermission('finance_view')) return;
+  if (page === 'super_admin_panel' && state.userProfile?.role !== 'super_admin') return;
+
   setState({ currentPage: page });
 };
 
@@ -78,22 +104,27 @@ window.renderLayout = function () {
       { id: 'settings', label: 'Настройки', icon: 'settings' }
     ];
   } else {
-    menuItems = [
-      { id: 'dashboard', label: 'Главное', icon: 'grid' },
-      { id: 'bookings', label: 'Записи', icon: 'calendar' },
-      { id: 'masters', label: 'Сотрудники', icon: 'users' },
-      { id: 'clients', label: 'Клиенты', icon: 'user' },
-      { id: 'services', label: 'Услуги', icon: 'scissors' }
-    ];
-
-    if (role === 'owner' || role === 'manager') {
+    if (hasPermission('dashboard_view')) {
+      menuItems.push({ id: 'dashboard', label: 'Главное', icon: 'grid' });
+    }
+    if (hasPermission('bookings_view')) {
+      menuItems.push({ id: 'bookings', label: 'Записи', icon: 'calendar' });
+    }
+    if (hasPermission('employees_view')) {
+      menuItems.push({ id: 'masters', label: 'Сотрудники', icon: 'users' });
+    }
+    if (hasPermission('clients_view')) {
+      menuItems.push({ id: 'clients', label: 'Клиенты', icon: 'user' });
+    }
+    if (hasPermission('services_view')) {
+      menuItems.push({ id: 'services', label: 'Услуги', icon: 'scissors' });
+    }
+    if (hasPermission('finance_view') && (role === 'owner' || role === 'manager')) {
       menuItems.push({ id: 'finance', label: 'Финансы', icon: 'dollar-sign' });
     }
-
     if (role === 'master' || role === 'manager') {
       menuItems.push({ id: 'job_search', label: 'Поиск работы', icon: 'search' });
     }
-
     menuItems.push({ id: 'settings', label: 'Настройки', icon: 'settings' });
   }
 
@@ -112,11 +143,16 @@ window.renderLayout = function () {
   if (role === 'super_admin') {
     mobileTabsList = ['super_admin_panel', 'settings'];
   } else {
-    mobileTabsList = ['dashboard', 'bookings', 'masters'];
-    if (role === 'owner' || role === 'manager') {
+    if (hasPermission('dashboard_view')) mobileTabsList.push('dashboard');
+    if (hasPermission('bookings_view')) mobileTabsList.push('bookings');
+    if (hasPermission('employees_view')) mobileTabsList.push('masters');
+    if (hasPermission('finance_view') && (role === 'owner' || role === 'manager')) {
       mobileTabsList.push('finance');
-    } else {
+    } else if (role === 'master' || role === 'manager') {
       mobileTabsList.push('job_search');
+    }
+    if (mobileTabsList.length === 0) {
+      mobileTabsList.push('settings');
     }
   }
 
@@ -169,6 +205,7 @@ window.renderLayout = function () {
     else if (state.ui.modal === 'bookingMessage' && window.renderBookingMessageModal) modalContent = renderBookingMessageModal();
     else if (state.ui.modal === 'viewMaster' && window.renderMasterDetailsModal) modalContent = renderMasterDetailsModal();
     else if (state.ui.modal === 'syncLogs' && window.renderSyncLogsModal) modalContent = renderSyncLogsModal();
+    else if (state.ui.modal === 'employeePermissions' && window.renderEmployeePermissionsModal) modalContent = renderEmployeePermissionsModal();
     else modalContent = `<div class="p-6">Неизвестное модальное окно: ${state.ui.modal}</div>`;
 
     modalHtml = `

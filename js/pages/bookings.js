@@ -23,6 +23,14 @@ window.renderBookings = function () {
 
   // Фильтрация записей
   let filteredBookings = [...state.bookings];
+
+  // RBAC: мастер видит только свои записи
+  if (state.userProfile?.role === 'master') {
+    const masterRecord = state.masters.find(m => m.user_id === state.userProfile?.id);
+    if (masterRecord) {
+      filteredBookings = filteredBookings.filter(b => b.masterId === masterRecord.id);
+    }
+  }
   
   if (filters.dateFrom) {
     filteredBookings = filteredBookings.filter(b => b.date >= filters.dateFrom);
@@ -193,9 +201,9 @@ window.renderBookings = function () {
       <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Записи салона</h1>
-          <button onclick="showCreateBookingModal()" class="hidden md-flex btn btn-primary" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+          ${hasPermission('bookings_edit') ? `<button onclick="showCreateBookingModal()" class="hidden md-flex btn btn-primary" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
             <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить запись
-          </button>
+          </button>` : ''}
         </div>
       </div>
 
@@ -235,9 +243,9 @@ window.renderBookings = function () {
       ${viewHtml}
       
       <!-- Плавающая кнопка добавления записи (FAB) -->
-      <button onclick="showCreateBookingModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+      ${hasPermission('bookings_edit') ? `<button onclick="showCreateBookingModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
         <i data-feather="plus" style="width: 24px; height: 24px;"></i>
-      </button>
+      </button>` : ''}
     </div>
   `;
 };
@@ -295,16 +303,18 @@ function renderBookingsTable(bookings) {
 
     // Quick actions
     let actionBtnHtml = '';
-    if (b.status === 'pending') {
-      actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
-      `;
-    } else if (b.status === 'confirmed') {
-      actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
-      `;
+    if (hasPermission('bookings_edit')) {
+      if (b.status === 'pending') {
+        actionBtnHtml = `
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+        `;
+      } else if (b.status === 'confirmed') {
+        actionBtnHtml = `
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+        `;
+      }
     }
 
     // Master Dropdown (styled as select on mobile)
@@ -312,11 +322,11 @@ function renderBookingsTable(bookings) {
       <option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>
     `).join('');
 
-    const masterText = `
+    const masterText = hasPermission('bookings_edit') ? `
       <select onchange="event.stopPropagation(); handleQuickUpdateBookingMaster('${b.id}', this.value);" style="background: transparent; border: none; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; padding: 0; outline: none; width: auto; max-width: 140px; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
         ${masterOptionsHtml}
       </select>
-    `;
+    ` : `<span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">${state.masters.find(m => m.id === b.masterId)?.name || 'Не назначен'}</span>`;
     
     const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
     const statusHtmlMobile = `<span class="badge ${statusColor}" style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; padding: 0;" title="${statusLabel}"><i data-feather="${iconStr}" style="width: 14px; height: 14px;"></i></span>`;
@@ -364,16 +374,18 @@ function renderBookingsTable(bookings) {
     const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
     
     let actionBtnHtml = '';
-    if (b.status === 'pending') {
-      actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
-      `;
-    } else if (b.status === 'confirmed') {
-      actionBtnHtml = `
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
-        <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
-      `;
+    if (hasPermission('bookings_edit')) {
+      if (b.status === 'pending') {
+        actionBtnHtml = `
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+        `;
+      } else if (b.status === 'confirmed') {
+        actionBtnHtml = `
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'completed')" title="Завершить/Оплатить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #10b981;"><i data-feather="credit-card" style="width: 14px; height: 14px;"></i></button>
+          <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" title="Отменить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: #ef4444;"><i data-feather="x" style="width: 14px; height: 14px;"></i></button>
+        `;
+      }
     }
 
     return `
@@ -388,11 +400,11 @@ function renderBookingsTable(bookings) {
         <td onclick="event.stopPropagation();">
           <div style="display: flex; align-items: center; gap: 6px;">
             <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text);">${getInitials(b.masterName)}</div>
-            <select onchange="handleQuickUpdateBookingMaster('${b.id}', this.value);" style="background: transparent; border: none; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; padding: 2px 4px; outline: none; width: auto; max-width: 140px;">
+            ${hasPermission('bookings_edit') ? `<select onchange="handleQuickUpdateBookingMaster('${b.id}', this.value);" style="background: transparent; border: none; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; padding: 2px 4px; outline: none; width: auto; max-width: 140px;">
               ${`<option value="">👤 Любой мастер</option>` + state.masters.map(m => `
                 <option value="${m.id}" ${b.masterId === m.id ? 'selected' : ''}>${m.name}</option>
               `).join('')}
-            </select>
+            </select>` : `<span style="font-size: 13px; font-weight: 600; color: var(--text);">${state.masters.find(m => m.id === b.masterId)?.name || 'Не назначен'}</span>`}
           </div>
         </td>
         <td style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(b.price)}</td>
@@ -506,7 +518,7 @@ function renderBookingsTimeline(bookings) {
 
       const bookingBlocks = matchBookings.map(b => {
         let actions = '';
-        if (b.status === 'pending' || b.status === 'confirmed') {
+        if (hasPermission('bookings_edit') && (b.status === 'pending' || b.status === 'confirmed')) {
           const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
           const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
           actions = `
@@ -757,16 +769,18 @@ window.renderBookingDetailsModal = function () {
   const statusLabel = getStatusLabel(b.status);
 
   let actionsHtml = '';
-  if (b.status === 'pending') {
-    actionsHtml = `
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="thumbs-up" style="width: 16px; height: 16px;"></i> Подтвердить</button>
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'cancelled')" class="btn btn-danger" style="flex: 1; background: #dc2626; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="x" style="width: 16px; height: 16px;"></i> Отклонить</button>
-    `;
-  } else if (b.status === 'confirmed') {
-    actionsHtml = `
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="flex: 1; background: #10b981; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="check-circle" style="width: 16px; height: 16px;"></i> Завершить сеанс</button>
-      <button onclick="handleUpdateBookingStatus('${b.id}', 'no-show')" class="btn btn-secondary" style="flex: 1; color: #ef4444; border-color: rgba(239,68,68,0.2); display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="user-x" style="width: 16px; height: 16px;"></i> Не пришел</button>
-    `;
+  if (hasPermission('bookings_edit')) {
+    if (b.status === 'pending') {
+      actionsHtml = `
+        <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="thumbs-up" style="width: 16px; height: 16px;"></i> Подтвердить</button>
+        <button onclick="handleUpdateBookingStatus('${b.id}', 'cancelled')" class="btn btn-danger" style="flex: 1; background: #dc2626; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="x" style="width: 16px; height: 16px;"></i> Отклонить</button>
+      `;
+    } else if (b.status === 'confirmed') {
+      actionsHtml = `
+        <button onclick="handleUpdateBookingStatus('${b.id}', 'completed')" class="btn btn-primary" style="flex: 1; background: #10b981; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="check-circle" style="width: 16px; height: 16px;"></i> Завершить сеанс</button>
+        <button onclick="handleUpdateBookingStatus('${b.id}', 'no-show')" class="btn btn-secondary" style="flex: 1; color: #ef4444; border-color: rgba(239,68,68,0.2); display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="user-x" style="width: 16px; height: 16px;"></i> Не пришел</button>
+      `;
+    }
   }
 
   return `
@@ -819,14 +833,14 @@ window.renderBookingDetailsModal = function () {
         <button onclick="showBookingMessageModal('${b.id}')" class="btn btn-secondary" style="flex: 1; min-width: 140px; color: #3b82f6; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.05); display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="message-circle" style="width: 16px; height: 16px;"></i> Отправить сообщение</button>
       </div>
 
-      <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; justify-content: space-between;">
+      ${hasPermission('bookings_edit') ? `<div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; justify-content: space-between;">
         <button onclick="showEditBookingModal('${b.id}')" class="btn btn-secondary" style="width: auto; display: flex; align-items: center; gap: 6px;">
           <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Редактировать
         </button>
         <button onclick="handleDeleteBooking('${b.id}')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto; display: flex; align-items: center; gap: 6px;">
           <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Удалить запись
         </button>
-      </div>
+      </div>` : ''}
     </div>
   `;
 };
@@ -1308,7 +1322,11 @@ window.renderBookingModal = function () {
     
     const grouped = {};
     svcs.forEach(s => {
-      const t = s.categoryName || 'Другое';
+      let t = s.categoryName;
+      if (!t && s.categoryId) {
+        t = (state.categories || []).find(c => c.id === s.categoryId)?.name;
+      }
+      t = t || 'Другое';
       if (!grouped[t]) grouped[t] = [];
       grouped[t].push(s);
     });

@@ -75,6 +75,7 @@ CREATE TABLE public.business_members (
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('manager', 'master')),
     status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+    permissions JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
     UNIQUE(business_id, user_id)
 );
@@ -109,8 +110,12 @@ CREATE TABLE public.masters (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id UUID REFERENCES public.business(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    phone TEXT,
     specialization TEXT,
     avatar TEXT,
+    percentage NUMERIC DEFAULT 40,
+    work_hours_start TEXT DEFAULT '09:00',
+    work_hours_end TEXT DEFAULT '20:00',
     services JSONB DEFAULT '[]'::jsonb,
     user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
@@ -408,10 +413,10 @@ BEGIN
     RETURNING id INTO v_nail_cat_id;
 
     -- 5. Create Services
-    INSERT INTO public.services (category_id, name, price, duration, business_id) VALUES
-    (v_hair_cat_id, 'Женская стрижка', 1200, 60, v_business_id),
-    (v_hair_cat_id, 'Мужская стрижка', 800, 45, v_business_id),
-    (v_nail_cat_id, 'Маникюр с покрытием Gel', 1500, 90, v_business_id);
+    INSERT INTO public.services (category_id, name, price, duration, gender_category, business_id) VALUES
+    (v_hair_cat_id, 'Женская стрижка', 1200, 60, 'female', v_business_id),
+    (v_hair_cat_id, 'Мужская стрижка', 800, 45, 'male', v_business_id),
+    (v_nail_cat_id, 'Маникюр с покрытием Gel', 1500, 90, 'female', v_business_id);
 
     -- 6. Get Owner Username
     SELECT username INTO v_username FROM public.profiles WHERE id = p_owner_id;

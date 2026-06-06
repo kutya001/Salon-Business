@@ -528,22 +528,29 @@ class SupabaseAPI {
             dateTo = dTo.toISOString().split('T')[0];
           }
 
+          // Получаем первую группу основных данных (6 запросов)
           const [
-            businessRes, categoriesRes, mastersRes, servicesRes, clientsRes,
-            bookingsRes, transactionsRes, shiftsRes, walletsRes, tCatRes, membersRes
+            businessRes, categoriesRes, mastersRes, servicesRes, clientsRes, bookingsRes
           ] = await Promise.all([
             this.client.from('business').select('*').eq('id', activeId).maybeSingle(),
             this.client.from('categories').select('*').eq('business_id', activeId),
             this.client.from('masters').select('*').eq('business_id', activeId),
             this.client.from('services').select('*').eq('business_id', activeId),
             this.client.from('clients').select('*').eq('business_id', activeId),
-            this.client.from('bookings').select('*, client:clients(name, phone), master:masters(name)').eq('business_id', activeId).gte('date', dateFrom).lte('date', dateTo),
+            this.client.from('bookings').select('*, client:clients(name, phone), master:masters(name)').eq('business_id', activeId).gte('date', dateFrom).lte('date', dateTo)
+          ]);
+
+          // Получаем вторую группу финансовых и административных данных (5 запросов)
+          const [
+            transactionsRes, shiftsRes, walletsRes, tCatRes, membersRes
+          ] = await Promise.all([
             this.client.from('transactions').select('*').eq('business_id', activeId),
             this.client.from('shifts').select('*').eq('business_id', activeId),
             this.client.from('wallets').select('*').eq('business_id', activeId),
             this.client.from('transaction_categories').select('*').eq('business_id', activeId),
             this.client.from('business_members').select('*, profiles(username)').eq('business_id', activeId)
           ]);
+
 
           result.business = mapDbBusinessToFrontend(businessRes.data) || null;
           result.categories = categoriesRes.data || [];

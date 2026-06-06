@@ -96,38 +96,68 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Настройка Supabase Realtime
+let isSyncing = false;
+let syncPending = false;
+
 function setupRealtime() {
   const channel = window.supabaseClient.channel('public:all');
   
   channel
     .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
       console.log('Realtime change received!', payload);
-      try {
-        const allData = await window.api.getAll({ background: true });
-        setState({
-          userProfile: allData.userProfile,
-          myBusinesses: allData.myBusinesses || [],
-          myEmployments: allData.myEmployments || [],
-          allSalons: allData.allSalons || [],
-          business: allData.business || null,
-          categories: allData.categories || [],
-          masters: allData.masters || [],
-          services: allData.services || [],
-          bookings: allData.bookings || [],
-          clients: allData.clients || [],
-          transactions: allData.transactions || [],
-          shifts: allData.shifts || [],
-          wallets: allData.wallets || [],
-          transactionCategories: allData.transactionCategories || [],
-          jobApplications: allData.jobApplications || [],
-          allUsers: allData.allUsers || [],
-          allBusinesses: allData.allBusinesses || [],
-          globalCategories: allData.globalCategories || [],
-          globalServices: allData.globalServices || []
-        });
-      } catch (e) {
-        console.error('Ошибка фонового обновления после realtime event:', e);
+      
+      if (isSyncing) {
+        syncPending = true;
+        return;
       }
+      
+      isSyncing = true;
+      
+      async function runSync() {
+        try {
+          const allData = await window.api.getAll({ background: true });
+          setState({
+            userProfile: allData.userProfile,
+            myBusinesses: allData.myBusinesses || [],
+            myEmployments: allData.myEmployments || [],
+            allSalons: allData.allSalons || [],
+            business: allData.business || null,
+            categories: allData.categories || [],
+            masters: allData.masters || [],
+            services: allData.services || [],
+            bookings: allData.bookings || [],
+            clients: allData.clients || [],
+            transactions: allData.transactions || [],
+            shifts: allData.shifts || [],
+            wallets: allData.wallets || [],
+            transactionCategories: allData.transactionCategories || [],
+            jobApplications: allData.jobApplications || [],
+            allUsers: allData.allUsers || [],
+            allBusinesses: allData.allBusinesses || [],
+            globalCategories: allData.globalCategories || [],
+            globalServices: allData.globalServices || []
+          });
+        } catch (e) {
+          console.error('Ошибка фонового обновления после realtime event:', e);
+        } finally {
+          isSyncing = false;
+          if (syncPending) {
+            syncPending = false;
+            // Cooldown to bundle subsequent changes
+            setTimeout(() => {
+              if (!isSyncing) {
+                isSyncing = true;
+                runSync();
+              }
+            }, 300);
+          }
+        }
+      }
+      
+      // Debounce slightly to allow batching
+      setTimeout(() => {
+        runSync();
+      }, 100);
     })
     .subscribe((status) => {
       console.log('Realtime subscription status:', status);

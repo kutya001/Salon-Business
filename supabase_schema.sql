@@ -378,6 +378,7 @@ DECLARE
     v_business_id UUID;
     v_hair_cat_id UUID;
     v_nail_cat_id UUID;
+    v_username TEXT;
 BEGIN
     -- 1. Create Business
     INSERT INTO public.business (name, owner_id)
@@ -411,6 +412,20 @@ BEGIN
     (v_hair_cat_id, 'Женская стрижка', 1200, 60, v_business_id),
     (v_hair_cat_id, 'Мужская стрижка', 800, 45, v_business_id),
     (v_nail_cat_id, 'Маникюр с покрытием Gel', 1500, 90, v_business_id);
+
+    -- 6. Get Owner Username
+    SELECT username INTO v_username FROM public.profiles WHERE id = p_owner_id;
+    IF v_username IS NULL THEN
+        v_username := 'Владелец';
+    END IF;
+
+    -- 7. Create Owner as Master
+    INSERT INTO public.masters (business_id, name, user_id, specialization)
+    VALUES (v_business_id, v_username, p_owner_id, 'Владелец / Мастер');
+
+    -- 8. Add Owner to Business Members as Approved Master
+    INSERT INTO public.business_members (business_id, user_id, role, status)
+    VALUES (v_business_id, p_owner_id, 'master', 'approved');
 
     RETURN v_business_id;
 END;

@@ -308,6 +308,53 @@ class SupabaseAPI {
     return true;
   }
 
+  // Обновление роли сотрудника (Мастер / Менеджер)
+  async updateEmployeeRole(memberId, userId, role, username) {
+    const activeId = window.state?.ui?.activeBusinessId;
+    if (!activeId) throw new Error('Салон не выбран');
+
+    const { error: updateError } = await this.client
+      .from('business_members')
+      .update({ role })
+      .eq('id', memberId);
+
+    if (updateError) throw updateError;
+
+    if (role === 'master') {
+      // Автоматически создаем карточку мастера, если ее еще нет
+      const { data: existing, error: findErr } = await this.client
+        .from('masters')
+        .select('*')
+        .eq('business_id', activeId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (findErr) console.error('Ошибка поиска мастера:', findErr);
+
+      if (!existing) {
+        const { error: masterError } = await this.client.from('masters').insert([
+          {
+            business_id: activeId,
+            name: username,
+            user_id: userId,
+            specialization: 'Мастер'
+          }
+        ]);
+        if (masterError) console.error('Ошибка автоматического создания мастера при смене роли:', masterError);
+      }
+    } else if (role === 'manager') {
+      // Удаляем карточку мастера, если перевели в менеджеры
+      const { error: delError } = await this.client
+        .from('masters')
+        .delete()
+        .eq('business_id', activeId)
+        .eq('user_id', userId);
+      if (delError) console.error('Ошибка удаления мастера при смене роли:', delError);
+    }
+
+    return true;
+  }
+
   // RPC методы для суперадминистратора
   async adminUpdateUser(targetUserId, username, role, password = '') {
     const { error } = await this.client.rpc('admin_update_user', {

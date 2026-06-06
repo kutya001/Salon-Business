@@ -64,7 +64,6 @@ window.renderLayout = function () {
   else if (page === 'finance' && window.renderFinance) pageContent = renderFinance();
   else if (page === 'settings' && window.renderSettings) pageContent = renderSettings();
   else if (page === 'job_search' && window.renderJobSearch) pageContent = renderJobSearch();
-  else if (page === 'members_control' && window.renderMembersControl) pageContent = renderMembersControl();
   else if (page === 'super_admin_panel' && window.renderSuperAdminPanel) pageContent = renderSuperAdminPanel();
   else pageContent = `<div class="p-8 text-center">Раздел "${page}" недоступен или находится в разработке</div>`;
 
@@ -82,17 +81,13 @@ window.renderLayout = function () {
     menuItems = [
       { id: 'dashboard', label: 'Главное', icon: 'grid' },
       { id: 'bookings', label: 'Записи', icon: 'calendar' },
-      { id: 'masters', label: 'Мастера', icon: 'users' },
+      { id: 'masters', label: 'Сотрудники', icon: 'users' },
       { id: 'clients', label: 'Клиенты', icon: 'user' },
       { id: 'services', label: 'Услуги', icon: 'scissors' }
     ];
 
     if (role === 'owner' || role === 'manager') {
       menuItems.push({ id: 'finance', label: 'Финансы', icon: 'dollar-sign' });
-    }
-
-    if (role === 'owner') {
-      menuItems.push({ id: 'members_control', label: 'Сотрудники', icon: 'user-plus' });
     }
 
     if (role === 'master' || role === 'manager') {

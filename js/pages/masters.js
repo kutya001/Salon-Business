@@ -1,10 +1,15 @@
 // ============================================
-// masters.js — Управление мастерами салона
+// masters.js — Управление сотрудниками салона (Мастера + Доступы)
 // ============================================
 
 window.renderMasters = function () {
+  const userRole = state.userProfile?.role || 'master';
+  const isOwnerOrManager = userRole === 'owner' || userRole === 'manager';
+  const activeTab = state.ui.mastersActiveTab || 'masters';
+
   const currentMonthStr = new Date().toISOString().substring(0, 7); // 'YYYY-MM'
 
+  // --- Вкладка "Мастера" ---
   const masterCardsHtml = state.masters.length === 0
     ? `
       <div class="card p-12 text-center" style="color: var(--text-secondary); grid-column: 1 / -1;">
@@ -36,7 +41,7 @@ window.renderMasters = function () {
               </div>
               <div style="flex-grow: 1;">
                 <h3 style="font-weight: 800; font-size: 16px; color: var(--text);">${m.name}</h3>
-                <p style="font-size: 12px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">${m.specialization}</p>
+                <p style="font-size: 12px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">${m.specialization || 'Специалист'}</p>
               </div>
             </div>
 
@@ -75,32 +80,172 @@ window.renderMasters = function () {
         `;
       }).join('');
 
+  // --- Вкладка "Сотрудники" (Заявки + Роли) ---
+  const applications = state.jobApplications || [];
+  const pendingApps = applications.filter(a => a.status === 'pending');
+  const approvedApps = applications.filter(a => a.status === 'approved');
+
+  const pendingHtml = pendingApps.length === 0 ? `
+    <div style="color: var(--text-secondary); text-align: center; padding: 24px; background: rgba(255,255,255,0.01); border-radius: 16px; border: 1px dashed var(--border);">
+      <p style="font-size: 13px; margin: 0;">Новых заявок на вступление нет</p>
+    </div>
+  ` : pendingApps.map(app => {
+    const roleText = app.role === 'manager' ? 'Менеджер' : 'Мастер';
+    return `
+      <div class="card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(251,191,36,0.03); border: 1px solid rgba(251,191,36,0.2); border-radius: 16px;">
+        <div>
+          <div style="font-weight: 800; font-size: 15px; color: var(--text);">${app.profiles?.username || 'Сотрудник'}</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Запрошенная роль: <span style="font-weight: 700; color: var(--primary);">${roleText}</span></div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'approved')" class="btn btn-primary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #34d399; color: white;">
+            Одобрить
+          </button>
+          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2);">
+            Отклонить
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const approvedHtml = approvedApps.length === 0 ? `
+    <div style="color: var(--text-secondary); text-align: center; padding: 24px; background: rgba(255,255,255,0.01); border-radius: 16px; border: 1px dashed var(--border);">
+      <p style="font-size: 13px; margin: 0;">В салоне пока нет одобренных сотрудников</p>
+    </div>
+  ` : approvedApps.map(app => {
+    return `
+      <div class="card glass-island" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border);">
+        <div>
+          <div style="font-weight: 800; font-size: 15px; color: var(--text);">${app.profiles?.username || 'Сотрудник'}</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Доступ / Роль:</span>
+            <select onchange="handleUpdateEmployeeRole('${app.id}', '${app.user_id}', this.value, '${app.profiles?.username}')" style="padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); cursor: pointer; outline: none;">
+              <option value="master" ${app.role === 'master' ? 'selected' : ''}>Мастер (исполнитель)</option>
+              <option value="manager" ${app.role === 'manager' ? 'selected' : ''}>Менеджер (администратор)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">
+            Исключить
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // --- Сборка контента страницы ---
+  let contentHtml = '';
+  if (activeTab === 'masters') {
+    contentHtml = `
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${masterCardsHtml}
+      </div>
+    `;
+  } else {
+    contentHtml = `
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <h2 style="font-weight: 700; font-size: 15px; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+            <i data-feather="clock" style="width: 16px; height: 16px;"></i> Заявки на рассмотрении
+          </h2>
+          ${pendingHtml}
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+          <h2 style="font-weight: 700; font-size: 15px; color: #34d399; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+            <i data-feather="check-circle" style="width: 16px; height: 16px;"></i> Действующие сотрудники
+          </h2>
+          ${approvedHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  // --- Переключатели вкладок ---
+  const tabsHtml = isOwnerOrManager ? `
+    <div style="display: flex; gap: 8px; border-bottom: 2px solid var(--border); padding-bottom: 0; margin-bottom: 8px;">
+      <button onclick="setMastersTab('masters')" style="padding: 10px 16px; font-weight: 700; font-size: 14px; border: none; background: none; color: ${activeTab === 'masters' ? 'var(--primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid ${activeTab === 'masters' ? 'var(--primary)' : 'transparent'}; margin-bottom: -2px; cursor: pointer; transition: all 0.2s;">
+        Мастера
+      </button>
+      <button onclick="setMastersTab('employees')" style="padding: 10px 16px; font-weight: 700; font-size: 14px; border: none; background: none; color: ${activeTab === 'employees' ? 'var(--primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid ${activeTab === 'employees' ? 'var(--primary)' : 'transparent'}; margin-bottom: -2px; cursor: pointer; transition: all 0.2s;">
+        Управление доступом
+      </button>
+    </div>
+  ` : '';
+
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 28px; padding-bottom: 80px;">
       
       <!-- Заголовок -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div>
-          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;"><i data-feather="star" style="width: 28px; height: 28px;"></i> Мастера и расписание</h1>
-          <p style="color: var(--text-secondary); font-size: 14px;">Управление командой профессионалов и расчетом заработных плат</p>
+          <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;">
+            <i data-feather="users" style="width: 28px; height: 28px;"></i> Сотрудники салона
+          </h1>
+          <p style="color: var(--text-secondary); font-size: 14px;">Управление доступом, ролями, сотрудниками и настройками мастеров</p>
         </div>
-        <button onclick="showCreateMasterModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
-          <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить
-        </button>
+        ${activeTab === 'masters' ? `
+          <button onclick="showCreateMasterModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+            <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить мастера
+          </button>
+        ` : ''}
       </div>
 
-      <!-- Сетка карточек -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        ${masterCardsHtml}
-      </div>
+      ${tabsHtml}
+
+      ${contentHtml}
       
-      <!-- Плавающая кнопка (FAB) -->
-      <button onclick="showCreateMasterModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
-        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
-      </button>
-
+      <!-- Плавающая кнопка (FAB) только на вкладке мастеров -->
+      ${activeTab === 'masters' ? `
+        <button onclick="showCreateMasterModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+          <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+        </button>
+      ` : ''}
     </div>
   `;
+};
+
+window.setMastersTab = function (tab) {
+  setUI({ mastersActiveTab: tab });
+};
+
+window.handleUpdateEmployeeRole = async function (memberId, userId, newRole, username) {
+  setUI({ loading: true });
+  try {
+    await api.updateEmployeeRole(memberId, userId, newRole, username);
+    showToast('Роль сотрудника успешно обновлена', 'success');
+    const allData = await api.getAll();
+    setState({
+      jobApplications: allData.jobApplications || [],
+      masters: allData.masters || []
+    });
+  } catch (err) {
+    showToast(err.message || 'Ошибка изменения роли', 'error');
+  } finally {
+    setUI({ loading: false });
+  }
+};
+
+window.handleJobApplication = async function (memberId, userId, role, username, status) {
+  setUI({ loading: true });
+  try {
+    const activeId = state.ui.activeBusinessId;
+    await api.respondToJobApplication(memberId, activeId, userId, role, username, status);
+    showToast(status === 'approved' ? 'Заявка успешно одобрена!' : 'Сотрудник исключен/отклонен', 'success');
+    
+    // Перезапрашиваем данные
+    const allData = await api.getAll();
+    setState({
+      jobApplications: allData.jobApplications || [],
+      masters: allData.masters || []
+    });
+  } catch (err) {
+    showToast(err.message || 'Ошибка обработки заявки', 'error');
+  } finally {
+    setUI({ loading: false });
+  }
 };
 
 // Открытие модалки создания мастера
@@ -355,7 +500,7 @@ window.renderMasterDetailsModal = function() {
           </div>
           <div style="overflow: hidden;">
             <h3 style="font-weight: 800; font-size: 20px; color: var(--text); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.name}</h3>
-            <p style="font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</p>
+            <p style="font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization || 'Специалист'}</p>
           </div>
         </div>
         <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-feather="x"></i></button>

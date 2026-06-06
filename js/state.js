@@ -5,7 +5,6 @@
 window.state = {
   isAuthenticated: false,
   currentPage: 'dashboard',
-  gasUrl: '', // Ссылка на Google Apps Script, сохраняется в localStorage
   token: '',  // Токен сессии, сохраняется в sessionStorage
   
   // Данные бизнеса
@@ -107,7 +106,7 @@ window.setTxFilters = function (updates) {
   if (window.render) window.render();
 };
 
-// Вспомогательная функция ведения лога GAS API
+// Вспомогательная функция ведения лога API
 window.logApiCall = function (type, action, details) {
   const time = new Date().toLocaleTimeString('ru-RU');
   const logs = [...(window.state.apiLogs || [])];

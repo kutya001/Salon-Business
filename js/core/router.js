@@ -75,7 +75,8 @@ window.renderLayout = function () {
   let menuItems = [];
   if (role === 'super_admin') {
     menuItems = [
-      { id: 'super_admin_panel', label: 'Админ-панель', icon: 'shield' }
+      { id: 'super_admin_panel', label: 'Админ-панель', icon: 'shield' },
+      { id: 'settings', label: 'Настройки', icon: 'settings' }
     ];
   } else {
     menuItems = [
@@ -92,12 +93,13 @@ window.renderLayout = function () {
 
     if (role === 'owner') {
       menuItems.push({ id: 'members_control', label: 'Сотрудники', icon: 'user-plus' });
-      menuItems.push({ id: 'settings', label: 'Настройки', icon: 'settings' });
     }
 
     if (role === 'master' || role === 'manager') {
       menuItems.push({ id: 'job_search', label: 'Поиск работы', icon: 'search' });
     }
+
+    menuItems.push({ id: 'settings', label: 'Настройки', icon: 'settings' });
   }
 
   const sidebarLinks = menuItems.map(item => {
@@ -113,7 +115,7 @@ window.renderLayout = function () {
   // Нижняя панель для мобильных
   let mobileTabsList = [];
   if (role === 'super_admin') {
-    mobileTabsList = ['super_admin_panel'];
+    mobileTabsList = ['super_admin_panel', 'settings'];
   } else {
     mobileTabsList = ['dashboard', 'bookings', 'masters'];
     if (role === 'owner' || role === 'manager') {

@@ -9,6 +9,30 @@ const SUPABASE_KEY = 'sb_publishable_vI28QpLgQw-sSxJja_SmOA_pthfQHjp';
 window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Мапперы для согласования snake_case СУБД и camelCase фронтенда
+const mapDbBusinessToFrontend = (b) => {
+  if (!b) return b;
+  return {
+    ...b,
+    businessName: b.name,
+    workSchedule: b.work_schedule
+  };
+};
+
+const mapFrontendBusinessToDb = (b) => {
+  if (!b) return b;
+  const dbBiz = {};
+  if (b.businessName !== undefined) dbBiz.name = b.businessName;
+  if (b.name !== undefined) dbBiz.name = b.name;
+  if (b.currency !== undefined) dbBiz.currency = b.currency;
+  if (b.description !== undefined) dbBiz.description = b.description;
+  if (b.address !== undefined) dbBiz.address = b.address;
+  if (b.phone !== undefined) dbBiz.phone = b.phone;
+  if (b.email !== undefined) dbBiz.email = b.email;
+  if (b.workSchedule !== undefined) dbBiz.work_schedule = b.workSchedule;
+  if (b.theme !== undefined) dbBiz.theme = b.theme;
+  return dbBiz;
+};
+
 const mapDbServiceToFrontend = (s) => {
   if (!s) return s;
   return {
@@ -129,6 +153,30 @@ class SupabaseAPI {
     return { token: data?.session?.access_token, user: data.user };
   }
 
+  async updateUserProfile(username, email, password = '') {
+    const { data: { user } } = await this.client.auth.getUser();
+    if (!user) throw new Error('Пользователь не авторизован');
+
+    const updateData = { data: { username } };
+    if (email && email !== user.email) {
+      updateData.email = email;
+    }
+    if (password) {
+      updateData.password = password;
+    }
+
+    const { error: authErr } = await this.client.auth.updateUser(updateData);
+    if (authErr) throw authErr;
+
+    const { error: profileErr } = await this.client
+      .from('profiles')
+      .update({ username })
+      .eq('id', user.id);
+    if (profileErr) throw profileErr;
+
+    return true;
+  }
+
   // Создание салона с дефолтными справочниками через RPC
   async createBusinessWithDefaults(businessName) {
     const { data: { user } } = await this.client.auth.getUser();
@@ -240,6 +288,8 @@ class SupabaseAPI {
         throw new Error('Учетная запись не найдена или была удалена. Пожалуйста, войдите снова.');
       }
 
+      profile.email = user.email;
+
       const result = {
         userProfile: profile,
         myBusinesses: [],
@@ -263,12 +313,20 @@ class SupabaseAPI {
       };
 
       if (profile.role === 'super_admin') {
-        const [businessesRes, profilesRes] = await Promise.all([
+        const [businessesRes, profilesRes, globalCatsRes, globalServicesRes, transactionsRes, membersRes] = await Promise.all([
           this.client.from('business').select('*, profiles(username)'),
-          this.client.from('profiles').select('*')
+          this.client.from('profiles').select('*'),
+          this.client.from('global_categories').select('*').order('name'),
+          this.client.from('global_services').select('*').order('name'),
+          this.client.from('transactions').select('*, business(name)').order('transaction_date_time', { ascending: false }),
+          this.client.from('business_members').select('*, profiles(username), business(name)')
         ]);
         result.allBusinesses = businessesRes.data || [];
         result.allUsers = profilesRes.data || [];
+        result.globalCategories = globalCatsRes.data || [];
+        result.globalServices = globalServicesRes.data || [];
+        result.allTransactions = transactionsRes.data || [];
+        result.allMembers = membersRes.data || [];
       } else if (profile.role === 'owner') {
         const { data: businesses, error: bizErr } = await this.client
           .from('business')
@@ -302,7 +360,7 @@ class SupabaseAPI {
             this.client.from('business_members').select('*, profiles(username)').eq('business_id', activeId)
           ]);
 
-          result.business = businessRes.data || null;
+          result.business = mapDbBusinessToFrontend(businessRes.data) || null;
           result.categories = categoriesRes.data || [];
           result.masters = mastersRes.data || [];
           result.clients = clientsRes.data || [];
@@ -344,7 +402,7 @@ class SupabaseAPI {
             this.client.from('bookings').select('*').eq('business_id', activeId)
           ]);
 
-          result.business = businessRes.data || null;
+          result.business = mapDbBusinessToFrontend(businessRes.data) || null;
           result.categories = categoriesRes.data || [];
           result.masters = mastersRes.data || [];
           result.clients = clientsRes.data || [];
@@ -400,15 +458,16 @@ class SupabaseAPI {
     if (!activeId) return null;
     const { data, error } = await this.client.from('business').select('*').eq('id', activeId).maybeSingle();
     if (error) throw error;
-    return data;
+    return mapDbBusinessToFrontend(data);
   }
 
   async updateSettings(dataToUpdate) {
     const activeId = window.state?.ui?.activeBusinessId;
     if (!activeId) return null;
-    const { data, error } = await this.client.from('business').update(dataToUpdate).eq('id', activeId).select().single();
+    const dbData = mapFrontendBusinessToDb(dataToUpdate);
+    const { data, error } = await this.client.from('business').update(dbData).eq('id', activeId).select().single();
     if (error) throw error;
-    return data;
+    return mapDbBusinessToFrontend(data);
   }
 
   // Generic Helpers
@@ -576,6 +635,52 @@ class SupabaseAPI {
         }
       }
     }
+    return true;
+  }
+
+  async createGlobalCategory(name) {
+    const { data, error } = await this.client.from('global_categories').insert([{ name }]).select().single();
+    if (error) throw error;
+    return data;
+  }
+  async updateGlobalCategory(id, name) {
+    const { data, error } = await this.client.from('global_categories').update({ name }).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  async deleteGlobalCategory(id) {
+    const { error } = await this.client.from('global_categories').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
+  async createGlobalService(categoryId, name, price, duration, genderCategory = '', description = '') {
+    const { data, error } = await this.client.from('global_services').insert([{
+      category_id: categoryId,
+      name,
+      price,
+      duration,
+      gender_category: genderCategory,
+      description
+    }]).select().single();
+    if (error) throw error;
+    return data;
+  }
+  async updateGlobalService(id, categoryId, name, price, duration, genderCategory = '', description = '') {
+    const { data, error } = await this.client.from('global_services').update({
+      category_id: categoryId,
+      name,
+      price,
+      duration,
+      gender_category: genderCategory,
+      description
+    }).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  async deleteGlobalService(id) {
+    const { error } = await this.client.from('global_services').delete().eq('id', id);
+    if (error) throw error;
     return true;
   }
 }

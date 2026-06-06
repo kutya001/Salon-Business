@@ -2,7 +2,7 @@
 // sw.js — Service Worker для Suluu Business
 // ============================================
 
-const CACHE_NAME = 'suluu-business-v10';
+const CACHE_NAME = 'suluu-business-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -67,11 +67,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Запросы к Google Apps Script ВСЕГДА идут в сеть в обход кэша
-  if (requestUrl.hostname === 'script.google.com' || requestUrl.pathname.includes('/macros/')) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
 
   // Для остальных запросов используем стратегию Network-First
   // Сначала пытаемся получить самую свежую версию из сети, если не получается (офлайн) — берем из кэша

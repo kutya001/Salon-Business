@@ -1,8 +1,11 @@
 // ============================================
-// settings.js — Настройки бизнес-профиля
+// settings.js — Настройки профиля пользователя и салона
 // ============================================
 
+if (state.ui.settingsTab === undefined) state.ui.settingsTab = 'user_profile';
+
 window.renderSettings = function () {
+  const role = state.userProfile?.role || 'master';
   const biz = state.business || {};
   const schedule = biz.workSchedule || {};
   const daysTranslation = {
@@ -33,22 +36,28 @@ window.renderSettings = function () {
     `;
   }).join('');
 
-  const activeTab = state.ui.settingsTab || 'profile';
+  const activeTab = state.ui.settingsTab || 'user_profile';
+  
+  // Доступные вкладки в зависимости от роли
   const tabs = [
-    { id: 'profile', label: 'Профиль', icon: 'user' },
-    { id: 'schedule', label: 'График салона', icon: 'calendar' },
-    { id: 'security', label: 'Безопасность', icon: 'lock' }
+    { id: 'user_profile', label: 'Мой профиль', icon: 'user' }
   ];
+
+  // Профиль бизнеса и график доступны только Владельцам и Менеджерам
+  if (role === 'owner' || role === 'manager') {
+    tabs.push({ id: 'business_profile', label: 'Профиль салона', icon: 'briefcase' });
+    tabs.push({ id: 'schedule', label: 'График салона', icon: 'calendar' });
+  }
 
   const tabsHtml = `
     <div style="margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
-      <div class="segment-tabs-container">
+      <div class="segment-tabs-container" style="display: flex; gap: 8px;">
         ${tabs.map(tab => {
           const isActive = activeTab === tab.id;
           return `
             <button onclick="setUI({ settingsTab: '${tab.id}' })" class="segment-tab ${isActive ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="${tab.label}">
               <i data-feather="${tab.icon}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
-              <span class="hidden md-inline">${tab.label}</span>
+              <span>${tab.label}</span>
             </button>
           `;
         }).join('')}
@@ -58,10 +67,58 @@ window.renderSettings = function () {
 
   let contentHtml = '';
 
-  if (activeTab === 'profile') {
+  if (activeTab === 'user_profile') {
+    contentHtml = `
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Редактирование личного профиля -->
+        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">
+            <i data-feather="user" style="width: 18px; height: 18px;"></i> Личные настройки
+          </h3>
+          
+          <form onsubmit="event.preventDefault(); handleSaveUserProfile();" style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label">Имя пользователя (Логин)</label>
+              <input type="text" id="user-username" class="form-input" value="${state.userProfile?.username || ''}" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Почта (Email)</label>
+              <input type="email" id="user-email" class="form-input" value="${state.userProfile?.email || ''}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Новый пароль (оставьте пустым для сохранения текущего)</label>
+              <input type="password" id="user-password" class="form-input" placeholder="Минимум 6 символов">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content;">
+              <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить профиль
+            </button>
+          </form>
+        </div>
+
+        <!-- Системная информация -->
+        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px; border-left: 5px solid var(--primary);">
+          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">
+            <i data-feather="settings" style="width: 18px; height: 18px;"></i> Системная информация
+          </h3>
+          
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Версия системы:</span><span style="font-weight: 700;">2.3.0-PRO (PWA)</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">База данных:</span><span style="font-weight: 700; color: #10b981;">PostgreSQL (Supabase)</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Синхронизация:</span><span style="font-weight: 700; color: #10b981;">Активна (Real-time)</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Тип аккаунта:</span><span style="font-weight: 700; text-transform: uppercase;">${role}</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (activeTab === 'business_profile') {
     contentHtml = `
       <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="briefcase" style="width: 18px; height: 18px;"></i> Профиль салона</h3>
+        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;">
+          <i data-feather="briefcase" style="width: 18px; height: 18px;"></i> Профиль салона
+        </h3>
         
         <form onsubmit="event.preventDefault(); handleSaveProfile();" style="display: flex; flex-direction: column; gap: 14px;">
           <div class="form-group">
@@ -94,7 +151,9 @@ window.renderSettings = function () {
   } else if (activeTab === 'schedule') {
     contentHtml = `
       <div class="card p-6">
-        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;"><i data-feather="calendar" style="width: 18px; height: 18px;"></i> График работы салона</h3>
+        <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <i data-feather="calendar" style="width: 18px; height: 18px;"></i> График работы салона
+        </h3>
         
         <div class="data-table-container">
           <table class="data-table">
@@ -119,55 +178,6 @@ window.renderSettings = function () {
         </div>
       </div>
     `;
-  } else if (activeTab === 'security') {
-    contentHtml = `
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Управление Пин-кодом -->
-        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="lock" style="width: 18px; height: 18px;"></i> Безопасность (PIN-код)</h3>
-          <p style="font-size: 12px; color: var(--text-secondary);">Установите 4-значный цифровой пин-код для ограничения доступа к панели Suluu Business. Если вы настраиваете его впервые, поле старого пин-кода можно оставить пустым.</p>
-          
-          <form onsubmit="event.preventDefault(); handlePinChangeSubmit();" style="display: flex; flex-direction: column; gap: 14px;">
-            <div class="form-group">
-              <label class="form-label">Старый PIN-код (4 цифры)</label>
-              <input type="password" id="pin-old" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Новый PIN-код (4 цифры)</label>
-              <input type="password" id="pin-new" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Подтверждение нового PIN-кода</label>
-              <input type="password" id="pin-confirm" class="form-input" pattern="[0-9]*" inputmode="numeric" maxlength="4" placeholder="••••" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content;">
-              <i data-feather="key" style="width: 16px; height: 16px;"></i> Установить / Изменить
-            </button>
-          </form>
-        </div>
-
-        <!-- Подключение бэкенда -->
-        <div class="card p-6" style="display: flex; flex-direction: column; gap: 16px; border-left: 5px solid var(--primary);">
-          <h3 style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px;"><i data-feather="settings" style="width: 18px; height: 18px;"></i> Системная информация</h3>
-          
-          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Версия:</span><span style="font-weight: 700;">1.0.0 (PWA)</span></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Платформа:</span><span style="font-weight: 700;">GitHub Pages & Google Sheets</span></div>
-            <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
-              <span style="color: var(--text-secondary); font-weight: 600;">Google Apps Script Web App URL:</span>
-              <input type="text" value="${api.gasUrl}" readonly style="width:100%; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-secondary);">
-            </div>
-          </div>
-          
-          <div style="margin-top: auto; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end;">
-            <button onclick="handleDisconnect()" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.15); width: auto; display: flex; align-items: center; gap: 6px;">
-              <i data-feather="power" style="width: 16px; height: 16px;"></i> Отключить бэкенд
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
   return `
@@ -175,7 +185,7 @@ window.renderSettings = function () {
       <!-- Заголовок страницы -->
       <div>
         <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Настройки</h1>
-        <p style="color: var(--text-secondary); font-size: 14px;">Управление информацией о салоне, расписанием и безопасностью</p>
+        <p style="color: var(--text-secondary); font-size: 14px;">Управление личной информацией и настройками салона</p>
       </div>
 
       <!-- Вкладки настроек -->
@@ -187,6 +197,39 @@ window.renderSettings = function () {
   `;
 };
 
+// Сохранение личного профиля пользователя
+window.handleSaveUserProfile = async function () {
+  const username = document.getElementById('user-username').value.trim();
+  const email = document.getElementById('user-email').value.trim();
+  const password = document.getElementById('user-password').value.trim();
+
+  if (!username) {
+    showToast('Логин не может быть пустым', 'error');
+    return;
+  }
+  if (!email) {
+    showToast('Email не может быть пустым', 'error');
+    return;
+  }
+
+  setUI({ loading: true });
+  try {
+    await api.updateUserProfile(username, email, password);
+    showToast('Профиль успешно обновлен', 'success');
+    document.getElementById('user-password').value = '';
+    
+    // Обновляем данные пользователя
+    const allData = await api.getAll();
+    setState({
+      userProfile: allData.userProfile
+    });
+  } catch (err) {
+    showToast(err.message || 'Ошибка сохранения профиля', 'error');
+  } finally {
+    setUI({ loading: false });
+  }
+};
+
 // Сохранение общей информации о бизнесе
 window.handleSaveProfile = function () {
   const businessName = document.getElementById('set-name').value.trim();
@@ -195,36 +238,15 @@ window.handleSaveProfile = function () {
   let phone = document.getElementById('set-phone').value.trim();
   const email = document.getElementById('set-email').value.trim();
 
-  // Очистка номера перед сохранением (оставляем только красивый формат)
   phone = window.formatClientPhone(phone);
 
-  const updatedBusiness = { ...state.business, businessName, description, address, phone, email };
-  setState({ business: updatedBusiness });
-  showToast('Сохранение профиля (синхронизация...)', 'info');
+  showToast('Сохранение профиля...', 'info');
 
   api.updateSettings({ businessName, description, address, phone, email }).then(updated => {
     setState({ business: updated });
-    showToast('Профиль успешно обновлен', 'success');
+    showToast('Профиль салона успешно обновлен', 'success');
   }).catch(e => {
     showToast('Не удалось сохранить изменения', 'error');
-  });
-};
-
-// Переключение темы оформления
-window.handleChangeTheme = function (themeId) {
-  const updatedBusiness = { ...state.business, theme: themeId };
-  setState({ business: updatedBusiness });
-  
-  if (window.ThemeManager) {
-    window.ThemeManager.setTheme(themeId);
-  }
-  showToast('Изменение темы (синхронизация...)', 'info');
-  
-  api.updateSettings({ theme: themeId }).then(updated => {
-    setState({ business: updated });
-    showToast('Тема оформления успешно изменена', 'success');
-  }).catch(e => {
-    showToast('Не удалось обновить тему', 'error');
   });
 };
 
@@ -241,9 +263,7 @@ window.handleSaveSchedule = function () {
     };
   });
 
-  const updatedBusiness = { ...state.business, workSchedule: newSchedule };
-  setState({ business: updatedBusiness });
-  showToast('Сохранение расписания (синхронизация...)', 'info');
+  showToast('Сохранение расписания...', 'info');
 
   api.updateSettings({ workSchedule: newSchedule }).then(updated => {
     setState({ business: updated });
@@ -251,41 +271,4 @@ window.handleSaveSchedule = function () {
   }).catch(e => {
     showToast('Не удалось сохранить расписание', 'error');
   });
-};
-
-// Изменение PIN-кода
-window.handlePinChangeSubmit = function () {
-  const oldPin = document.getElementById('pin-old').value.trim();
-  const newPin = document.getElementById('pin-new').value.trim();
-  const confirmPin = document.getElementById('pin-confirm').value.trim();
-
-  const isDigits = /^\d{4}$/;
-  if (!isDigits.test(newPin)) {
-    showToast('Новый PIN-код должен состоять ровно из 4 цифр!', 'error');
-    return;
-  }
-  if (newPin !== confirmPin) {
-    showToast('Новые PIN-коды не совпадают', 'error');
-    return;
-  }
-
-  showToast('Изменение PIN-кода (синхронизация...)', 'info');
-
-  api.changePassword(oldPin, newPin).then(() => {
-    document.getElementById('pin-old').value = '';
-    document.getElementById('pin-new').value = '';
-    document.getElementById('pin-confirm').value = '';
-    showToast('PIN-код доступа успешно изменен!', 'success');
-  }).catch(e => {
-    showToast(e.message || 'Ошибка изменения PIN-кода. Возможно, старый PIN неверен.', 'error');
-  });
-};
-
-// Отключение бэкенда (сброс)
-window.handleDisconnect = function () {
-  if (confirm('Вы действительно хотите отключить бэкенд? Все данные будут удалены из кэша приложения, потребуется настроить скрипт заново.')) {
-    localStorage.removeItem('gas_url');
-    localStorage.removeItem('auth_token');
-    location.reload();
-  }
 };

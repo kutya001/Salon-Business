@@ -59,6 +59,12 @@ CREATE TABLE public.business (
     name TEXT NOT NULL,
     owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     currency TEXT DEFAULT 'сом',
+    description TEXT,
+    address TEXT,
+    phone TEXT,
+    email TEXT,
+    work_schedule JSONB DEFAULT '{}'::jsonb,
+    theme TEXT DEFAULT 'hair',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
 

@@ -1176,24 +1176,35 @@ window.handleEditBookingFullSubmit = function() {
 // Переход по шагам в модалке
 window.setBookingWizardStep = function(step) {
   const data = { ...state.ui.modalData };
+  const goingForward = step > data.step;
   
   // Сохраняем значения текущего шага
   if (data.step === 1) {
     const nameInput = document.getElementById('b-client-name');
     const phoneInput = document.getElementById('b-client-phone');
     if (nameInput && phoneInput) {
-      if (!nameInput.value.trim() || !phoneInput.value.trim() || phoneInput.value.trim() === '+996') {
-        return showToast('Пожалуйста, заполните имя и телефон', 'error');
+      if (goingForward) {
+        if (!nameInput.value.trim() || !phoneInput.value.trim() || phoneInput.value.trim() === '+996') {
+          return showToast('Пожалуйста, заполните имя и телефон', 'error');
+        }
       }
       data.draft.clientName = nameInput.value.trim();
       data.draft.clientPhone = phoneInput.value.trim();
     }
-  } else if (data.step === 2) {
-    // Категория выбирается по клику, тут сохранять нечего, но переход делаем ниже
-  } else if (data.step === 3) {
-    // Услуга выбирается по клику
-  } else if (data.step === 4) {
-    // Мастер выбирается по клику
+  } else if (data.step === 5) {
+    const dateInput = document.getElementById('b-date');
+    const timeInput = document.getElementById('b-time');
+    const notesInput = document.getElementById('b-notes');
+    if (dateInput && timeInput) {
+      if (goingForward) {
+        if (!dateInput.value || !timeInput.value) {
+          return showToast('Пожалуйста, укажите дату и время', 'error');
+        }
+      }
+      data.draft.date = dateInput.value;
+      data.draft.time = timeInput.value;
+      data.draft.notes = notesInput ? notesInput.value.trim() : '';
+    }
   }
 
   data.step = step;
@@ -1242,13 +1253,6 @@ window.handleWizardMasterSelect = function(masterId) {
 
 window.handleWizardPaymentSelect = function(method) {
   const data = { ...state.ui.modalData };
-  const d = document.getElementById('b-date');
-  const t = document.getElementById('b-time');
-  const n = document.getElementById('b-notes');
-  if (d) data.draft.date = d.value;
-  if (t) data.draft.time = t.value;
-  if (n) data.draft.notes = n.value;
-  
   data.draft.paymentMethod = method;
   setUI({ modalData: data });
 };
@@ -1258,7 +1262,7 @@ window.renderBookingModal = function () {
   const step = md.step || 1;
   const draft = md.draft || {};
 
-  const totalSteps = 5;
+  const totalSteps = 6;
   const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
 
   let stepContent = '';
@@ -1294,6 +1298,7 @@ window.renderBookingModal = function () {
         <button type="button" onclick="setBookingWizardStep(1)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
       </div>
     `;
+  } else if (step === 3) {
     const svcs = (state.services || []).filter(s => {
       const sGC = s.genderCategory || 'any';
       if (draft.genderCategory === 'any') return true;
@@ -1384,11 +1389,11 @@ window.renderBookingModal = function () {
         <div style="display: flex; gap: 12px; width: 100%;">
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Дата</label>
-            <input type="date" id="b-date" class="form-input" value="${draft.date}" onchange="state.ui.modalData.draft.date = this.value" required>
+            <input type="date" id="b-date" class="form-input" value="${draft.date}" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Время</label>
-            <input type="time" id="b-time" class="form-input" value="${draft.time}" onchange="state.ui.modalData.draft.time = this.value" required>
+            <input type="time" id="b-time" class="form-input" value="${draft.time}" required>
           </div>
         </div>
         <div class="form-group">
@@ -1406,7 +1411,135 @@ window.renderBookingModal = function () {
 
         <div style="display: flex; gap: 12px; margin-top: 10px;">
           <button type="button" onclick="setBookingWizardStep(4)" class="btn btn-secondary" style="flex: 1;">⬅ Назад</button>
-          <button type="button" onclick="handleCreateBookingSubmit()" class="btn btn-primary" style="flex: 2;">${md.isEdit ? 'Сохранить изменения ✅' : 'Создать запись ✅'}</button>
+          <button type="button" onclick="setBookingWizardStep(6)" class="btn btn-primary" style="flex: 2;">Далее: Подтверждение ➔</button>
+        </div>
+      </div>
+    `;
+  } else if (step === 6) {
+    const genderNames = {
+      female: '👩 Женская',
+      male: '👨 Мужская',
+      any: '🧑 Любая'
+    };
+    const genderName = genderNames[draft.genderCategory] || 'Любая';
+
+    const ids = (draft.serviceId || '').split(',').map(id => id.trim()).filter(Boolean);
+    const selectedServices = ids.map(id => (state.services || []).find(s => s.id === id)).filter(Boolean);
+
+    const servicesListHtml = selectedServices.map(s => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); font-size: 13px;">
+        <span style="color: var(--text); font-weight: 500;">${s.name}</span>
+        <span style="color: var(--primary); font-weight: 700;">${formatPrice(s.price)}</span>
+      </div>
+    `).join('');
+
+    const serviceInfo = getServicesInfo(draft.serviceId);
+    const master = state.masters.find(m => m.id === draft.masterId) || { name: 'Любой мастер' };
+    
+    const paymentMethods = {
+      cash: '💵 Наличные',
+      card: '💳 Карта',
+      bonus: '🌟 Бонусы'
+    };
+    const paymentName = paymentMethods[draft.paymentMethod] || 'Не выбран';
+
+    let formattedDate = draft.date;
+    if (draft.date) {
+      try {
+        const dObj = new Date(draft.date);
+        if (!isNaN(dObj.getTime())) {
+          formattedDate = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+      } catch(e) {}
+    }
+
+    stepContent = `
+      <div class="animate-slide-in-right" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-interactive-card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; background: rgba(255, 255, 255, 0.03);">
+          <!-- Клиент -->
+          <div style="display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <i data-feather="user" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Клиент</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text);">${draft.clientName}</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">${draft.clientPhone}</div>
+            </div>
+          </div>
+
+          <!-- Категория (Гендер) -->
+          <div style="display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <i data-feather="sliders" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Категория</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text);">${genderName}</div>
+            </div>
+          </div>
+
+          <!-- Услуги -->
+          <div style="display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 4px;">
+              <i data-feather="scissors" style="width: 16px; height: 16px; color: var(--primary);"></i>
+              <div style="font-size: 11px; color: var(--text-secondary);">Выбранные услуги</div>
+            </div>
+            <div style="padding-left: 26px;">
+              ${servicesListHtml || '<div style="color: var(--text-secondary); font-size: 13px;">Не выбраны</div>'}
+            </div>
+          </div>
+
+          <!-- Мастер -->
+          <div style="display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <i data-feather="award" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Мастер</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text);">${master.name}</div>
+            </div>
+          </div>
+
+          <!-- Дата и Время -->
+          <div style="display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <i data-feather="calendar" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Дата и время</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text);">${formattedDate} в ${draft.time}</div>
+            </div>
+          </div>
+
+          <!-- Оплата -->
+          <div style="display: flex; gap: 10px; align-items: center; ${draft.notes ? 'border-bottom: 1px solid var(--border); padding-bottom: 10px;' : ''}">
+            <i data-feather="credit-card" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Способ оплаты</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text);">${paymentName}</div>
+            </div>
+          </div>
+
+          <!-- Заметки -->
+          ${draft.notes ? `
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <i data-feather="message-square" style="width: 16px; height: 16px; color: var(--primary);"></i>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Заметки</div>
+              <div style="font-size: 13px; color: var(--text);">${draft.notes}</div>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+
+        <!-- Итоговая стоимость и длительность -->
+        <div class="glass-island" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; border-radius: 16px; border-color: rgba(99,102,241,0.2); background: rgba(99,102,241,0.08);">
+          <div>
+            <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Итого к оплате</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--text);">${formatPrice(serviceInfo.price)}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Длительность</div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text);">${serviceInfo.durationMins} мин</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 10px;">
+          <button type="button" onclick="setBookingWizardStep(5)" class="btn btn-secondary" style="flex: 1;">⬅ Назад</button>
+          <button type="button" onclick="handleCreateBookingSubmit()" class="btn btn-primary" style="flex: 2; background: var(--accent); border-color: var(--accent); font-weight: 700;">Подтвердить запись ✅</button>
         </div>
       </div>
     `;
@@ -1436,12 +1569,7 @@ window.handleCreateBookingSubmit = function () {
   const md = state.ui.modalData;
   const draft = md.draft || {};
   
-  // Сохраняем значения с 5 шага
-  const dateInput = document.getElementById('b-date');
-  const timeInput = document.getElementById('b-time');
-  const notesInput = document.getElementById('b-notes');
-  
-  if (!dateInput.value || !timeInput.value) {
+  if (!draft.date || !draft.time) {
     return showToast('Укажите дату и время записи', 'error');
   }
 
@@ -1453,10 +1581,10 @@ window.handleCreateBookingSubmit = function () {
     clientPhone: cleanPhone,
     serviceId: draft.serviceId,
     masterId: draft.masterId, // Может быть пустой строкой, бэкенд должен обработать как "Любой"
-    date: dateInput.value,
-    time: timeInput.value,
+    date: draft.date,
+    time: draft.time,
     paymentMethod: draft.paymentMethod,
-    notes: notesInput.value.trim(),
+    notes: draft.notes || '',
     status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : (draft.status || 'pending')
   };
 

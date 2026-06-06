@@ -1,6 +1,6 @@
 // ============================================
 // dashboard.js — Панель управления и аналитика
-// ==================window.renderDashboard = function () {
+window.renderDashboard = function () {
   const todayStr = new Date().toISOString().split('T')[0];
   const userRole = state.userProfile?.role || 'master';
   const loggedInMaster = state.masters.find(m => m.user_id === state.userProfile?.id);

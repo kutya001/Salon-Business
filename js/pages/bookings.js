@@ -740,8 +740,8 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   showToast('Статус записи успешно изменен', 'success');
 
   try {
-    // 1. Обновляем статус записи на сервере (передаем и цену на случай, если она не была сохранена)
-    await api.updateBooking(id, { status: newStatus, price: b.price }, { background: true });
+    // 1. Обновляем статус записи на сервере
+    await api.updateBooking(id, { status: newStatus }, { background: true });
 
     // 2. Управляем транзакциями в базе данных
     if (newStatus === 'completed' && cashWallet && revenueCat && activeShift) {

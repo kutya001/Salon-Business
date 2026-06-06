@@ -237,16 +237,30 @@ async function apiDelete(client, table, id) {
 }
 
 async function findOrCreateClient(client, activeId, name, phone) {
-  if (!phone) return null;
-  const { data: existing, error: findErr } = await client
-    .from('clients')
-    .select('id')
-    .eq('business_id', activeId)
-    .eq('phone', phone)
-    .limit(1);
+  if (!phone && !name) return null;
 
-  if (!findErr && existing && existing.length > 0) {
-    return existing[0].id;
+  if (phone) {
+    const { data: existing, error: findErr } = await client
+      .from('clients')
+      .select('id')
+      .eq('business_id', activeId)
+      .eq('phone', phone)
+      .limit(1);
+
+    if (!findErr && existing && existing.length > 0) {
+      return existing[0].id;
+    }
+  } else if (name) {
+    const { data: existing, error: findErr } = await client
+      .from('clients')
+      .select('id')
+      .eq('business_id', activeId)
+      .eq('name', name)
+      .limit(1);
+
+    if (!findErr && existing && existing.length > 0) {
+      return existing[0].id;
+    }
   }
 
   const { data: newClient, error: createErr } = await client
@@ -780,7 +794,7 @@ class SupabaseAPI {
     if (!activeId) throw new Error('Салон не выбран');
 
     let clientId = data.clientId;
-    if (!clientId && data.clientPhone) {
+    if (!clientId && (data.clientPhone || data.clientName)) {
       clientId = await findOrCreateClient(this.client, activeId, data.clientName, data.clientPhone);
     }
 
@@ -797,7 +811,7 @@ class SupabaseAPI {
     if (!activeId) throw new Error('Салон не выбран');
 
     let clientId = data.clientId;
-    if (!clientId && data.clientPhone) {
+    if (!clientId && (data.clientPhone || data.clientName)) {
       clientId = await findOrCreateClient(this.client, activeId, data.clientName, data.clientPhone);
     }
 

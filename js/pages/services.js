@@ -293,23 +293,58 @@ window.renderServices = function () {
   `;
 };
 
-window.handleToggleTemplate = async function (globalServiceId, isChecked) {
-  setUI({ loading: true });
-  try {
-    await api.toggleGlobalService(globalServiceId, isChecked);
-    showToast(isChecked ? 'Услуга добавлена!' : 'Услуга удалена', 'success');
+window.handleToggleTemplate = function (globalServiceId, isChecked) {
+  // Optimistic UI updates
+  if (isChecked) {
+    const gs = state.globalServices.find(s => s.id === globalServiceId);
+    if (!gs) return;
+    const catName = state.globalCategories.find(c => c.id === gs.category_id)?.name || 'Шаблон';
     
-    // Перезапрашиваем данные
-    const allData = await api.getAll();
-    setState({
-      services: allData.services || [],
-      categories: allData.categories || []
-    });
-  } catch (err) {
-    showToast(err.message || 'Ошибка обновления услуги', 'error');
-  } finally {
-    setUI({ loading: false });
+    let localCat = state.categories.find(c => c.name === catName);
+    if (!localCat) {
+      localCat = { id: 'temp_cat_' + Date.now(), name: catName };
+      state.categories.push(localCat);
+    }
+    
+    const tempService = {
+      id: 'temp_s_' + Date.now(),
+      global_service_id: globalServiceId,
+      globalServiceId: globalServiceId,
+      name: gs.name,
+      price: gs.price,
+      duration: window.minutesToDuration(gs.duration),
+      categoryId: localCat.id,
+      genderCategory: gs.gender_category || 'any',
+      description: gs.description || ''
+    };
+    state.services.push(tempService);
+    setState({ services: state.services, categories: state.categories });
+  } else {
+    const updatedServices = state.services.filter(s => s.global_service_id !== globalServiceId);
+    setState({ services: updatedServices });
   }
+
+  showToast(isChecked ? 'Добавление услуги...' : 'Удаление услуги...', 'info');
+
+  api.toggleGlobalService(globalServiceId, isChecked)
+    .then(async () => {
+      showToast(isChecked ? 'Услуга добавлена!' : 'Услуга удалена', 'success');
+      const allData = await api.getAll({ background: true });
+      setState({
+        services: allData.services || [],
+        categories: allData.categories || []
+      });
+    })
+    .catch(err => {
+      showToast(err.message || 'Ошибка обновления услуги', 'error');
+      // Rollback on error
+      api.getAll({ background: true }).then(allData => {
+        setState({
+          services: allData.services || [],
+          categories: allData.categories || []
+        });
+      });
+    });
 };
 
 window.handleSelectCategory = function (cat) {

@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         jobApplications: allData.jobApplications || [],
         allUsers: allData.allUsers || [],
         allBusinesses: allData.allBusinesses || [],
+        globalCategories: allData.globalCategories || [],
+        globalServices: allData.globalServices || [],
         currentPage: startPage
       });
 
@@ -119,7 +121,9 @@ function setupRealtime() {
           transactionCategories: allData.transactionCategories || [],
           jobApplications: allData.jobApplications || [],
           allUsers: allData.allUsers || [],
-          allBusinesses: allData.allBusinesses || []
+          allBusinesses: allData.allBusinesses || [],
+          globalCategories: allData.globalCategories || [],
+          globalServices: allData.globalServices || []
         });
       } catch (e) {
         console.error('Ошибка фонового обновления после realtime event:', e);
@@ -153,7 +157,9 @@ window.forceSync = async function () {
       transactionCategories: allData.transactionCategories || [],
       jobApplications: allData.jobApplications || [],
       allUsers: allData.allUsers || [],
-      allBusinesses: allData.allBusinesses || []
+      allBusinesses: allData.allBusinesses || [],
+      globalCategories: allData.globalCategories || [],
+      globalServices: allData.globalServices || []
     });
     showToast('Синхронизация завершена', 'success');
   } catch (err) {

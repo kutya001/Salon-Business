@@ -321,6 +321,15 @@ class SupabaseAPI {
         result.allSalons = allBiz || [];
       }
 
+      if (profile.role === 'owner' || profile.role === 'manager') {
+        const [globalCatsRes, globalServicesRes] = await Promise.all([
+          this.client.from('global_categories').select('*').order('name'),
+          this.client.from('global_services').select('*').order('name')
+        ]);
+        result.globalCategories = globalCatsRes.data || [];
+        result.globalServices = globalServicesRes.data || [];
+      }
+
       if (window.logApiCall) window.logApiCall('recv', 'getAll', result);
       return result;
     } catch (err) {
@@ -428,6 +437,80 @@ class SupabaseAPI {
       closing_cash: closing_cash,
       closed_at: new Date().toISOString()
     });
+  }
+
+  async toggleGlobalService(globalServiceId, isEnabled) {
+    const activeId = window.state?.ui?.activeBusinessId;
+    if (!activeId) throw new Error('Салон не выбран');
+
+    if (isEnabled) {
+      const { data: gs, error: gsErr } = await this.client
+        .from('global_services')
+        .select('*, global_categories(name)')
+        .eq('id', globalServiceId)
+        .single();
+      if (gsErr) throw gsErr;
+
+      let { data: localCat, error: catErr } = await this.client
+        .from('categories')
+        .select('*')
+        .eq('business_id', activeId)
+        .eq('name', gs.global_categories.name)
+        .maybeSingle();
+      if (catErr) throw catErr;
+
+      let localCatId;
+      if (!localCat) {
+        const { data: newCat, error: newCatErr } = await this.client
+          .from('categories')
+          .insert([{ business_id: activeId, name: gs.global_categories.name }])
+          .select()
+          .single();
+        if (newCatErr) throw newCatErr;
+        localCatId = newCat.id;
+      } else {
+        localCatId = localCat.id;
+      }
+
+      const { error: sErr } = await this.client
+        .from('services')
+        .insert([{
+          business_id: activeId,
+          category_id: localCatId,
+          name: gs.name,
+          price: gs.price,
+          duration: gs.duration,
+          global_service_id: gs.id
+        }]);
+      if (sErr) throw sErr;
+    } else {
+      const { data: localService, error: sFindErr } = await this.client
+        .from('services')
+        .select('*')
+        .eq('business_id', activeId)
+        .eq('global_service_id', globalServiceId)
+        .maybeSingle();
+      if (sFindErr) throw sFindErr;
+
+      if (localService) {
+        const { error: delErr } = await this.client
+          .from('services')
+          .delete()
+          .eq('id', localService.id);
+        if (delErr) throw delErr;
+
+        const { data: remainingServices, error: remErr } = await this.client
+          .from('services')
+          .select('*')
+          .eq('category_id', localService.category_id);
+        if (remErr) throw remErr;
+
+        if (!remainingServices || remainingServices.length === 0) {
+          await this.client.from('categories').delete().eq('id', localService.category_id);
+        }
+      }
+    }
+    return true;
   }
 }
 

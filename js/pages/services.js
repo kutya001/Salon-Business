@@ -1,9 +1,9 @@
 // ============================================
-// services.js — Управление каталогом услуг
+// services.js — Управление каталогом услуг (с поддержкой шаблонов)
 // ============================================
 
 window.renderServices = function () {
-  const activeTab = state.ui.servicesMainTab || 'services'; // 'services' or 'categories'
+  const activeTab = state.ui.servicesMainTab || 'services'; // 'services', 'categories', or 'templates'
   const viewMode = state.ui.servicesViewMode || 'cards';
 
   const combinedTabsHtml = `
@@ -11,11 +11,15 @@ window.renderServices = function () {
       <div class="segment-tabs-container" style="display: inline-flex; align-items: center; flex-wrap: nowrap;">
         <button onclick="setUI({ servicesMainTab: 'services' })" class="segment-tab ${activeTab === 'services' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Услуги">
           <i data-feather="scissors" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
-          <span class="hidden md-inline">Услуги</span>
+          <span class="hidden md-inline">Услуги салона</span>
         </button>
         <button onclick="setUI({ servicesMainTab: 'categories' })" class="segment-tab ${activeTab === 'categories' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Виды услуг">
           <i data-feather="tag" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
           <span class="hidden md-inline">Виды услуг</span>
+        </button>
+        <button onclick="setUI({ servicesMainTab: 'templates' })" class="segment-tab ${activeTab === 'templates' ? 'active' : ''}" style="border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; justify-content: center;" title="Шаблоны">
+          <i data-feather="book-open" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+          <span class="hidden md-inline">Шаблоны (50+)</span>
         </button>
         
         ${activeTab === 'services' ? `
@@ -37,7 +41,7 @@ window.renderServices = function () {
   let contentHtml = '';
 
   if (activeTab === 'categories') {
-    // Вкладка "Виды"
+    // Вкладка "Виды услуг"
     const catsHtml = state.categories.length === 0 ? '<div style="color: var(--text-secondary); text-align: center; padding: 40px;">Виды услуг пока не добавлены</div>' :
       state.categories.map(c => `
         <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 12px; transition: all 0.2s;">
@@ -65,12 +69,77 @@ window.renderServices = function () {
       </div>
     `;
 
+  } else if (activeTab === 'templates') {
+    // Вкладка "Шаблоны услуг"
+    const groupedTemplates = {};
+    state.globalCategories.forEach(gc => {
+      groupedTemplates[gc.id] = { name: gc.name, items: [] };
+    });
+    state.globalServices.forEach(gs => {
+      if (groupedTemplates[gs.category_id]) {
+        groupedTemplates[gs.category_id].items.push(gs);
+      }
+    });
+
+    let templatesHtml = '';
+    for (const gcId in groupedTemplates) {
+      const group = groupedTemplates[gcId];
+      if (group.items.length === 0) continue;
+
+      const itemsListHtml = group.items.map(gs => {
+        const isActive = state.services.some(s => s.global_service_id === gs.id);
+        
+        return `
+          <div class="card glass-island" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-radius: 16px; border: 1px solid var(--border); background: rgba(255,255,255,0.01);">
+            <div>
+              <div style="font-weight: 800; font-size: 14px; color: var(--text);">${gs.name}</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 12px; font-weight: 500;">
+                <span style="display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px; color: var(--primary);"></i> ${gs.duration} мин</span>
+                <span style="display: flex; align-items: center; gap: 4px;"><i data-feather="dollar-sign" style="width: 12px; height: 12px; color: var(--primary);"></i> ${formatPrice(gs.price)}</span>
+              </div>
+            </div>
+            <div>
+              <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                <input type="checkbox" ${isActive ? 'checked' : ''} onchange="handleToggleTemplate('${gs.id}', this.checked)"
+                  style="opacity: 0; width: 0; height: 0; display: none;">
+                <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; transition: .3s; border-radius: 24px; border: 1px solid var(--border); display: block;">
+                  <span style="position: absolute; content: ''; height: 16px; width: 16px; left: ${isActive ? '23px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; display: block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      templatesHtml += `
+        <div style="margin-bottom: 28px;">
+          <h2 style="font-size: 15px; font-weight: 800; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid var(--primary); padding-left: 10px;">
+            ${group.name} (${group.items.length})
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${itemsListHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    contentHtml = `
+      <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card" style="padding: 16px 20px; background: rgba(118,75,162,0.05); border: 1px solid rgba(118,75,162,0.15); border-radius: 16px;">
+          <h3 style="font-weight: 800; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 6px;">
+            <i data-feather="info" style="width: 16px; height: 16px; color: var(--primary);"></i> Библиотека готовых услуг (50+)
+          </h3>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4;">
+            Выберите услуги, которые оказывает ваш салон. Они автоматически появятся в вашем прайс-листе. Вы всегда сможете настроить цену или длительность каждой услуги индивидуально в первой вкладке.
+          </p>
+        </div>
+        ${templatesHtml}
+      </div>
+    `;
+
   } else {
-    // Вкладка "Услуги"
-    // Группировка услуг по Видам
+    // Вкладка "Услуги салона"
     const collapsedCategories = state.ui.collapsedCategories || {};
-    
-    // Подготовка структуры для группировки
     const grouped = {};
     state.categories.forEach(c => {
       grouped[c.id] = { name: c.name, items: [] };
@@ -90,14 +159,17 @@ window.renderServices = function () {
         <div class="card p-12 text-center" style="color: var(--text-secondary);">
           <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="inbox" style="width: 56px; height: 56px;"></i></span>
           <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Список услуг пуст</h3>
-          <p style="font-size: 14px; margin-bottom: 16px;">Добавьте новую процедуру, чтобы сделать ее доступной для записи</p>
-          <button onclick="showCreateServiceModal()" class="btn btn-primary" style="margin: 0 auto;">Добавить услугу</button>
+          <p style="font-size: 14px; margin-bottom: 16px;">Добавьте индивидуальную процедуру или выберите готовые в разделе «Шаблоны».</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button onclick="showCreateServiceModal()" class="btn btn-primary">Добавить услугу</button>
+            <button onclick="setUI({ servicesMainTab: 'templates' })" class="btn btn-secondary">Использовать шаблоны</button>
+          </div>
         </div>
       `;
     } else {
       for (const catId in grouped) {
         const group = grouped[catId];
-        if (group.items.length === 0) continue; // Не показываем пустые группы
+        if (group.items.length === 0) continue;
 
         const isCollapsed = collapsedCategories[catId];
         
@@ -192,16 +264,18 @@ window.renderServices = function () {
     }
   }
 
-  const fabAction = activeTab === 'services' ? 'showCreateServiceModal()' : `document.getElementById('cat-name-input')?.focus()`;
+  const fabAction = activeTab === 'services' ? 'showCreateServiceModal()' : activeTab === 'categories' ? `document.getElementById('cat-name-input')?.focus()` : '';
 
   return `
     <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px; padding-bottom: 80px;">
       <div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div style="display: flex; align-items: center; gap: 16px;">
           <h1 style="font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">Виды и Услуги</h1>
-          <button onclick="${fabAction}" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
-            <i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}
-          </button>
+          ${activeTab !== 'templates' ? `
+            <button onclick="${fabAction}" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+              <i data-feather="plus" style="width: 16px; height: 16px;"></i> ${activeTab === 'services' ? 'Добавить услугу' : 'Добавить вид'}
+            </button>
+          ` : ''}
         </div>
       </div>
 
@@ -210,24 +284,42 @@ window.renderServices = function () {
       ${contentHtml}
 
       <!-- Плавающая кнопка (FAB) -->
-      <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
-        <i data-feather="plus" style="width: 24px; height: 24px;"></i>
-      </button>
+      ${activeTab !== 'templates' ? `
+        <button onclick="${fabAction}" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
+          <i data-feather="plus" style="width: 24px; height: 24px;"></i>
+        </button>
+      ` : ''}
     </div>
   `;
 };
 
-// Функция переключения категории
+window.handleToggleTemplate = async function (globalServiceId, isChecked) {
+  setUI({ loading: true });
+  try {
+    await api.toggleGlobalService(globalServiceId, isChecked);
+    showToast(isChecked ? 'Услуга добавлена!' : 'Услуга удалена', 'success');
+    
+    // Перезапрашиваем данные
+    const allData = await api.getAll();
+    setState({
+      services: allData.services || [],
+      categories: allData.categories || []
+    });
+  } catch (err) {
+    showToast(err.message || 'Ошибка обновления услуги', 'error');
+  } finally {
+    setUI({ loading: false });
+  }
+};
+
 window.handleSelectCategory = function (cat) {
   setUI({ selectedCategory: cat });
 };
 
-// Открытие модалки добавления услуги
 window.showCreateServiceModal = function () {
   setUI({ modal: 'createService', modalData: null });
 };
 
-// Открытие модалки редактирования услуги
 window.showEditServiceModal = function (id) {
   const service = state.services.find(s => s.id === id);
   if (!service) return;
@@ -237,8 +329,6 @@ window.showEditServiceModal = function (id) {
 window.renderServiceModal = function () {
   const s = state.ui.modalData;
   const isEdit = !!s;
-
-  // Duration options removed since we use type="time"
 
   return `
     <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
@@ -295,7 +385,6 @@ window.renderServiceModal = function () {
   `;
 };
 
-// Отправка формы услуги (Фоновая синхронизация)
 window.handleServiceSubmit = function (id) {
   const name = document.getElementById('s-name').value.trim();
   const genderCategory = document.getElementById('s-gender').value;
@@ -305,7 +394,6 @@ window.handleServiceSubmit = function (id) {
   const duration = document.getElementById('s-duration').value || '01:00';
   const description = document.getElementById('s-description').value.trim();
 
-  // Оптимистичное обновление
   const tempId = id || 'temp_' + Date.now();
   const serviceData = { id: tempId, name, genderCategory, categoryId, categoryName, price, duration, description, status: 'active' };
 
@@ -320,14 +408,12 @@ window.handleServiceSubmit = function (id) {
 
   setUI({ modal: null, modalData: null });
 
-  // Фоновая отправка на сервер
   if (id) {
     api.updateService(id, { name, genderCategory, categoryId, categoryName, price, duration, description }).catch(e => {
       showToast('Ошибка фоновой синхронизации услуги', 'error');
     });
   } else {
     api.createService({ name, genderCategory, categoryId, categoryName, price, duration, description }).then(result => {
-      // Заменяем временный ID на реальный
       const idx = state.services.findIndex(s => s.id === tempId);
       if (idx !== -1) {
         state.services[idx] = result;
@@ -340,26 +426,19 @@ window.handleServiceSubmit = function (id) {
   }
 };
 
-// Удаление услуги
 window.handleDeleteService = function (id) {
   if (!confirm('Вы действительно хотите удалить эту услугу из каталога?')) return;
   
-  // Оптимистичное обновление
   const backup = [...state.services];
   const services = state.services.filter(s => s.id !== id);
   setState({ services });
   showToast('Услуга удалена из списка', 'success');
 
-  // Фоновая синхронизация
   api.deleteService(id).catch(e => {
     showToast('Не удалось удалить услугу на сервере', 'error');
-    setState({ services: backup }); // откат
+    setState({ services: backup });
   });
 };
-
-// ----------------------------------------------------
-// Модалка Управления Категориями
-// ----------------------------------------------------
 
 window.handleCreateCategory = function() {
   const input = document.getElementById('cat-name-input');
@@ -370,9 +449,8 @@ window.handleCreateCategory = function() {
   const tempId = 'cat_temp_' + Date.now();
   const newCat = { id: tempId, name, status: 'active' };
   
-  // Оптимистичное добавление
   state.categories.push(newCat);
-  setState({ categories: state.categories }); // перерисовка UI
+  setState({ categories: state.categories });
 
   api.createCategory({ name }).then(result => {
     const idx = state.categories.findIndex(c => c.id === tempId);

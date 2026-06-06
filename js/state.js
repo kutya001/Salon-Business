@@ -37,6 +37,8 @@ window.state = {
   shifts: [],
   wallets: [],
   transactionCategories: [],
+  globalCategories: [],
+  globalServices: [],
   
   // UI Состояние
   ui: {

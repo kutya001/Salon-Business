@@ -15,6 +15,8 @@ DROP TABLE IF EXISTS public.transaction_categories CASCADE;
 DROP TABLE IF EXISTS public.business_members CASCADE;
 DROP TABLE IF EXISTS public.business CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.global_services CASCADE;
+DROP TABLE IF EXISTS public.global_categories CASCADE;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
@@ -79,6 +81,21 @@ CREATE TABLE public.categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
 
+-- Global Categories
+CREATE TABLE public.global_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL
+);
+
+-- Global Services (50+ templates)
+CREATE TABLE public.global_services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_id UUID REFERENCES public.global_categories(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    duration INTEGER NOT NULL
+);
+
 -- 5. Masters
 CREATE TABLE public.masters (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -87,7 +104,7 @@ CREATE TABLE public.masters (
     specialization TEXT,
     avatar TEXT,
     services JSONB DEFAULT '[]'::jsonb,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL, -- links approved user to their master slot
+    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
 
@@ -99,6 +116,7 @@ CREATE TABLE public.services (
     name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL DEFAULT 0,
     duration INTEGER NOT NULL DEFAULT 60,
+    global_service_id UUID REFERENCES public.global_services(id) ON DELETE SET NULL, -- link to templates
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
 
@@ -189,7 +207,9 @@ ALTER PUBLICATION supabase_realtime ADD TABLE
   public.wallets, 
   public.transaction_categories, 
   public.shifts, 
-  public.transactions;
+  public.transactions,
+  public.global_categories,
+  public.global_services;
 
 -- Helper functions for RLS checks (SECURITY DEFINER to run with bypass)
 CREATE OR REPLACE FUNCTION public.is_super_admin(p_user_id UUID)
@@ -238,6 +258,8 @@ ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transaction_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.global_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.global_services ENABLE ROW LEVEL SECURITY;
 
 -- 1. Profiles Policies
 CREATE POLICY "Allow select for all authenticated" ON public.profiles FOR SELECT TO authenticated USING (true);
@@ -264,7 +286,13 @@ CREATE POLICY "Allow update/delete for owner" ON public.business_members FOR ALL
 );
 CREATE POLICY "Allow all for super_admin" ON public.business_members FOR ALL TO authenticated USING (public.is_super_admin(auth.uid()));
 
--- 4. Shared Tenant Tables Policies (categories, services, clients, wallets, transaction_categories, shifts, transactions, masters)
+-- Global Templates Policies
+CREATE POLICY "Allow select for all authenticated" ON public.global_categories FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow select for all authenticated" ON public.global_services FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow all for super_admin" ON public.global_categories FOR ALL TO authenticated USING (public.is_super_admin(auth.uid()));
+CREATE POLICY "Allow all for super_admin" ON public.global_services FOR ALL TO authenticated USING (public.is_super_admin(auth.uid()));
+
+-- 4. Shared Tenant Tables Policies
 -- Categories
 CREATE POLICY "Allow select for owners, managers, and masters" ON public.categories FOR SELECT TO authenticated USING (
     public.is_super_admin(auth.uid()) OR public.is_business_owner(business_id, auth.uid()) OR public.is_business_member_approved(business_id, auth.uid())

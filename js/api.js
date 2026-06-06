@@ -39,7 +39,8 @@ const mapDbServiceToFrontend = (s) => {
     ...s,
     categoryId: s.category_id,
     genderCategory: s.gender_category,
-    globalServiceId: s.global_service_id
+    globalServiceId: s.global_service_id,
+    duration: window.minutesToDuration(s.duration || 60)
   };
 };
 
@@ -50,7 +51,7 @@ const mapFrontendServiceToDb = (s) => {
     category_id: s.categoryId,
     gender_category: s.genderCategory,
     price: s.price,
-    duration: s.duration,
+    duration: window.durationToMinutes(s.duration),
     description: s.description,
     global_service_id: s.globalServiceId
   };
@@ -59,29 +60,67 @@ const mapFrontendServiceToDb = (s) => {
 const mapDbBookingToFrontend = (b, clients = [], services = []) => {
   if (!b) return b;
   const client = clients.find(c => c.id === b.client_id) || {};
-  const service = services.find(s => s.id === b.service_id) || {};
+  
+  // Restore serviceIds from services JSONB or fallback to service_id
+  let serviceIds = b.service_id;
+  if (b.services) {
+    try {
+      const parsed = typeof b.services === 'string' ? JSON.parse(b.services) : b.services;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        serviceIds = parsed.join(',');
+      }
+    } catch (e) {
+      console.error('Error parsing booking services:', e);
+    }
+  }
+
+  let serviceName = 'Неизвестная услуга';
+  let duration = '01:00';
+  
+  if (serviceIds) {
+    const ids = serviceIds.split(',').map(id => id.trim()).filter(Boolean);
+    let totalDurationMins = 0;
+    let names = [];
+    ids.forEach(id => {
+      const s = services.find(x => x.id === id);
+      if (s) {
+        totalDurationMins += window.durationToMinutes(s.duration);
+        names.push(s.name);
+      }
+    });
+    if (names.length > 0) {
+      serviceName = names.join(' + ');
+      duration = window.minutesToDuration(totalDurationMins || 60);
+    }
+  }
+
   return {
     ...b,
     masterId: b.master_id,
     clientId: b.client_id,
-    serviceId: b.service_id,
+    serviceId: serviceIds,
     clientName: client.name || 'Неизвестный клиент',
     clientPhone: client.phone || '',
-    serviceName: service.name || 'Неизвестная услуга'
+    serviceName,
+    duration
   };
 };
 
 const mapFrontendBookingToDb = (b) => {
   if (!b) return b;
+  const isMultiple = b.serviceId && b.serviceId.includes(',');
+  const mainServiceId = isMultiple ? b.serviceId.split(',')[0].trim() : b.serviceId;
+  const serviceList = b.serviceId ? b.serviceId.split(',').map(id => id.trim()).filter(Boolean) : [];
+
   return {
     master_id: b.masterId,
     client_id: b.clientId,
-    service_id: b.serviceId,
+    service_id: mainServiceId || null,
     date: b.date,
     time: b.time,
     status: b.status,
     price: b.price,
-    services: b.services || null
+    services: serviceList // JSONB datatype is auto-serialized by Supabase client
   };
 };
 

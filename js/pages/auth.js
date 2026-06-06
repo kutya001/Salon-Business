@@ -1,9 +1,11 @@
 // ============================================
-// auth.js — Авторизация по Email/Пароль (Supabase)
+// auth.js — Авторизация и Регистрация с выбором роли
 // ============================================
 
 if (state.ui.authEmail === undefined) state.ui.authEmail = '';
 if (state.ui.authPassword === undefined) state.ui.authPassword = '';
+if (state.ui.authRole === undefined) state.ui.authRole = 'owner';
+if (state.ui.authBusinessName === undefined) state.ui.authBusinessName = '';
 if (state.ui.authError === undefined) state.ui.authError = '';
 if (state.ui.isRegisterMode === undefined) state.ui.isRegisterMode = false;
 
@@ -46,9 +48,33 @@ window.renderAuth = function () {
                 <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:6px;">Логин</label>
                     <input type="text" id="auth-email" required value="${state.ui.authEmail}" onchange="setUI({authEmail: this.value})"
+                        placeholder="Например: admin или master1"
                         style="width:100%; padding:14px 16px; border-radius:14px; border:2px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.3s; background:#fff; color:#1a1a2e;"
                         onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#e2e8f0'">
                 </div>
+                
+                ${isRegister ? `
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:6px;">Ваша роль</label>
+                    <select id="auth-role" onchange="setUI({authRole: this.value})"
+                        style="width:100%; padding:14px 16px; border-radius:14px; border:2px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.3s; background:#fff; color:#1a1a2e; cursor:pointer;">
+                        <option value="owner" ${state.ui.authRole === 'owner' ? 'selected' : ''}>Владелец салона</option>
+                        <option value="manager" ${state.ui.authRole === 'manager' ? 'selected' : ''}>Менеджер салона</option>
+                        <option value="master" ${state.ui.authRole === 'master' ? 'selected' : ''}>Мастер (Сотрудник)</option>
+                    </select>
+                </div>
+                
+                ${state.ui.authRole === 'owner' ? `
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:6px;">Название салона</label>
+                    <input type="text" id="auth-business-name" required value="${state.ui.authBusinessName}" onchange="setUI({authBusinessName: this.value})"
+                        placeholder="Например: Имидж Студия"
+                        style="width:100%; padding:14px 16px; border-radius:14px; border:2px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.3s; background:#fff; color:#1a1a2e;"
+                        onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#e2e8f0'">
+                </div>
+                ` : ''}
+                ` : ''}
+
                 <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:6px;">Пароль</label>
                     <input type="password" id="auth-password" required value="${state.ui.authPassword}" onchange="setUI({authPassword: this.value})"
@@ -87,14 +113,31 @@ window.handleAuthSubmit = async function(e) {
     
     if (!rawLogin || !password) return;
 
-    // Supabase requires an email format, so we append a hidden domain to the username
     const email = rawLogin.includes('@') ? rawLogin : `${rawLogin}@suluu.app`;
 
     setUI({ loading: true, authError: '', authEmail: rawLogin, authPassword: password });
 
     try {
         if (state.ui.isRegisterMode) {
-            await api.register(email, password);
+            const role = state.ui.authRole;
+            const businessName = state.ui.authBusinessName.trim();
+            
+            if (role === 'owner' && !businessName) {
+                throw new Error('Укажите название вашего салона');
+            }
+
+            // Регистрируем пользователя
+            await api.register(email, password, rawLogin, role);
+            
+            // Входим сразу после регистрации
+            await api.authenticate(email, password);
+            
+            // Если владелец, автоматически создаем салон с дефолтами
+            if (role === 'owner') {
+                const bizId = await api.createBusinessWithDefaults(businessName);
+                setUI({ activeBusinessId: bizId });
+            }
+            
             showToast('Регистрация успешна!', 'success');
         } else {
             await api.authenticate(email, password);
@@ -104,9 +147,13 @@ window.handleAuthSubmit = async function(e) {
         // Подгружаем ВСЕ данные с бэкенда за ОДИН запрос
         const allData = await api.getAll();
 
-        setState({ 
+        const updates = { 
             isAuthenticated: true, 
-            business: allData.business || state.business,
+            userProfile: allData.userProfile,
+            myBusinesses: allData.myBusinesses || [],
+            myEmployments: allData.myEmployments || [],
+            allSalons: allData.allSalons || [],
+            business: allData.business || null,
             categories: allData.categories || [],
             masters: allData.masters || [], 
             clients: allData.clients || [], 
@@ -115,9 +162,20 @@ window.handleAuthSubmit = async function(e) {
             transactions: allData.transactions || [], 
             shifts: allData.shifts || [], 
             wallets: allData.wallets || [],
-            transactionCategories: allData.transactionCategories || [],
-            currentPage: 'dashboard'
-        });
+            transactionCategories: allData.transactionCategories || []
+        };
+
+        // Роутинг в зависимости от роли
+        if (allData.userProfile.role === 'super_admin') {
+            updates.currentPage = 'super_admin_panel';
+        } else if (allData.userProfile.role === 'owner') {
+            updates.currentPage = 'dashboard';
+        } else {
+            const hasApproved = (allData.myEmployments || []).some(e => e.status === 'approved');
+            updates.currentPage = hasApproved ? 'dashboard' : 'job_search';
+        }
+
+        setState(updates);
         
         // Setup Realtime 
         if (window.setupRealtime) {
@@ -131,7 +189,5 @@ window.handleAuthSubmit = async function(e) {
 };
 
 window.renderSetup = function() {
-    // В новой архитектуре с Supabase отдельный экран setup больше не нужен, 
-    // но оставляем заглушку, чтобы роутер не сломался
     return renderAuth();
 };

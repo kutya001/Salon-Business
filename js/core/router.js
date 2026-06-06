@@ -1,10 +1,35 @@
 // ============================================
-// router.js — Упрощенный роутер и макет (Layout)
+// router.js — Упрощенный роутер и макет (Layout) с поддержкой ролей
 // ============================================
 
 window.navigate = function (page) {
   setUI({ sidebarOpen: false });
   setState({ currentPage: page });
+};
+
+window.switchActiveBusiness = async function (bizId) {
+  setUI({ activeBusinessId: bizId, loading: true });
+  try {
+    const allData = await api.getAll();
+    setState({
+      business: allData.business || state.business,
+      categories: allData.categories || [],
+      masters: allData.masters || [],
+      services: allData.services || [],
+      bookings: allData.bookings || [],
+      clients: allData.clients || [],
+      transactions: allData.transactions || [],
+      shifts: allData.shifts || [],
+      wallets: allData.wallets || [],
+      transactionCategories: allData.transactionCategories || [],
+      jobApplications: allData.jobApplications || []
+    });
+    showToast('Активный салон изменен', 'success');
+  } catch (err) {
+    showToast('Ошибка при переключении салона', 'error');
+  } finally {
+    setUI({ loading: false });
+  }
 };
 
 window.renderApp = function () {
@@ -28,7 +53,9 @@ window.renderLayout = function () {
   const syncClass = isSyncing ? 'sync-icon-spin' : '';
   const logsCount = (state.apiLogs || []).length;
 
-  // Подключение рендеров страниц по условию
+  const role = state.userProfile?.role || 'master';
+
+  // Маршрутизация по страницам
   if (page === 'dashboard' && window.renderDashboard) pageContent = renderDashboard();
   else if (page === 'bookings' && window.renderBookings) pageContent = renderBookings();
   else if (page === 'masters' && window.renderMasters) pageContent = renderMasters();
@@ -36,20 +63,42 @@ window.renderLayout = function () {
   else if (page === 'services' && window.renderServices) pageContent = renderServices();
   else if (page === 'finance' && window.renderFinance) pageContent = renderFinance();
   else if (page === 'settings' && window.renderSettings) pageContent = renderSettings();
-  else pageContent = `<div class="p-8 text-center">Раздел "${page}" находится в разработке</div>`;
+  else if (page === 'job_search' && window.renderJobSearch) pageContent = renderJobSearch();
+  else if (page === 'members_control' && window.renderMembersControl) pageContent = renderMembersControl();
+  else if (page === 'super_admin_panel' && window.renderSuperAdminPanel) pageContent = renderSuperAdminPanel();
+  else pageContent = `<div class="p-8 text-center">Раздел "${page}" недоступен или находится в разработке</div>`;
 
   const isSidebarOpen = state.ui.sidebarOpen;
   const businessName = state.business?.name || 'Мой Салон';
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Главное', icon: 'grid' },
-    { id: 'bookings', label: 'Записи', icon: 'calendar' },
-    { id: 'masters', label: 'Мастера', icon: 'users' },
-    { id: 'clients', label: 'Клиенты', icon: 'user' },
-    { id: 'services', label: 'Услуги', icon: 'scissors' },
-    { id: 'finance', label: 'Финансы', icon: 'dollar-sign' },
-    { id: 'settings', label: 'Настройки', icon: 'settings' }
-  ];
+  // Определение пунктов меню по ролям
+  let menuItems = [];
+  if (role === 'super_admin') {
+    menuItems = [
+      { id: 'super_admin_panel', label: 'Админ-панель', icon: 'shield' }
+    ];
+  } else {
+    menuItems = [
+      { id: 'dashboard', label: 'Главное', icon: 'grid' },
+      { id: 'bookings', label: 'Записи', icon: 'calendar' },
+      { id: 'masters', label: 'Мастера', icon: 'users' },
+      { id: 'clients', label: 'Клиенты', icon: 'user' },
+      { id: 'services', label: 'Услуги', icon: 'scissors' }
+    ];
+
+    if (role === 'owner' || role === 'manager') {
+      menuItems.push({ id: 'finance', label: 'Финансы', icon: 'dollar-sign' });
+    }
+
+    if (role === 'owner') {
+      menuItems.push({ id: 'members_control', label: 'Сотрудники', icon: 'user-plus' });
+      menuItems.push({ id: 'settings', label: 'Настройки', icon: 'settings' });
+    }
+
+    if (role === 'master' || role === 'manager') {
+      menuItems.push({ id: 'job_search', label: 'Поиск работы', icon: 'search' });
+    }
+  }
 
   const sidebarLinks = menuItems.map(item => {
     const activeClass = page === item.id ? 'active' : '';
@@ -61,8 +110,21 @@ window.renderLayout = function () {
     `;
   }).join('');
 
-  const mobileTabs = ['dashboard', 'bookings', 'masters', 'finance'].map(id => {
-    const item = menuItems.find(m => m.id === id);
+  // Нижняя панель для мобильных
+  let mobileTabsList = [];
+  if (role === 'super_admin') {
+    mobileTabsList = ['super_admin_panel'];
+  } else {
+    mobileTabsList = ['dashboard', 'bookings', 'masters'];
+    if (role === 'owner' || role === 'manager') {
+      mobileTabsList.push('finance');
+    } else {
+      mobileTabsList.push('job_search');
+    }
+  }
+
+  const mobileTabs = mobileTabsList.map(id => {
+    const item = menuItems.find(m => m.id === id) || { id, label: 'Поиск', icon: 'search' };
     const activeClass = page === item.id ? 'active' : '';
     return `
       <a href="#" onclick="event.preventDefault(); navigate('${item.id}')" class="tab-item ${activeClass}">
@@ -83,12 +145,10 @@ window.renderLayout = function () {
     `;
   }).join('');
 
-  // Рендерим модалку, если она есть
+  // Рендерим модалку
   let modalHtml = '';
   if (state.ui.modal) {
     let modalContent = '';
-    
-    // Передаем отрисовку соответствующего окна
     if (state.ui.modal === 'createBooking' && window.renderBookingModal) modalContent = renderBookingModal();
     else if (state.ui.modal === 'editBookingFull' && window.renderEditBookingFullModal) modalContent = renderEditBookingFullModal();
     else if (state.ui.modal === 'viewBooking' && window.renderBookingDetailsModal) modalContent = renderBookingDetailsModal();
@@ -128,26 +188,74 @@ window.renderLayout = function () {
     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11,15,26,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(8px); animation: fadeIn 0.3s forwards;">
       <div class="card" style="padding: 40px 32px; display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(255, 255, 255, 0.96); border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); max-width: 340px; width: 90%; text-align: center; border: 1px solid rgba(255,255,255,0.2); animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;">
         <div style="font-size: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); animation: pulse 1.5s infinite;">💎</div>
-        
         <div>
           <h2 style="font-weight: 800; font-size: 22px; color: #1a1a2e; margin-bottom: 4px; letter-spacing: -0.02em;">Suluu Business</h2>
-          <p style="font-size: 12px; color: #555; line-height: 1.4; font-weight: 500;">Современная платформа для управления салоном красоты</p>
         </div>
-        
         <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 8px 0;">
           <span class="spinner" style="width: 36px; height: 36px; border: 3.5px solid #e2e8f0; border-top-color: #764ba2; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block;"></span>
           <div style="font-weight: 700; color: #764ba2; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Синхронизация...</div>
-        </div>
-        
-        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; width: 100%; font-size: 10px; color: #999; display: flex; flex-direction: column; gap: 2px;">
-          <div>Версия: <span style="font-weight: 600; color: #666;">2.3.0-PRO</span></div>
-          <div>Обновление: <span style="font-weight: 600; color: #666;">31.05.2026</span></div>
         </div>
       </div>
     </div>
   ` : '';
 
   const syncingIcon = (state.ui.syncingCount > 0) ? `<i data-feather="refresh-cw" class="sync-icon-spin" style="width: 16px; height: 16px; margin-left: 8px; color: var(--primary);"></i>` : '';
+
+  // Отрендерим переключатель салонов
+  let businessSwitcherHtml = '';
+  if (role === 'owner' && state.myBusinesses && state.myBusinesses.length > 0) {
+    const options = state.myBusinesses.map(b => `
+      <option value="${b.id}" ${b.id === state.ui.activeBusinessId ? 'selected' : ''}>${b.name}</option>
+    `).join('');
+    businessSwitcherHtml = `
+      <div style="margin: 0 16px 12px; display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Салон</label>
+        <select onchange="switchActiveBusiness(this.value)" style="width: 100%; padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); outline: none; cursor: pointer;">
+          ${options}
+        </select>
+      </div>
+    `;
+  } else if ((role === 'manager' || role === 'master') && state.myEmployments) {
+    const approvedEmps = state.myEmployments.filter(e => e.status === 'approved');
+    if (approvedEmps.length > 0) {
+      const options = approvedEmps.map(e => `
+        <option value="${e.business_id}" ${e.business_id === state.ui.activeBusinessId ? 'selected' : ''}>${e.business?.name || 'Салон'}</option>
+      `).join('');
+      businessSwitcherHtml = `
+        <div style="margin: 0 16px 12px; display: flex; flex-direction: column; gap: 4px;">
+          <label style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Салон</label>
+          <select onchange="switchActiveBusiness(this.value)" style="width: 100%; padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); outline: none; cursor: pointer;">
+            ${options}
+          </select>
+        </div>
+      `;
+    }
+  }
+
+  // Мобильный переключатель в шапке
+  let topBarSwitcherHtml = '';
+  if (role === 'owner' && state.myBusinesses && state.myBusinesses.length > 1) {
+    const options = state.myBusinesses.map(b => `
+      <option value="${b.id}" ${b.id === state.ui.activeBusinessId ? 'selected' : ''}>${b.name}</option>
+    `).join('');
+    topBarSwitcherHtml = `
+      <select onchange="switchActiveBusiness(this.value)" style="background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; outline: none; cursor: pointer; max-width: 120px; margin-left: 8px;">
+        ${options}
+      </select>
+    `;
+  } else if ((role === 'manager' || role === 'master') && state.myEmployments) {
+    const approvedEmps = state.myEmployments.filter(e => e.status === 'approved');
+    if (approvedEmps.length > 1) {
+      const options = approvedEmps.map(e => `
+        <option value="${e.business_id}" ${e.business_id === state.ui.activeBusinessId ? 'selected' : ''}>${e.business?.name || 'Салон'}</option>
+      `).join('');
+      topBarSwitcherHtml = `
+        <select onchange="switchActiveBusiness(this.value)" style="background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; outline: none; cursor: pointer; max-width: 120px; margin-left: 8px;">
+          ${options}
+        </select>
+      `;
+    }
+  }
 
   return `
     <div class="app-layout ${state.ui.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
@@ -166,18 +274,20 @@ window.renderLayout = function () {
             <i data-feather="${state.ui.sidebarCollapsed ? 'chevron-right' : 'chevron-left'}" style="width: 20px; height: 20px;"></i>
           </button>
         </div>
+        
+        <div style="margin-top: 16px;">
+          ${businessSwitcherHtml}
+        </div>
+
         <nav class="sidebar-menu" style="padding: 16px; display: flex; flex-direction: column; gap: 4px; flex-grow: 1; overflow-x: hidden;">
           ${sidebarLinks}
         </nav>
+
         <div class="sidebar-footer" style="padding: 16px; border-top: 1px solid var(--border); overflow-x: hidden; display: flex; flex-direction: column; gap: 8px;">
-          <div class="sidebar-business-name" style="font-size: 13px; font-weight: 600; padding: 0 12px 8px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px;">
-            <i data-feather="briefcase" style="width: 16px; height: 16px; min-width: 16px;"></i> <span>${businessName}</span>
+          <div class="sidebar-business-name" style="font-size: 12px; font-weight: 600; padding: 0 12px 8px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px;">
+            <i data-feather="user" style="width: 16px; height: 16px; min-width: 16px;"></i> 
+            <span>${state.userProfile?.username} (${role === 'owner' ? 'Владелец' : role === 'manager' ? 'Менеджер' : role === 'super_admin' ? 'Админ' : 'Мастер'})</span>
           </div>
-          <button onclick="setUI({ modal: 'syncLogs' })" title="Синхронизация" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text); border-color: var(--border); background: var(--bg-secondary);">
-            <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px; min-width: 16px; color: var(--primary);"></i>
-            <span class="sidebar-action-text" style="flex-grow: 1; text-align: left;">Синхронизация</span>
-            ${logsCount > 0 ? `<span class="sidebar-action-text" style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px;">${logsCount}</span>` : ''}
-          </button>
           <button onclick="api.logout()" title="Выйти" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
             <i data-feather="log-out" style="width: 16px; height: 16px; min-width: 16px;"></i>
             <span class="sidebar-action-text" style="flex-grow: 1; text-align: left;">Выйти</span>
@@ -190,17 +300,16 @@ window.renderLayout = function () {
           <i data-feather="menu"></i>
         </button>
         <div style="font-weight: 800; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 6px;">
-          <i data-feather="hexagon" style="width: 20px; height: 20px; color: var(--primary);"></i> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${businessName}</span> ${syncingIcon}
+          <i data-feather="hexagon" style="width: 20px; height: 20px; color: var(--primary);"></i> 
+          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${businessName}</span> 
+          ${topBarSwitcherHtml}
+          ${syncingIcon}
         </div>
         <div style="display: flex; gap: 12px; align-items: center;">
           ${page === 'bookings' ? `
             <button onclick="setUI({ showMobileSearch: !state.ui.showMobileSearch, showMobileFilters: false })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px;"><i data-feather="search" style="width: 20px; height: 20px;"></i></button>
             <button onclick="setUI({ showMobileFilters: !state.ui.showMobileFilters, showMobileSearch: false })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px;"><i data-feather="sliders" style="width: 20px; height: 20px;"></i></button>
           ` : ''}
-          <button onclick="setUI({ modal: 'syncLogs' })" style="background: none; border: none; cursor: pointer; color: var(--text); padding: 4px; display: flex; align-items: center; justify-content: center; position: relative;">
-            <i data-feather="refresh-cw" class="${syncClass}" style="width: 20px; height: 20px; color: var(--primary);"></i>
-            ${logsCount > 0 ? `<div style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; font-size: 8px; font-weight: 800; width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--bg); font-family: sans-serif;">${logsCount}</div>` : ''}
-          </button>
         </div>
       </header>
 
@@ -214,14 +323,18 @@ window.renderLayout = function () {
             </div>
             <button onclick="setUI({ sidebarOpen: false })" style="background: none; border: none; cursor: pointer; color: var(--text);"><i data-feather="x"></i></button>
           </div>
+          
+          <div style="padding: 16px 16px 0;">
+            ${businessSwitcherHtml}
+          </div>
+
           <nav style="padding: 16px; display: flex; flex-direction: column; gap: 6px;">
             ${sidebarLinks}
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 12px 0;">
-            <button onclick="setUI({ modal: 'syncLogs', sidebarOpen: false })" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: var(--text); border-color: var(--border); background: var(--bg-secondary); cursor: pointer;">
-              <i data-feather="refresh-cw" class="${syncClass}" style="width: 18px; height: 18px; color: var(--primary);"></i>
-              <span style="flex-grow: 1; text-align: left;">Синхронизация</span>
-              ${logsCount > 0 ? `<span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px;">${logsCount}</span>` : ''}
-            </button>
+            <div style="font-size: 12px; font-weight: 600; padding: 0 12px 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+              <i data-feather="user" style="width: 18px; height: 18px;"></i> 
+              <span>${state.userProfile?.username} (${role === 'owner' ? 'Владелец' : role === 'manager' ? 'Менеджер' : role === 'super_admin' ? 'Админ' : 'Мастер'})</span>
+            </div>
             <button onclick="api.logout()" class="btn btn-secondary glass-interactive-card" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); cursor: pointer;">
               <i data-feather="log-out" style="width: 18px; height: 18px;"></i>
               <span style="flex-grow: 1; text-align: left;">Выйти из аккаунта</span>
@@ -251,67 +364,6 @@ window.renderLayout = function () {
 
       <!-- Загрузчик -->
       ${globalSpinner}
-    </div>
-  `;
-};
-
-window.renderSyncLogsModal = function () {
-  const isSyncing = state.ui.loading || state.ui.syncingCount > 0;
-  const syncClass = isSyncing ? 'sync-icon-spin' : '';
-  const logsCount = (state.apiLogs || []).length;
-
-  const logsHtml = logsCount === 0 ? `
-    <div style="color: var(--text-secondary); text-align: center; padding: 40px 20px;">
-      <i data-feather="cloud-off" style="width: 48px; height: 48px; color: var(--border); margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;"></i>
-      <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">Сетевой лог пуст</div>
-      <p style="font-size: 12px;">Активные обмены данными с Google Apps Script еще не происходили.</p>
-    </div>
-  ` : state.apiLogs.map(log => {
-      let color = '#a78bfa'; // purple for send
-      let prefix = '📤 ОТПРАВЛЕНО';
-      if (log.type === 'recv') {
-        color = '#34d399'; // green for recv
-        prefix = '📥 ПОЛУЧЕНО';
-      } else if (log.type === 'error') {
-        color = '#f87171'; // red for error
-        prefix = '❌ ОШИБКА';
-      }
-      return `
-        <div style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; font-family: monospace;">
-          <div style="display: flex; gap: 8px; color: ${color}; font-weight: 700; font-size: 12px; align-items: center; justify-content: space-between;">
-            <span style="display: flex; align-items: center; gap: 6px;">[${log.time}] ${prefix}</span>
-            <span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: normal; color: var(--text-secondary);">${log.action}</span>
-          </div>
-          <pre style="margin-top: 6px; color: #e2e8f0; font-size: 10px; overflow-x: auto; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; max-height: 120px; border: 1px solid var(--border);">${log.details}</pre>
-        </div>
-      `;
-  }).join('');
-
-  return `
-    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 600px; width: 100%;">
-      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
-        <div>
-          <h3 style="font-weight: 800; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px;">
-            <i data-feather="cloud-lightning" style="color: var(--primary);"></i> Сетевой шлюз GAS
-          </h3>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Контроль и детализация обмена данными</p>
-        </div>
-        <button onclick="setUI({ modal: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">✕</button>
-      </div>
-
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="forceSync()" class="btn btn-primary" style="flex: 2; min-width: 180px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <i data-feather="refresh-cw" class="${syncClass}" style="width: 16px; height: 16px;"></i>
-          ${isSyncing ? 'Синхронизация...' : 'Синхронизировать сейчас'}
-        </button>
-        <button onclick="setState({ apiLogs: [] })" class="btn btn-secondary" style="flex: 1; min-width: 100px; color: #f87171; border-color: rgba(248,113,113,0.2); background: rgba(248,113,113,0.05); display: flex; align-items: center; justify-content: center; gap: 6px;">
-          <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Очистить
-        </button>
-      </div>
-
-      <div class="scrollbar-hide" style="max-height: 40vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; background: var(--bg-secondary); border-radius: 12px; padding: 12px; border: 1px solid var(--border);">
-        ${logsHtml}
-      </div>
     </div>
   `;
 };

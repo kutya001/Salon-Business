@@ -1,5 +1,5 @@
 // ============================================
-// app.js — Точка входа в приложение
+// app.js — Точка входа в приложение (Ролевая модель + Мультитеннантность)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,9 +22,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Подгружаем все данные с бэкенда за один запрос
       const allData = await window.api.getAll();
       
+      let startPage = 'dashboard';
+      if (allData.userProfile.role === 'super_admin') {
+        startPage = 'super_admin_panel';
+      } else if (allData.userProfile.role === 'owner') {
+        startPage = 'dashboard';
+      } else {
+        const hasApproved = (allData.myEmployments || []).some(e => e.status === 'approved');
+        startPage = hasApproved ? 'dashboard' : 'job_search';
+      }
+
       setState({
         isAuthenticated: true,
-        business: allData.business || state.business,
+        userProfile: allData.userProfile,
+        myBusinesses: allData.myBusinesses || [],
+        myEmployments: allData.myEmployments || [],
+        allSalons: allData.allSalons || [],
+        business: allData.business || null,
         categories: allData.categories || [],
         masters: allData.masters || [],
         services: allData.services || [],
@@ -34,7 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         shifts: allData.shifts || [],
         wallets: allData.wallets || [],
         transactionCategories: allData.transactionCategories || [],
-        currentPage: 'dashboard'
+        jobApplications: allData.jobApplications || [],
+        allUsers: allData.allUsers || [],
+        allBusinesses: allData.allBusinesses || [],
+        currentPage: startPage
       });
 
       // Инициализация Realtime
@@ -53,7 +70,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Слушаем изменения авторизации
   window.supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT') {
-      setState({ isAuthenticated: false, currentPage: 'auth' });
+      setState({ 
+        isAuthenticated: false, 
+        currentPage: 'auth',
+        userProfile: null,
+        myBusinesses: [],
+        myEmployments: [],
+        allSalons: [],
+        business: null,
+        categories: [],
+        masters: [],
+        services: [],
+        bookings: [],
+        clients: [],
+        transactions: [],
+        shifts: [],
+        wallets: [],
+        transactionCategories: []
+      });
+      setUI({ activeBusinessId: null });
     }
   });
 });
@@ -65,12 +100,14 @@ function setupRealtime() {
   channel
     .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
       console.log('Realtime change received!', payload);
-      // При получении любого изменения просто дергаем getAll в фоне,
-      // чтобы стейт обновился и интерфейс перерисовался
       try {
         const allData = await window.api.getAll({ background: true });
         setState({
-          business: allData.business || state.business,
+          userProfile: allData.userProfile,
+          myBusinesses: allData.myBusinesses || [],
+          myEmployments: allData.myEmployments || [],
+          allSalons: allData.allSalons || [],
+          business: allData.business || null,
           categories: allData.categories || [],
           masters: allData.masters || [],
           services: allData.services || [],
@@ -79,7 +116,10 @@ function setupRealtime() {
           transactions: allData.transactions || [],
           shifts: allData.shifts || [],
           wallets: allData.wallets || [],
-          transactionCategories: allData.transactionCategories || []
+          transactionCategories: allData.transactionCategories || [],
+          jobApplications: allData.jobApplications || [],
+          allUsers: allData.allUsers || [],
+          allBusinesses: allData.allBusinesses || []
         });
       } catch (e) {
         console.error('Ошибка фонового обновления после realtime event:', e);
@@ -97,7 +137,11 @@ window.forceSync = async function () {
   try {
     const allData = await window.api.getAll({ background: false });
     setState({
-      business: allData.business || state.business,
+      userProfile: allData.userProfile,
+      myBusinesses: allData.myBusinesses || [],
+      myEmployments: allData.myEmployments || [],
+      allSalons: allData.allSalons || [],
+      business: allData.business || null,
       categories: allData.categories || [],
       masters: allData.masters || [],
       services: allData.services || [],
@@ -106,7 +150,10 @@ window.forceSync = async function () {
       transactions: allData.transactions || [],
       shifts: allData.shifts || [],
       wallets: allData.wallets || [],
-      transactionCategories: allData.transactionCategories || []
+      transactionCategories: allData.transactionCategories || [],
+      jobApplications: allData.jobApplications || [],
+      allUsers: allData.allUsers || [],
+      allBusinesses: allData.allBusinesses || []
     });
     showToast('Синхронизация завершена', 'success');
   } catch (err) {

@@ -32,7 +32,10 @@ class SupabaseAPI {
     
     if (error) {
       if (window.logApiCall) window.logApiCall('error', 'authenticate', error.message);
-      throw new Error('Неверный логин или пароль');
+      let errMsg = error.message;
+      if (errMsg === 'Invalid login credentials') errMsg = 'Неверный логин или пароль';
+      if (errMsg === 'Email not confirmed') errMsg = 'Email не подтвержден. Проверьте почту.';
+      throw new Error(errMsg);
     }
     
     if (window.logApiCall) window.logApiCall('recv', 'authenticate', data);

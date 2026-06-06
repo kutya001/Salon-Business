@@ -147,7 +147,7 @@ window.renderDashboard = function () {
                 <h4 style="font-weight: 700; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; md:max-width: 180px;">${b.clientName}</h4>
                 <span class="hidden md-inline" style="color: var(--border);">|</span>
                 <p style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; md:max-width: 250px; margin: 0;">
-                  ${b.serviceName} • <span style="color: var(--primary-light); font-weight: 600;">${b.masterName.split(' ')[0]}</span>
+                  ${b.serviceName} • <span style="color: var(--primary-light); font-weight: 600;">${b.masterName ? b.masterName.split(' ')[0] : 'Мастер'}</span>
                 </p>
               </div>
             </div>
@@ -171,7 +171,7 @@ window.renderDashboard = function () {
   const masterStats = {};
   state.bookings.filter(b => b.status === 'completed').forEach(b => {
     if (!masterStats[b.masterId]) {
-      masterStats[b.masterId] = { name: b.masterName, count: 0, revenue: 0 };
+      masterStats[b.masterId] = { name: b.masterName || 'Любой мастер', count: 0, revenue: 0 };
     }
     masterStats[b.masterId].count += 1;
     masterStats[b.masterId].revenue += parseFloat(b.price) || 0;

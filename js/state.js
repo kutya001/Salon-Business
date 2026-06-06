@@ -88,6 +88,13 @@ window.setUI = function (updates) {
 window.setFilters = function (updates) {
   Object.assign(window.state.ui.filters, updates);
   if (window.render) window.render();
+  
+  // Refetch bookings in background if date range changes
+  if (updates.dateFrom !== undefined || updates.dateTo !== undefined) {
+    api.getAll({ background: true }).then(allData => {
+      setState({ bookings: allData.bookings });
+    }).catch(e => console.error('Error refetching filtered bookings:', e));
+  }
 };
 
 // Функция обновления фильтров транзакций

@@ -57,9 +57,10 @@ const mapFrontendServiceToDb = (s) => {
   };
 };
 
-const mapDbBookingToFrontend = (b, clients = [], services = []) => {
+const mapDbBookingToFrontend = (b, clients = [], services = [], masters = []) => {
   if (!b) return b;
-  const client = clients.find(c => c.id === b.client_id) || {};
+  const client = b.client || clients.find(c => c.id === b.client_id) || {};
+  const master = b.master || masters.find(m => m.id === b.master_id) || {};
   
   // Restore serviceIds from services JSONB or fallback to service_id
   let serviceIds = b.service_id;
@@ -101,6 +102,7 @@ const mapDbBookingToFrontend = (b, clients = [], services = []) => {
     serviceId: serviceIds,
     clientName: client.name || 'Неизвестный клиент',
     clientPhone: client.phone || '',
+    masterName: master.name || 'Любой мастер',
     serviceName,
     duration
   };
@@ -123,6 +125,29 @@ const mapFrontendBookingToDb = (b) => {
     services: serviceList // JSONB datatype is auto-serialized by Supabase client
   };
 };
+
+// Внутренние приватные хелперы для взаимодействия с таблицами Supabase (не доступны через window.api)
+async function apiInsert(client, table, data) {
+  const activeId = window.state?.ui?.activeBusinessId;
+  if (table !== 'business' && table !== 'profiles' && table !== 'business_members' && activeId) {
+    data.business_id = activeId;
+  }
+  const { data: res, error } = await client.from(table).insert([data]).select().single();
+  if (error) throw error;
+  return res;
+}
+
+async function apiUpdate(client, table, id, data) {
+  const { data: res, error } = await client.from(table).update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return res;
+}
+
+async function apiDelete(client, table, id) {
+  const { error } = await client.from(table).delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
 
 class SupabaseAPI {
   constructor() {
@@ -382,6 +407,18 @@ class SupabaseAPI {
         
         if (activeId) {
           window.state.ui.activeBusinessId = activeId;
+
+          let dateFrom = window.state?.ui?.filters?.dateFrom;
+          let dateTo = window.state?.ui?.filters?.dateTo;
+          if (!dateFrom && !dateTo) {
+            const dFrom = new Date();
+            dFrom.setDate(dFrom.getDate() - 60);
+            const dTo = new Date();
+            dTo.setDate(dTo.getDate() + 60);
+            dateFrom = dFrom.toISOString().split('T')[0];
+            dateTo = dTo.toISOString().split('T')[0];
+          }
+
           const [
             businessRes, categoriesRes, mastersRes, servicesRes, clientsRes,
             bookingsRes, transactionsRes, shiftsRes, walletsRes, tCatRes, membersRes
@@ -391,7 +428,7 @@ class SupabaseAPI {
             this.client.from('masters').select('*').eq('business_id', activeId),
             this.client.from('services').select('*').eq('business_id', activeId),
             this.client.from('clients').select('*').eq('business_id', activeId),
-            this.client.from('bookings').select('*').eq('business_id', activeId),
+            this.client.from('bookings').select('*, client:clients(name, phone), master:masters(name)').eq('business_id', activeId).gte('date', dateFrom).lte('date', dateTo),
             this.client.from('transactions').select('*').eq('business_id', activeId),
             this.client.from('shifts').select('*').eq('business_id', activeId),
             this.client.from('wallets').select('*').eq('business_id', activeId),
@@ -411,7 +448,7 @@ class SupabaseAPI {
 
           // Применяем мапперы для локальных услуг и записей
           result.services = (servicesRes.data || []).map(mapDbServiceToFrontend);
-          result.bookings = (bookingsRes.data || []).map(b => mapDbBookingToFrontend(b, result.clients, result.services));
+          result.bookings = (bookingsRes.data || []).map(b => mapDbBookingToFrontend(b, result.clients, result.services, result.masters));
         }
       } else {
         const { data: employments, error: empErr } = await this.client
@@ -430,6 +467,18 @@ class SupabaseAPI {
 
         if (activeId) {
           window.state.ui.activeBusinessId = activeId;
+
+          let dateFrom = window.state?.ui?.filters?.dateFrom;
+          let dateTo = window.state?.ui?.filters?.dateTo;
+          if (!dateFrom && !dateTo) {
+            const dFrom = new Date();
+            dFrom.setDate(dFrom.getDate() - 60);
+            const dTo = new Date();
+            dTo.setDate(dTo.getDate() + 60);
+            dateFrom = dFrom.toISOString().split('T')[0];
+            dateTo = dTo.toISOString().split('T')[0];
+          }
+
           const [
             businessRes, categoriesRes, mastersRes, servicesRes, clientsRes, bookingsRes
           ] = await Promise.all([
@@ -438,7 +487,7 @@ class SupabaseAPI {
             this.client.from('masters').select('*').eq('business_id', activeId),
             this.client.from('services').select('*').eq('business_id', activeId),
             this.client.from('clients').select('*').eq('business_id', activeId),
-            this.client.from('bookings').select('*').eq('business_id', activeId)
+            this.client.from('bookings').select('*, client:clients(name, phone), master:masters(name)').eq('business_id', activeId).gte('date', dateFrom).lte('date', dateTo)
           ]);
 
           result.business = mapDbBusinessToFrontend(businessRes.data) || null;
@@ -447,7 +496,7 @@ class SupabaseAPI {
           result.clients = clientsRes.data || [];
 
           result.services = (servicesRes.data || []).map(mapDbServiceToFrontend);
-          result.bookings = (bookingsRes.data || []).map(b => mapDbBookingToFrontend(b, result.clients, result.services));
+          result.bookings = (bookingsRes.data || []).map(b => mapDbBookingToFrontend(b, result.clients, result.services, result.masters));
 
           const approvedMember = result.myEmployments.find(e => e.business_id === activeId && e.status === 'approved');
           if (approvedMember && approvedMember.role === 'manager') {
@@ -509,83 +558,60 @@ class SupabaseAPI {
     return mapDbBusinessToFrontend(data);
   }
 
-  // Generic Helpers
-  async _insert(table, data) {
-    const activeId = window.state?.ui?.activeBusinessId;
-    if (table !== 'business' && table !== 'profiles' && table !== 'business_members' && activeId) {
-      data.business_id = activeId;
-    }
-    const { data: res, error } = await this.client.from(table).insert([data]).select().single();
-    if (error) throw error;
-    return res;
-  }
-
-  async _update(table, id, data) {
-    const { data: res, error } = await this.client.from(table).update(data).eq('id', id).select().single();
-    if (error) throw error;
-    return res;
-  }
-
-  async _delete(table, id) {
-    const { error } = await this.client.from(table).delete().eq('id', id);
-    if (error) throw error;
-    return true;
-  }
-
   // Категории
-  async createCategory(data) { return this._insert('categories', data); }
-  async updateCategory(id, data) { return this._update('categories', id, data); }
-  async deleteCategory(id) { return this._delete('categories', id); }
+  async createCategory(data) { return apiInsert(this.client, 'categories', data); }
+  async updateCategory(id, data) { return apiUpdate(this.client, 'categories', id, data); }
+  async deleteCategory(id) { return apiDelete(this.client, 'categories', id); }
 
   // Мастера
-  async createMaster(data) { return this._insert('masters', data); }
-  async updateMaster(id, data) { return this._update('masters', id, data); }
-  async deleteMaster(id) { return this._delete('masters', id); }
+  async createMaster(data) { return apiInsert(this.client, 'masters', data); }
+  async updateMaster(id, data) { return apiUpdate(this.client, 'masters', id, data); }
+  async deleteMaster(id) { return apiDelete(this.client, 'masters', id); }
 
   // Услуги
   async createService(data) { 
-    return this._insert('services', mapFrontendServiceToDb(data))
+    return apiInsert(this.client, 'services', mapFrontendServiceToDb(data))
       .then(mapDbServiceToFrontend); 
   }
   async updateService(id, data) { 
-    return this._update('services', id, mapFrontendServiceToDb(data))
+    return apiUpdate(this.client, 'services', id, mapFrontendServiceToDb(data))
       .then(mapDbServiceToFrontend); 
   }
-  async deleteService(id) { return this._delete('services', id); }
+  async deleteService(id) { return apiDelete(this.client, 'services', id); }
 
   // Клиенты
-  async createClient(data) { return this._insert('clients', data); }
-  async updateClient(id, data) { return this._update('clients', id, data); }
+  async createClient(data) { return apiInsert(this.client, 'clients', data); }
+  async updateClient(id, data) { return apiUpdate(this.client, 'clients', id, data); }
 
   // Записи
   async createBooking(data) { 
-    return this._insert('bookings', mapFrontendBookingToDb(data))
-      .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services)); 
+    return apiInsert(this.client, 'bookings', mapFrontendBookingToDb(data))
+      .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services, window.state.masters)); 
   }
   async updateBooking(id, data) { 
-    return this._update('bookings', id, mapFrontendBookingToDb(data))
-      .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services)); 
+    return apiUpdate(this.client, 'bookings', id, mapFrontendBookingToDb(data))
+      .then(b => mapDbBookingToFrontend(b, window.state.clients, window.state.services, window.state.masters)); 
   }
-  async deleteBooking(id) { return this._delete('bookings', id); }
+  async deleteBooking(id) { return apiDelete(this.client, 'bookings', id); }
 
   // Транзакции
-  async createTransaction(data) { return this._insert('transactions', data); }
-  async updateTransaction(id, data) { return this._update('transactions', id, data); }
-  async deleteTransaction(id) { return this._delete('transactions', id); }
+  async createTransaction(data) { return apiInsert(this.client, 'transactions', data); }
+  async updateTransaction(id, data) { return apiUpdate(this.client, 'transactions', id, data); }
+  async deleteTransaction(id) { return apiDelete(this.client, 'transactions', id); }
 
   // Категории транзакций
-  async createTransactionCategory(data) { return this._insert('transaction_categories', data); }
-  async updateTransactionCategory(id, data) { return this._update('transaction_categories', id, data); }
-  async deleteTransactionCategory(id) { return this._delete('transaction_categories', id); }
+  async createTransactionCategory(data) { return apiInsert(this.client, 'transaction_categories', data); }
+  async updateTransactionCategory(id, data) { return apiUpdate(this.client, 'transaction_categories', id, data); }
+  async deleteTransactionCategory(id) { return apiDelete(this.client, 'transaction_categories', id); }
 
   // Кошельки
-  async createWallet(data) { return this._insert('wallets', data); }
-  async updateWallet(id, data) { return this._update('wallets', id, data); }
-  async deleteWallet(id) { return this._delete('wallets', id); }
+  async createWallet(data) { return apiInsert(this.client, 'wallets', data); }
+  async updateWallet(id, data) { return apiUpdate(this.client, 'wallets', id, data); }
+  async deleteWallet(id) { return apiDelete(this.client, 'wallets', id); }
 
   // Смены
   async openShift(opening_cash, date = null) {
-    return this._insert('shifts', {
+    return apiInsert(this.client, 'shifts', {
       status: 'open',
       opening_cash: opening_cash,
       date: date || new Date().toISOString().split('T')[0]
@@ -593,7 +619,7 @@ class SupabaseAPI {
   }
 
   async closeShift(id, closing_cash) {
-    return this._update('shifts', id, {
+    return apiUpdate(this.client, 'shifts', id, {
       status: 'closed',
       closing_cash: closing_cash,
       closed_at: new Date().toISOString()

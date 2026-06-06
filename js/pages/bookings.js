@@ -740,8 +740,8 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   showToast('Статус записи успешно изменен', 'success');
 
   try {
-    // 1. Обновляем статус записи на сервере
-    await api.updateBooking(id, { status: newStatus }, { background: true });
+    // 1. Обновляем статус записи на сервере (передаем и цену на случай, если она не была сохранена)
+    await api.updateBooking(id, { status: newStatus, price: b.price }, { background: true });
 
     // 2. Управляем транзакциями в базе данных
     if (newStatus === 'completed' && cashWallet && revenueCat && activeShift) {
@@ -1197,6 +1197,8 @@ window.handleEditBookingFullSubmit = async function() {
     return showToast('Выберите хотя бы одну процедуру', 'error');
   }
 
+  const serviceInfo = getServicesInfo(serviceIds);
+
   const clientName = document.getElementById('edit-b-name').value.trim();
   let cleanPhone = window.formatClientPhone(document.getElementById('edit-b-phone').value);
 
@@ -1216,7 +1218,8 @@ window.handleEditBookingFullSubmit = async function() {
     time: document.getElementById('edit-b-time').value,
     paymentMethod: document.getElementById('edit-b-payment').value,
     notes: document.getElementById('edit-b-notes').value.trim(),
-    status: document.getElementById('edit-b-status').value
+    status: document.getElementById('edit-b-status').value,
+    price: serviceInfo.price
   };
 
   // Проверяем кассовую смену, если статус меняется на Выполнен
@@ -1228,8 +1231,6 @@ window.handleEditBookingFullSubmit = async function() {
     }
   }
 
-  const serviceInfo = getServicesInfo(payload.serviceId);
-  
   if (!window.isMasterAvailable(payload.masterId, payload.date, payload.time, serviceInfo.durationMins, tempId)) {
     return showToast('Выбранный мастер занят в указанное время', 'error');
   }
@@ -1704,6 +1705,8 @@ window.handleCreateBookingSubmit = function () {
   // Используем единый формат
   let cleanPhone = window.formatClientPhone(draft.clientPhone);
 
+  const serviceInfo = getServicesInfo(draft.serviceId);
+
   const payload = {
     clientName: draft.clientName,
     clientPhone: cleanPhone,
@@ -1713,12 +1716,12 @@ window.handleCreateBookingSubmit = function () {
     time: draft.time,
     paymentMethod: draft.paymentMethod,
     notes: draft.notes || '',
-    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : (draft.status || 'pending')
+    status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : (draft.status || 'pending'),
+    price: serviceInfo.price
   };
 
   // Оптимистичное обновление
   const tempId = md.isEdit ? md.bookingId : ('b_temp_' + Date.now());
-  const serviceInfo = getServicesInfo(payload.serviceId);
 
   if (!window.isMasterAvailable(payload.masterId, payload.date, payload.time, serviceInfo.durationMins, md.isEdit ? tempId : null)) {
     return showToast('Выбранный мастер занят в указанное время', 'error');

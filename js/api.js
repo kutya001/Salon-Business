@@ -104,26 +104,31 @@ const mapDbBookingToFrontend = (b, clients = [], services = [], masters = []) =>
 
   let serviceName = 'Неизвестная услуга';
   let duration = '01:00';
+  let calculatedPrice = 0;
   
   if (serviceIds) {
     const ids = serviceIds.split(',').map(id => id.trim()).filter(Boolean);
     let totalDurationMins = 0;
     let names = [];
+    let totalPrice = 0;
     ids.forEach(id => {
       const s = services.find(x => x.id === id);
       if (s) {
         totalDurationMins += window.durationToMinutes(s.duration);
         names.push(s.name);
+        totalPrice += parseFloat(s.price) || 0;
       }
     });
     if (names.length > 0) {
       serviceName = names.join(' + ');
       duration = window.minutesToDuration(totalDurationMins || 60);
+      calculatedPrice = totalPrice;
     }
   }
 
   return {
     ...b,
+    price: (b.price !== null && b.price !== undefined) ? b.price : calculatedPrice,
     masterId: b.master_id,
     clientId: b.client_id,
     serviceId: serviceIds,

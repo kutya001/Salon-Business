@@ -93,16 +93,16 @@ window.renderMasters = function () {
   ` : pendingApps.map(app => {
     const roleText = app.role === 'manager' ? 'Менеджер' : 'Мастер';
     return `
-      <div class="card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(251,191,36,0.03); border: 1px solid rgba(251,191,36,0.2); border-radius: 16px;">
-        <div>
-          <div style="font-weight: 800; font-size: 15px; color: var(--text);">${app.profiles?.username || 'Сотрудник'}</div>
+      <div class="card employee-card employee-card-pending">
+        <div style="min-width: 0; flex-grow: 1;">
+          <div style="font-weight: 800; font-size: 15px; color: var(--text); word-break: break-word;">${app.profiles?.username || 'Сотрудник'}</div>
           <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Запрошенная роль: <span style="font-weight: 700; color: var(--primary);">${roleText}</span></div>
         </div>
-        ${hasPermission('employees_edit') ? `<div style="display: flex; gap: 8px;">
-          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'approved')" class="btn btn-primary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #34d399; color: white;">
+        ${hasPermission('employees_edit') ? `<div class="employee-actions">
+          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'approved')" class="btn btn-primary" style="background: #34d399; color: white;">
             Одобрить
           </button>
-          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2);">
+          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.2);">
             Отклонить
           </button>
         </div>` : ''}
@@ -117,10 +117,10 @@ window.renderMasters = function () {
   ` : approvedApps.map(app => {
     const isOwnerEmployee = app.user_id === state.business?.owner_id;
     return `
-      <div class="card glass-island" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border);">
-        <div>
-          <div style="font-weight: 800; font-size: 15px; color: var(--text);">${app.profiles?.username || 'Сотрудник'}</div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+      <div class="card glass-island employee-card employee-card-approved">
+        <div style="min-width: 0; flex-grow: 1;">
+          <div style="font-weight: 800; font-size: 15px; color: var(--text); word-break: break-word;">${app.profiles?.username || 'Сотрудник'}</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
             <span style="font-size: 12px; color: var(--text-secondary);">Доступ / Роль:</span>
             ${isOwnerEmployee
               ? `<span style="padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--primary); background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15);">👑 Владелец салона</span>`
@@ -131,11 +131,11 @@ window.renderMasters = function () {
             }
           </div>
         </div>
-        ${hasPermission('employees_edit') ? `<div style="display: flex; gap: 8px; align-items: center;">
-          ${app.role === 'manager' && !isOwnerEmployee ? `<button onclick="event.stopPropagation(); showEmployeePermissionsModal('${app.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--primary); border-color: var(--theme-200);">⚙️ Права доступа</button>` : ''}
-          ${!isOwnerEmployee ? `<button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">
+        ${hasPermission('employees_edit') && !isOwnerEmployee ? `<div class="employee-actions">
+          ${app.role === 'manager' ? `<button onclick="event.stopPropagation(); showEmployeePermissionsModal('${app.id}')" class="btn btn-secondary" style="color: var(--primary); border-color: var(--theme-200);">⚙️ Права доступа</button>` : ''}
+          <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">
             Исключить
-          </button>` : ''}
+          </button>
         </div>` : ''}
       </div>
     `;

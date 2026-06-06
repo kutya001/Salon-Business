@@ -303,7 +303,7 @@ function renderBookingsTable(bookings) {
 
     // Quick actions
     let actionBtnHtml = '';
-    if (hasPermission('bookings_edit')) {
+    if (hasPermission('bookings_status')) {
       if (b.status === 'pending') {
         actionBtnHtml = `
           <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
@@ -374,7 +374,7 @@ function renderBookingsTable(bookings) {
     const iconStr = window.getStatusIcon ? getStatusIcon(b.status) : 'info';
     
     let actionBtnHtml = '';
-    if (hasPermission('bookings_edit')) {
+    if (hasPermission('bookings_status')) {
       if (b.status === 'pending') {
         actionBtnHtml = `
           <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'confirmed')" title="Подтвердить" class="btn btn-secondary" style="padding: 6px; border-radius: 8px; color: var(--primary);"><i data-feather="check" style="width: 14px; height: 14px;"></i></button>
@@ -518,7 +518,7 @@ function renderBookingsTimeline(bookings) {
 
       const bookingBlocks = matchBookings.map(b => {
         let actions = '';
-        if (hasPermission('bookings_edit') && (b.status === 'pending' || b.status === 'confirmed')) {
+        if (hasPermission('bookings_status') && (b.status === 'pending' || b.status === 'confirmed')) {
           const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
           const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
           actions = `
@@ -832,7 +832,7 @@ window.renderBookingDetailsModal = function () {
   const statusLabel = getStatusLabel(b.status);
 
   let actionsHtml = '';
-  if (hasPermission('bookings_edit')) {
+  if (hasPermission('bookings_status')) {
     if (b.status === 'pending') {
       actionsHtml = `
         <button onclick="handleUpdateBookingStatus('${b.id}', 'confirmed')" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-feather="thumbs-up" style="width: 16px; height: 16px;"></i> Подтвердить</button>
@@ -1059,11 +1059,16 @@ window.renderEditBookingFullModal = function() {
   let svcsHtml = (state.services || []).map(s => {
     const isSelected = selectedServiceIds.includes(s.id);
     return `
-      <div onclick="toggleEditBookingService('${s.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'};">
-        <input type="checkbox" id="edit-svc-${s.id}" value="${s.id}" onchange="event.stopPropagation(); toggleEditBookingService('${s.id}');" ${isSelected ? 'checked' : ''} style="accent-color: var(--primary); width: 16px; height: 16px;">
-        <div style="flex: 1;">
-          <div style="font-weight: 700; font-size: 13px;">${s.name}</div>
-          <div style="font-size: 11px; color: var(--text-secondary);">${formatPrice(s.price)} (${s.duration} мин)</div>
+      <div onclick="toggleEditBookingService('${s.id}')" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; border-radius: 12px; margin-bottom: 8px; cursor: pointer; background: ${isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg)'}; transition: all 0.2s;">
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-weight: 700; font-size: 14px; color: ${isSelected ? 'var(--primary)' : 'var(--text)'}; transition: color 0.2s;">${s.name}</span>
+          <span style="font-size: 12px; color: var(--text-secondary);">${s.duration} мин</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-weight: 800; font-size: 14px; color: var(--text);">${formatPrice(s.price)}</span>
+          <div style="width: 22px; height: 22px; border-radius: 50%; border: 2px solid ${isSelected ? 'var(--primary)' : 'var(--text-secondary)'}; background: ${isSelected ? 'var(--primary)' : 'transparent'}; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: ${isSelected ? '0 2px 8px rgba(99,102,241,0.3)' : 'none'};">
+            ${isSelected ? '<i data-feather="check" style="width: 14px; height: 14px; color: white;"></i>' : ''}
+          </div>
         </div>
       </div>
     `;
@@ -1189,9 +1194,8 @@ window.handleEditBookingFullSubmit = async function() {
   const oldBooking = state.bookings.find(b => b.id === tempId);
   const oldStatus = oldBooking ? oldBooking.status : '';
   
-  // Получаем выбранные сервисы
-  const serviceCheckboxes = document.querySelectorAll('#edit-b-services input[type="checkbox"]:checked');
-  const serviceIds = Array.from(serviceCheckboxes).map(cb => cb.value).join(',');
+  // Получаем выбранные услуги из state (обновляются в toggleEditBookingService)
+  const serviceIds = md.draft.serviceId || '';
   
   if (!serviceIds) {
     return showToast('Выберите хотя бы одну процедуру', 'error');

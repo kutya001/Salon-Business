@@ -16,7 +16,7 @@ window.renderMasters = function () {
         <span style="display: flex; justify-content: center; margin-bottom: 16px; color: var(--border);"><i data-feather="users" style="width: 56px; height: 56px;"></i></span>
         <h3 style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Нет зарегистрированных мастеров</h3>
         <p style="font-size: 14px; margin-bottom: 16px;">Добавьте первого специалиста, чтобы принимать записи</p>
-        <button onclick="showCreateMasterModal()" class="btn btn-primary" style="width: auto;">Добавить мастера</button>
+        ${hasPermission('employees_edit') ? `<button onclick="showCreateMasterModal()" class="btn btn-primary" style="width: auto;">Добавить мастера</button>` : ''}
       </div>
     `
     : state.masters.map(m => {
@@ -68,6 +68,7 @@ window.renderMasters = function () {
               </div>
             </div>
 
+            ${hasPermission('employees_edit') ? `
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
                 <button onclick="event.stopPropagation(); showEditMasterModal('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; display: flex; align-items: center; gap: 4px;">
                   <i data-feather="edit-2" style="width: 14px; height: 14px;"></i> Изменить
@@ -75,7 +76,7 @@ window.renderMasters = function () {
                 <button onclick="event.stopPropagation(); handleDeleteMaster('${m.id}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto; color: #ef4444; border-color: rgba(239,68,68,0.15); display: flex; align-items: center; gap: 4px;">
                   <i data-feather="trash-2" style="width: 14px; height: 14px;"></i> Удалить
                 </button>
-            </div>
+            </div>` : ''}
           </div>
         `;
       }).join('');
@@ -97,14 +98,14 @@ window.renderMasters = function () {
           <div style="font-weight: 800; font-size: 15px; color: var(--text);">${app.profiles?.username || 'Сотрудник'}</div>
           <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Запрошенная роль: <span style="font-weight: 700; color: var(--primary);">${roleText}</span></div>
         </div>
-        <div style="display: flex; gap: 8px;">
+        ${hasPermission('employees_edit') ? `<div style="display: flex; gap: 8px;">
           <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'approved')" class="btn btn-primary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #34d399; color: white;">
             Одобрить
           </button>
           <button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2);">
             Отклонить
           </button>
-        </div>
+        </div>` : ''}
       </div>
     `;
   }).join('');
@@ -130,12 +131,12 @@ window.renderMasters = function () {
             }
           </div>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
+        ${hasPermission('employees_edit') ? `<div style="display: flex; gap: 8px; align-items: center;">
           ${app.role === 'manager' && !isOwnerEmployee ? `<button onclick="event.stopPropagation(); showEmployeePermissionsModal('${app.id}')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--primary); border-color: var(--theme-200);">⚙️ Права доступа</button>` : ''}
           ${!isOwnerEmployee ? `<button onclick="handleJobApplication('${app.id}', '${app.user_id}', '${app.role}', '${app.profiles?.username}', 'rejected')" class="btn btn-secondary" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">
             Исключить
           </button>` : ''}
-        </div>
+        </div>` : ''}
       </div>
     `;
   }).join('');
@@ -191,9 +192,9 @@ window.renderMasters = function () {
           <p style="color: var(--text-secondary); font-size: 14px;">Управление доступом, ролями, сотрудниками и настройками мастеров</p>
         </div>
         ${activeTab === 'masters' ? `
-          <button onclick="showCreateMasterModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
+          ${hasPermission('employees_edit') ? `<button onclick="showCreateMasterModal()" class="hidden md-flex btn btn-primary animate-scale-in" style="align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px;">
             <i data-feather="plus" style="width: 16px; height: 16px;"></i> Добавить мастера
-          </button>
+          </button>` : ''}
         ` : ''}
       </div>
 
@@ -202,7 +203,7 @@ window.renderMasters = function () {
       ${contentHtml}
       
       <!-- Плавающая кнопка (FAB) только на вкладке мастеров -->
-      ${activeTab === 'masters' ? `
+      ${hasPermission('employees_edit') && activeTab === 'masters' ? `
         <button onclick="showCreateMasterModal()" class="md-hidden animate-scale-in" style="position: fixed; bottom: 106px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: transform 0.2s ease;">
           <i data-feather="plus" style="width: 24px; height: 24px;"></i>
         </button>
@@ -605,33 +606,86 @@ window.renderEmployeePermissionsModal = function() {
   if (!md) return '';
   const p = md.permissions || {};
   
-  const permList = [
-    { key: 'dashboard_view', label: 'Главная (дашборд)', icon: 'grid' },
-    { key: 'bookings_view', label: 'Просмотр записей', icon: 'calendar' },
-    { key: 'bookings_edit', label: 'Редактирование записей', icon: 'edit' },
-    { key: 'employees_view', label: 'Просмотр сотрудников', icon: 'users' },
-    { key: 'clients_view', label: 'Просмотр клиентов', icon: 'user' },
-    { key: 'clients_edit', label: 'Редактирование клиентов', icon: 'user-plus' },
-    { key: 'services_view', label: 'Просмотр услуг', icon: 'scissors' },
-    { key: 'services_edit', label: 'Редактирование услуг', icon: 'edit-3' },
-    { key: 'services_delete', label: 'Удаление услуг', icon: 'trash-2' },
-    { key: 'finance_view', label: 'Просмотр финансов', icon: 'dollar-sign' },
-    { key: 'finance_shifts', label: 'Кассовые смены', icon: 'briefcase' },
-    { key: 'finance_transactions', label: 'Транзакции', icon: 'trending-up' },
-    { key: 'finance_categories', label: 'Статьи расхода/прихода', icon: 'layers' },
-    { key: 'finance_wallets', label: 'Кошельки', icon: 'credit-card' }
+  const permBlocks = [
+    {
+      title: 'Главная (Дашборд)',
+      icon: 'grid',
+      items: [
+        { key: 'dashboard_view', label: 'Видеть главную' }
+      ]
+    },
+    {
+      title: 'Записи',
+      icon: 'calendar',
+      items: [
+        { key: 'bookings_view', label: 'Просматривать записи' },
+        { key: 'bookings_edit', label: 'Создавать / Редактировать записи' },
+        { key: 'bookings_delete', label: 'Удалять записи' },
+        { key: 'bookings_status', label: 'Изменять статусы' }
+      ]
+    },
+    {
+      title: 'Услуги',
+      icon: 'scissors',
+      items: [
+        { key: 'services_view', label: 'Просматривать услуги' },
+        { key: 'services_edit', label: 'Создавать / Редактировать услуги' },
+        { key: 'services_delete', label: 'Удалять услуги' }
+      ]
+    },
+    {
+      title: 'Клиенты',
+      icon: 'users',
+      items: [
+        { key: 'clients_view', label: 'Просматривать клиентов' },
+        { key: 'clients_edit', label: 'Создавать / Редактировать клиентов' },
+        { key: 'clients_delete', label: 'Удалять клиентов' }
+      ]
+    },
+    {
+      title: 'Сотрудники',
+      icon: 'user',
+      items: [
+        { key: 'employees_view', label: 'Просматривать сотрудников' },
+        { key: 'employees_edit', label: 'Управлять сотрудниками' }
+      ]
+    },
+    {
+      title: 'Финансы',
+      icon: 'dollar-sign',
+      items: [
+        { key: 'finance_view', label: 'Просматривать финансы' },
+        { key: 'finance_shifts', label: 'Кассовые смены' },
+        { key: 'finance_transactions', label: 'Транзакции' },
+        { key: 'finance_categories', label: 'Статьи расхода/прихода' },
+        { key: 'finance_wallets', label: 'Кошельки' }
+      ]
+    }
   ];
-  
-  const toggleHtml = permList.map(item => {
-    const isAllowed = p[item.key] !== false;
-    return `
-      <div onclick="handleTogglePermission('${item.key}')" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <i data-feather="${item.icon}" style="width: 16px; height: 16px; color: ${isAllowed ? 'var(--primary)' : 'var(--text-secondary)'};"></i>
-          <span style="font-weight: 600; font-size: 13px; color: var(--text);">${item.label}</span>
+
+  const blocksHtml = permBlocks.map(block => {
+    const itemsHtml = block.items.map(item => {
+      const isAllowed = p[item.key] !== false;
+      return `
+        <div onclick="handleTogglePermission('${item.key}')" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'">
+          <div style="font-weight: 500; font-size: 13px; color: ${isAllowed ? 'var(--text)' : 'var(--text-secondary)'}; transition: color 0.2s;">
+            ${item.label}
+          </div>
+          <div style="width: 40px; height: 22px; border-radius: 20px; background: ${isAllowed ? 'var(--primary)' : 'rgba(150,150,150,0.2)'}; border: 1px solid var(--border); position: relative; transition: background 0.3s; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="width: 16px; height: 16px; border-radius: 50%; background: white; position: absolute; top: 2px; left: ${isAllowed ? '20px' : '2px'}; transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+          </div>
         </div>
-        <div style="width: 44px; height: 24px; border-radius: 24px; background: ${isAllowed ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; border: 1px solid var(--border); position: relative; transition: background 0.3s; cursor: pointer;">
-          <div style="width: 16px; height: 16px; border-radius: 50%; background: white; position: absolute; top: 3px; left: ${isAllowed ? '23px' : '3px'}; transition: left 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+      `;
+    }).join('');
+    
+    return `
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px;">
+        <div style="padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+          <i data-feather="${block.icon}" style="width: 16px; height: 16px; color: var(--primary);"></i>
+          <h4 style="font-weight: 700; font-size: 14px; color: var(--text); margin: 0;">${block.title}</h4>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          ${itemsHtml}
         </div>
       </div>
     `;
@@ -644,8 +698,8 @@ window.renderEmployeePermissionsModal = function() {
         <button onclick="setUI({ modal: null, modalData: null })" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i data-feather="x"></i></button>
       </div>
       <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">Управляйте доступами менеджера. По умолчанию все разрешения включены. Отключите ненужные.</p>
-      <div class="scrollbar-hide" style="overflow-y: auto; max-height: 55vh; border: 1px solid var(--border); border-radius: 12px;">
-        ${toggleHtml}
+      <div class="scrollbar-hide" style="overflow-y: auto; max-height: 55vh; padding-right: 4px;">
+        ${blocksHtml}
       </div>
       <button onclick="handleSaveEmployeePermissions()" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить права доступа</button>
     </div>

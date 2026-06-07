@@ -405,11 +405,7 @@ window.handleSaveTemplates = async function () {
   showToast('Сохранение шаблонов...', 'info');
   
   try {
-    const promises = [];
-    toAdd.forEach(id => promises.push(api.toggleGlobalService(id, true)));
-    toRemove.forEach(id => promises.push(api.toggleGlobalService(id, false)));
-    
-    await Promise.all(promises);
+    await api.saveGlobalTemplatesBatch(toAdd, toRemove);
     
     showToast('Шаблоны успешно сохранены!', 'success');
     

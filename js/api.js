@@ -958,6 +958,108 @@ class SupabaseAPI {
     return true;
   }
 
+  async saveGlobalTemplatesBatch(toAdd, toRemove) {
+    const activeId = window.state?.ui?.activeBusinessId;
+    if (!activeId) throw new Error('Салон не выбран');
+
+    // 1. Обработка удаления (toRemove)
+    if (toRemove && toRemove.length > 0) {
+      const { data: localServicesToRemove, error: findRemoveErr } = await this.client
+        .from('services')
+        .select('id, category_id')
+        .eq('business_id', activeId)
+        .in('global_service_id', toRemove);
+      
+      if (findRemoveErr) throw findRemoveErr;
+
+      if (localServicesToRemove && localServicesToRemove.length > 0) {
+        const localIds = localServicesToRemove.map(s => s.id);
+        const categoryIdsToCheck = Array.from(new Set(localServicesToRemove.map(s => s.category_id).filter(Boolean)));
+
+        const { error: delErr } = await this.client
+          .from('services')
+          .delete()
+          .in('id', localIds);
+        if (delErr) throw delErr;
+
+        for (const catId of categoryIdsToCheck) {
+          const { data: remaining, error: remErr } = await this.client
+            .from('services')
+            .select('id')
+            .eq('category_id', catId)
+            .limit(1);
+          if (!remErr && (!remaining || remaining.length === 0)) {
+            await this.client.from('categories').delete().eq('id', catId);
+          }
+        }
+      }
+    }
+
+    // 2. Обработка добавления (toAdd)
+    if (toAdd && toAdd.length > 0) {
+      const { data: globalServices, error: gsErr } = await this.client
+        .from('global_services')
+        .select('*, global_categories(name)')
+        .in('id', toAdd);
+      if (gsErr) throw gsErr;
+
+      if (globalServices && globalServices.length > 0) {
+        const categoryNames = Array.from(new Set(globalServices.map(gs => gs.global_categories?.name).filter(Boolean)));
+
+        const { data: existingCats, error: extCatsErr } = await this.client
+          .from('categories')
+          .select('id, name')
+          .eq('business_id', activeId)
+          .in('name', categoryNames);
+        if (extCatsErr) throw extCatsErr;
+
+        const catNameToIdMap = {};
+        if (existingCats) {
+          existingCats.forEach(c => {
+            catNameToIdMap[c.name] = c.id;
+          });
+        }
+
+        const catsToCreate = categoryNames.filter(name => !catNameToIdMap[name]);
+        if (catsToCreate.length > 0) {
+          const { data: createdCats, error: createCatsErr } = await this.client
+            .from('categories')
+            .insert(catsToCreate.map(name => ({ business_id: activeId, name })))
+            .select('id, name');
+          if (createCatsErr) throw createCatsErr;
+
+          if (createdCats) {
+            createdCats.forEach(c => {
+              catNameToIdMap[c.name] = c.id;
+            });
+          }
+        }
+
+        const servicesToInsert = globalServices.map(gs => {
+          const catName = gs.global_categories?.name;
+          const localCatId = catNameToIdMap[catName] || null;
+          return {
+            business_id: activeId,
+            category_id: localCatId,
+            name: gs.name,
+            price: gs.price,
+            duration: gs.duration,
+            global_service_id: gs.id,
+            gender_category: gs.gender_category,
+            description: gs.description
+          };
+        });
+
+        const { error: insertErr } = await this.client
+          .from('services')
+          .insert(servicesToInsert);
+        if (insertErr) throw insertErr;
+      }
+    }
+
+    return true;
+  }
+
   async createGlobalCategory(name) {
     const { data, error } = await this.client.from('global_categories').insert([{ name }]).select().single();
     if (error) throw error;

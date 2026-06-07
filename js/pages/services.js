@@ -71,6 +71,14 @@ window.renderServices = function () {
 
   } else if (activeTab === 'templates') {
     // Вкладка "Шаблоны услуг"
+    if (state.ui.templatesDraft === null || state.ui.templatesDraft === undefined) {
+      state.ui.templatesDraft = state.services
+        .map(s => s.global_service_id)
+        .filter(Boolean);
+    }
+    const draft = state.ui.templatesDraft || [];
+    const collapsedGroups = state.ui.collapsedTemplateCategories || {};
+
     const groupedTemplates = {};
     state.globalCategories.forEach(gc => {
       groupedTemplates[gc.id] = { name: gc.name, items: [] };
@@ -81,58 +89,111 @@ window.renderServices = function () {
       }
     });
 
+    const currentActive = state.services
+      .map(s => s.global_service_id)
+      .filter(Boolean);
+    const toAdd = draft.filter(id => !currentActive.includes(id));
+    const toRemove = currentActive.filter(id => !draft.includes(id));
+    const hasChanges = toAdd.length > 0 || toRemove.length > 0;
+    const totalChangesCount = toAdd.length + toRemove.length;
+
+    let savePanelHtml = '';
+    if (hasPermission('services_edit')) {
+      savePanelHtml = `
+        <div class="card shadow-lg" style="padding: 16px 20px; background: ${hasChanges ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${hasChanges ? 'var(--primary)' : 'var(--border)'}; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+          <div style="flex-grow: 1; min-width: 200px;">
+            <h3 style="font-weight: 800; font-size: 15px; color: var(--text); display: flex; align-items: center; gap: 8px; margin: 0;">
+              <i data-feather="book-open" style="width: 18px; height: 18px; color: var(--primary);"></i> Выбор шаблонов услуг (50+)
+            </h3>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0 0; line-height: 1.4;">
+              ${hasChanges 
+                ? `Несохраненные изменения: <b>+${toAdd.length}</b> добавлено, <b>-${toRemove.length}</b> удалено. Нажмите «Сохранить», чтобы применить.` 
+                : 'Отметьте нужные шаблоны галочками и нажмите кнопку сохранения.'}
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            ${hasChanges ? `
+              <button onclick="setUI({ templatesDraft: null })" class="btn btn-secondary" style="width: auto; padding: 10px 18px; font-weight: 700; border-color: rgba(239,68,68,0.2); color: #ef4444; border-radius: 12px; height: auto;">
+                Сбросить
+              </button>
+            ` : ''}
+            <button onclick="handleSaveTemplates()" class="btn ${hasChanges ? 'btn-primary animate-pulse' : 'btn-secondary'}" ${!hasChanges ? 'disabled' : ''} style="width: auto; padding: 10px 24px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; height: auto;">
+              <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     let templatesHtml = '';
     for (const gcId in groupedTemplates) {
       const group = groupedTemplates[gcId];
       if (group.items.length === 0) continue;
 
-      const itemsListHtml = group.items.map(gs => {
-        const isActive = state.services.some(s => s.global_service_id === gs.id);
-        
-        return `
-          <div class="card glass-island" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-radius: 16px; border: 1px solid var(--border); background: rgba(255,255,255,0.01);">
-            <div>
-              <div style="font-weight: 800; font-size: 14px; color: var(--text);">${gs.name}</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 12px; font-weight: 500;">
-                <span style="display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px; color: var(--primary);"></i> ${gs.duration} мин</span>
-                <span style="display: flex; align-items: center; gap: 4px;"><i data-feather="dollar-sign" style="width: 12px; height: 12px; color: var(--primary);"></i> ${formatPrice(gs.price)}</span>
-              </div>
-            </div>
-            <div>
-              <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
-                <input type="checkbox" ${isActive ? 'checked' : ''} onchange="handleToggleTemplate('${gs.id}', this.checked)"
-                  style="opacity: 0; width: 0; height: 0; display: none;">
-                <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; transition: .3s; border-radius: 24px; border: 1px solid var(--border); display: block;">
-                  <span style="position: absolute; content: ''; height: 16px; width: 16px; left: ${isActive ? '23px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; display: block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
-                </span>
-              </label>
-            </div>
+      const isCollapsed = !!collapsedGroups[gcId];
+      const serviceIds = group.items.map(gs => gs.id);
+      const selectedInGroup = serviceIds.filter(id => draft.includes(id));
+      const isAllSelected = serviceIds.every(id => draft.includes(id));
+      const isSomeSelected = selectedInGroup.length > 0 && !isAllSelected;
+
+      let itemsListHtml = '';
+      if (!isCollapsed) {
+        itemsListHtml = `
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style="margin-top: 12px; animation: fadeIn 0.2s ease-out;">
+            ${group.items.map(gs => {
+              const isActive = draft.includes(gs.id);
+              return `
+                <div class="card glass-island" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-radius: 16px; border: 1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}; background: ${isActive ? 'rgba(99,102,241,0.03)' : 'rgba(255,255,255,0.01)'}; transition: all 0.2s ease;">
+                  <div>
+                    <div style="font-weight: 800; font-size: 14px; color: var(--text);">${gs.name}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 12px; font-weight: 500;">
+                      <span style="display: flex; align-items: center; gap: 4px;"><i data-feather="clock" style="width: 12px; height: 12px; color: var(--primary);"></i> ${gs.duration} мин</span>
+                      <span style="display: flex; align-items: center; gap: 4px;"><i data-feather="dollar-sign" style="width: 12px; height: 12px; color: var(--primary);"></i> ${formatPrice(gs.price)}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                      <input type="checkbox" ${isActive ? 'checked' : ''} onchange="handleToggleTemplateDraft('${gs.id}', this.checked)"
+                        style="opacity: 0; width: 0; height: 0; display: none;">
+                      <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; transition: .3s; border-radius: 24px; border: 1px solid var(--border); display: block;">
+                        <span style="position: absolute; content: ''; height: 16px; width: 16px; left: ${isActive ? '23px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; display: block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         `;
-      }).join('');
+      }
+
+      const chevronIcon = isCollapsed ? 'chevron-right' : 'chevron-down';
 
       templatesHtml += `
-        <div style="margin-bottom: 28px;">
-          <h2 style="font-size: 15px; font-weight: 800; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid var(--primary); padding-left: 10px;">
-            ${group.name} (${group.items.length})
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            ${itemsListHtml}
+        <div style="margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 14px; padding: 10px 16px; flex-wrap: wrap;">
+            <!-- Левая часть: Сворачивание и Название -->
+            <div onclick="toggleTemplateGroupCollapse('${gcId}')" style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex-grow: 1; min-width: 200px;">
+              <i data-feather="${chevronIcon}" style="width: 18px; height: 18px; color: var(--text-secondary);"></i>
+              <h2 style="font-size: 15px; font-weight: 800; margin: 0; color: var(--text); text-transform: uppercase; letter-spacing: 0.05em;">
+                ${group.name} <span style="color: var(--text-secondary); font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0;">(${selectedInGroup.length} из ${group.items.length})</span>
+              </h2>
+            </div>
+            
+            <!-- Правая часть: Выбор всей группы разом -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="grp-select-all-${gcId}" style="font-size: 12px; font-weight: 700; color: var(--text-secondary); cursor: pointer; user-select: none;">Выбрать все</label>
+              <input type="checkbox" id="grp-select-all-${gcId}" ${isAllSelected ? 'checked' : ''} onchange="handleToggleTemplateGroupAll('${gcId}', this.checked)" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; ${isSomeSelected ? 'opacity: 0.6;' : ''}">
+            </div>
           </div>
+          ${itemsListHtml}
         </div>
       `;
     }
 
     contentHtml = `
       <div class="animate-fade-in" style="display: flex; flex-direction: column; gap: 16px;">
-        <div class="card" style="padding: 16px 20px; background: rgba(118,75,162,0.05); border: 1px solid rgba(118,75,162,0.15); border-radius: 16px;">
-          <h3 style="font-weight: 800; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 6px;">
-            <i data-feather="info" style="width: 16px; height: 16px; color: var(--primary);"></i> Библиотека готовых услуг (50+)
-          </h3>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4;">
-            Выберите услуги, которые оказывает ваш салон. Они автоматически появятся в вашем прайс-листе. Вы всегда сможете настроить цену или длительность каждой услуги индивидуально в первой вкладке.
-          </p>
-        </div>
+        ${savePanelHtml}
         ${templatesHtml}
       </div>
     `;
@@ -294,58 +355,77 @@ window.renderServices = function () {
   `;
 };
 
-window.handleToggleTemplate = function (globalServiceId, isChecked) {
-  // Optimistic UI updates
+window.handleToggleTemplateDraft = function (globalServiceId, isChecked) {
+  let draft = [...(state.ui.templatesDraft || [])];
   if (isChecked) {
-    const gs = state.globalServices.find(s => s.id === globalServiceId);
-    if (!gs) return;
-    const catName = state.globalCategories.find(c => c.id === gs.category_id)?.name || 'Шаблон';
-    
-    let localCat = state.categories.find(c => c.name === catName);
-    if (!localCat) {
-      localCat = { id: 'temp_cat_' + Date.now(), name: catName };
-      state.categories.push(localCat);
+    if (!draft.includes(globalServiceId)) {
+      draft.push(globalServiceId);
     }
-    
-    const tempService = {
-      id: 'temp_s_' + Date.now(),
-      global_service_id: globalServiceId,
-      globalServiceId: globalServiceId,
-      name: gs.name,
-      price: gs.price,
-      duration: window.minutesToDuration(gs.duration),
-      categoryId: localCat.id,
-      genderCategory: gs.gender_category || 'any',
-      description: gs.description || ''
-    };
-    state.services.push(tempService);
-    setState({ services: state.services, categories: state.categories });
   } else {
-    const updatedServices = state.services.filter(s => s.global_service_id !== globalServiceId);
-    setState({ services: updatedServices });
+    draft = draft.filter(id => id !== globalServiceId);
   }
+  setUI({ templatesDraft: draft });
+};
 
-  showToast(isChecked ? 'Добавление услуги...' : 'Удаление услуги...', 'info');
+window.toggleTemplateGroupCollapse = function (gcId) {
+  const collapsed = { ...(state.ui.collapsedTemplateCategories || {}) };
+  collapsed[gcId] = !collapsed[gcId];
+  setUI({ collapsedTemplateCategories: collapsed });
+};
 
-  api.toggleGlobalService(globalServiceId, isChecked)
-    .then(async () => {
-      showToast(isChecked ? 'Услуга добавлена!' : 'Услуга удалена', 'success');
-      const allData = await api.getAll({ background: true });
-      setState({
-        services: allData.services || [],
-        categories: allData.categories || []
-      });
-    })
-    .catch(err => {
-      showToast(err.message || 'Ошибка обновления услуги', 'error');
-      // Rollback on error
-      api.getAll({ background: true }).then(allData => {
-        setState({
-          services: allData.services || [],
-          categories: allData.categories || []
-        });
-      });
+window.handleToggleTemplateGroupAll = function (gcId, isChecked) {
+  const draft = [...(state.ui.templatesDraft || [])];
+  const groupServices = state.globalServices.filter(gs => gs.category_id === gcId);
+  const serviceIds = groupServices.map(gs => gs.id);
+
+  let newDraft;
+  if (isChecked) {
+    newDraft = Array.from(new Set([...draft, ...serviceIds]));
+  } else {
+    newDraft = draft.filter(id => !serviceIds.includes(id));
+  }
+  setUI({ templatesDraft: newDraft });
+};
+
+window.handleSaveTemplates = async function () {
+  const draft = state.ui.templatesDraft || [];
+  const currentActive = state.services
+    .map(s => s.global_service_id)
+    .filter(Boolean);
+  
+  const toAdd = draft.filter(id => !currentActive.includes(id));
+  const toRemove = currentActive.filter(id => !draft.includes(id));
+  
+  if (toAdd.length === 0 && toRemove.length === 0) {
+    showToast('Нет изменений для сохранения', 'info');
+    return;
+  }
+  
+  setUI({ loading: true });
+  showToast('Сохранение шаблонов...', 'info');
+  
+  try {
+    const promises = [];
+    toAdd.forEach(id => promises.push(api.toggleGlobalService(id, true)));
+    toRemove.forEach(id => promises.push(api.toggleGlobalService(id, false)));
+    
+    await Promise.all(promises);
+    
+    showToast('Шаблоны успешно сохранены!', 'success');
+    
+    const allData = await api.getAll({ background: true });
+    setState({
+      services: allData.services || [],
+      categories: allData.categories || []
     });
+    
+    setUI({ templatesDraft: null });
+  } catch (err) {
+    showToast(err.message || 'Ошибка сохранения шаблонов', 'error');
+    setUI({ templatesDraft: null });
+  } finally {
+    setUI({ loading: false });
+  }
 };
 
 window.handleSelectCategory = function (cat) {

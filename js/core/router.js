@@ -37,6 +37,7 @@ window.switchActiveBusiness = async function (bizId) {
   setUI({ 
     activeBusinessId: bizId, 
     loading: true,
+    templatesDraft: null,
     filters: {
       ...state.ui.filters,
       masterId: '',

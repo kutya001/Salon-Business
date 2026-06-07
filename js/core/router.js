@@ -34,7 +34,16 @@ window.navigate = function (page) {
 };
 
 window.switchActiveBusiness = async function (bizId) {
-  setUI({ activeBusinessId: bizId, loading: true });
+  setUI({ 
+    activeBusinessId: bizId, 
+    loading: true,
+    filters: {
+      ...state.ui.filters,
+      masterId: '',
+      serviceId: '',
+      searchQuery: ''
+    }
+  });
   try {
     const allData = await api.getAll();
     setState({

@@ -48,6 +48,7 @@ window.state = {
     filters: {
       status: '',
       masterId: '',
+      serviceId: '',
       dateFrom: new Date().toISOString().split('T')[0],
       dateTo: new Date().toISOString().split('T')[0],
       searchQuery: ''

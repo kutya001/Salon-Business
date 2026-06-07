@@ -44,6 +44,13 @@ window.renderBookings = function () {
   if (filters.masterId) {
     filteredBookings = filteredBookings.filter(b => b.masterId === filters.masterId);
   }
+  if (filters.serviceId) {
+    filteredBookings = filteredBookings.filter(b => {
+      if (!b.serviceId) return false;
+      const ids = b.serviceId.split(',').map(id => id.trim());
+      return ids.includes(filters.serviceId);
+    });
+  }
   if (filters.searchQuery) {
     const q = filters.searchQuery.toLowerCase();
     filteredBookings = filteredBookings.filter(b => 
@@ -121,6 +128,10 @@ window.renderBookings = function () {
     <option value="${m.id}" ${filters.masterId === m.id ? 'selected' : ''}>${m.name}</option>
   `).join('');
 
+  const serviceOptions = state.services.map(s => `
+    <option value="${s.id}" ${filters.serviceId === s.id ? 'selected' : ''}>${s.name}</option>
+  `).join('');
+
   const filterBarHtml = `
     <!-- Mobile Filters Panel -->
     <div class="card p-4 md-hidden animate-scale-in" style="margin-bottom: 16px; display: ${state.ui.showMobileFilters ? 'flex' : 'none'}; flex-direction: column; gap: 12px;">
@@ -143,8 +154,9 @@ window.renderBookings = function () {
           <option value="">👤 Мастера Все</option>
           ${masterOptions}
         </select>
-        <select onchange="setFilters({ categoryId: this.value })" class="form-select" style="flex: 1;">
+        <select onchange="setFilters({ serviceId: this.value })" class="form-select" style="flex: 1;">
           <option value="">💅 Услуги Все</option>
+          ${serviceOptions}
         </select>
       </div>
     </div>
@@ -174,8 +186,9 @@ window.renderBookings = function () {
           <option value="">👤 Мастера Все</option>
           ${masterOptions}
         </select>
-        <select class="form-select" style="width: auto; padding: 6px 12px; font-size: 13px; border: none; background: var(--bg-secondary); box-shadow: none;">
+        <select onchange="setFilters({ serviceId: this.value })" class="form-select" style="width: auto; padding: 6px 12px; font-size: 13px; border: none; background: var(--bg-secondary); box-shadow: none;">
           <option value="">💅 Услуги Все</option>
+          ${serviceOptions}
         </select>
         <button class="btn btn-secondary" style="padding: 6px 12px; border: none; background: var(--bg-secondary); color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
           <i data-feather="columns" style="width: 14px; height: 14px;"></i> Столбцы

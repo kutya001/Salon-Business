@@ -23,7 +23,8 @@ window.state = {
       sat: { start: '10:00', end: '18:00', enabled: true },
       sun: { enabled: false }
     },
-    theme: 'hair'
+    theme: 'hair',
+    useFinance: true
   },
   
   // Списки сущностей
@@ -62,6 +63,12 @@ window.state = {
       dateTo: ''
     },
     showTxFilters: false,
+    dashboardFilters: {
+      periodType: 'today', // 'today', 'all', 'custom'
+      dateFrom: new Date().toISOString().split('T')[0],
+      dateTo: new Date().toISOString().split('T')[0],
+      isOpen: false
+    },
     selectedDate: new Date().toISOString().split('T')[0],
     toasts: [],
     viewMode: 'table', // 'table' или 'timeline' для записей

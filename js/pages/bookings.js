@@ -716,7 +716,7 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   
   // Если статус становится выполненным, обязательно проверяем наличие открытой кассовой смены
   let activeShift = null;
-  if (newStatus === 'completed') {
+  if (newStatus === 'completed' && state.business?.useFinance !== false) {
     activeShift = state.shifts.find(s => s.status === 'open');
     if (!activeShift) {
       return showToast('Невозможно завершить запись: нет открытой кассовой смены. Пожалуйста, сначала откройте кассовую смену в разделе Финансы.', 'error', 5000);
@@ -730,7 +730,7 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   const cashWallet = (state.wallets || []).find(w => w.name === 'Наличные' || w.type === 'cash') || state.wallets?.[0];
   const revenueCat = (state.transactionCategories || []).find(c => c.name === 'Выручка от услуг' && c.type === 'income') || state.transactionCategories?.find(c => c.type === 'income');
 
-  if (newStatus === 'completed' && cashWallet && revenueCat && activeShift) {
+  if (newStatus === 'completed' && cashWallet && revenueCat && activeShift && state.business?.useFinance !== false) {
     const nowStr = window.formatDateTimeRU(new Date());
     optimisticTx = {
       id: 'tx_tmp_' + Date.now(),
@@ -757,7 +757,7 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
     await api.updateBooking(id, { status: newStatus }, { background: true });
 
     // 2. Управляем транзакциями в базе данных
-    if (newStatus === 'completed' && cashWallet && revenueCat && activeShift) {
+    if (newStatus === 'completed' && cashWallet && revenueCat && activeShift && state.business?.useFinance !== false) {
       const savedTx = await api.createTransaction({
         type: 'income',
         amount: parseFloat(b.price) || 0,
@@ -777,7 +777,7 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
           if (window.render) window.render();
         }
       }
-    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
+    } else if (oldStatus === 'completed' && newStatus !== 'completed' && state.business?.useFinance !== false) {
       const tx = state.transactions.find(t => t.bookingId === id);
       if (tx) {
         state.transactions = state.transactions.filter(t => t.id !== tx.id);
@@ -1241,7 +1241,7 @@ window.handleEditBookingFullSubmit = async function() {
 
   // Проверяем кассовую смену, если статус меняется на Выполнен
   let activeShift = null;
-  if (payload.status === 'completed' && oldStatus !== 'completed') {
+  if (payload.status === 'completed' && oldStatus !== 'completed' && state.business?.useFinance !== false) {
     activeShift = state.shifts.find(s => s.status === 'open');
     if (!activeShift) {
       return showToast('Невозможно завершить запись: нет открытой кассовой смены. Пожалуйста, сначала откройте кассовую смену в разделе Финансы.', 'error', 5000);
@@ -1287,7 +1287,7 @@ window.handleEditBookingFullSubmit = async function() {
     const revenueCat = (state.transactionCategories || []).find(c => c.name === 'Выручка от услуг' && c.type === 'income') || state.transactionCategories?.find(c => c.type === 'income');
     activeShift = state.shifts.find(s => s.status === 'open');
 
-    if (payload.status === 'completed' && oldStatus !== 'completed' && cashWallet && revenueCat && activeShift) {
+    if (payload.status === 'completed' && oldStatus !== 'completed' && cashWallet && revenueCat && activeShift && state.business?.useFinance !== false) {
       const nowStr = window.formatDateTimeRU(new Date());
       await api.createTransaction({
         type: 'income',
@@ -1299,7 +1299,7 @@ window.handleEditBookingFullSubmit = async function() {
         shiftId: activeShift.id,
         transactionDateTime: nowStr
       }, { background: true });
-    } else if (oldStatus === 'completed' && payload.status !== 'completed') {
+    } else if (oldStatus === 'completed' && payload.status !== 'completed' && state.business?.useFinance !== false) {
       const tx = state.transactions.find(t => t.bookingId === tempId);
       if (tx) {
         state.transactions = state.transactions.filter(t => t.id !== tx.id);

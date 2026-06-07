@@ -663,7 +663,11 @@ window.renderEmployeePermissionsModal = function() {
     }
   ];
 
-  const blocksHtml = permBlocks.map(block => {
+  const activeBlocks = state.business?.useFinance === false
+    ? permBlocks.filter(b => b.title !== 'Финансы')
+    : permBlocks;
+
+  const blocksHtml = activeBlocks.map(block => {
     const itemsHtml = block.items.map(item => {
       const isAllowed = p[item.key] !== false;
       return `

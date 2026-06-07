@@ -142,6 +142,11 @@ window.renderSettings = function () {
             <input type="email" id="set-email" class="form-input" value="${biz.email || ''}">
           </div>
           
+          <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 15px;">
+            <input type="checkbox" id="set-use-finance" ${biz.useFinance !== false ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+            <label for="set-use-finance" style="font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer; user-select: none;">Учитывать финансы</label>
+          </div>
+          
           <button type="submit" class="btn btn-primary" style="margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content;">
             <i data-feather="save" style="width: 16px; height: 16px;"></i> Сохранить изменения
           </button>
@@ -237,12 +242,13 @@ window.handleSaveProfile = function () {
   const address = document.getElementById('set-address').value.trim();
   let phone = document.getElementById('set-phone').value.trim();
   const email = document.getElementById('set-email').value.trim();
+  const useFinance = document.getElementById('set-use-finance') ? document.getElementById('set-use-finance').checked : true;
 
   phone = window.formatClientPhone(phone);
 
   showToast('Сохранение профиля...', 'info');
 
-  api.updateSettings({ businessName, description, address, phone, email }).then(updated => {
+  api.updateSettings({ businessName, description, address, phone, email, useFinance }).then(updated => {
     setState({ business: updated });
     showToast('Профиль салона успешно обновлен', 'success');
   }).catch(e => {

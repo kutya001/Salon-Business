@@ -14,7 +14,8 @@ const mapDbBusinessToFrontend = (b) => {
   return {
     ...b,
     businessName: b.name,
-    workSchedule: b.work_schedule
+    workSchedule: b.work_schedule,
+    useFinance: b.use_finance !== false
   };
 };
 
@@ -30,6 +31,7 @@ const mapFrontendBusinessToDb = (b) => {
   if (b.email !== undefined) dbBiz.email = b.email;
   if (b.workSchedule !== undefined) dbBiz.work_schedule = b.workSchedule;
   if (b.theme !== undefined) dbBiz.theme = b.theme;
+  if (b.useFinance !== undefined) dbBiz.use_finance = b.useFinance;
   return dbBiz;
 };
 
@@ -378,13 +380,14 @@ class SupabaseAPI {
   }
 
   // Создание салона с дефолтными справочниками через RPC
-  async createBusinessWithDefaults(businessName) {
+  async createBusinessWithDefaults(businessName, useFinance = true) {
     const { data: { user } } = await this.client.auth.getUser();
     if (!user) throw new Error('Пользователь не авторизован');
 
     const { data: businessId, error } = await this.client.rpc('create_business_with_defaults', {
       p_owner_id: user.id,
-      p_business_name: businessName
+      p_business_name: businessName,
+      p_use_finance: useFinance
     });
 
     if (error) throw error;

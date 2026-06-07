@@ -27,7 +27,7 @@ window.navigate = function (page) {
   if (page === 'masters' && !hasPermission('employees_view')) return;
   if (page === 'clients' && !hasPermission('clients_view')) return;
   if (page === 'services' && !hasPermission('services_view')) return;
-  if (page === 'finance' && !hasPermission('finance_view')) return;
+  if (page === 'finance' && (!hasPermission('finance_view') || state.business?.useFinance === false)) return;
   if (page === 'super_admin_panel' && state.userProfile?.role !== 'super_admin') return;
 
   setState({ currentPage: page });
@@ -128,7 +128,7 @@ window.renderLayout = function () {
     if (hasPermission('services_view')) {
       menuItems.push({ id: 'services', label: 'Услуги', icon: 'scissors' });
     }
-    if (hasPermission('finance_view') && (role === 'owner' || role === 'manager')) {
+    if (hasPermission('finance_view') && (role === 'owner' || role === 'manager') && state.business?.useFinance !== false) {
       menuItems.push({ id: 'finance', label: 'Финансы', icon: 'dollar-sign' });
     }
     if (role === 'master' || role === 'manager') {
@@ -155,7 +155,7 @@ window.renderLayout = function () {
     if (hasPermission('dashboard_view')) mobileTabsList.push('dashboard');
     if (hasPermission('bookings_view')) mobileTabsList.push('bookings');
     if (hasPermission('employees_view')) mobileTabsList.push('masters');
-    if (hasPermission('finance_view') && (role === 'owner' || role === 'manager')) {
+    if (hasPermission('finance_view') && (role === 'owner' || role === 'manager') && state.business?.useFinance !== false) {
       mobileTabsList.push('finance');
     } else if (role === 'master' || role === 'manager') {
       mobileTabsList.push('job_search');

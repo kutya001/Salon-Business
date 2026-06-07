@@ -90,6 +90,10 @@ window.renderAuth = function () {
                         style="width:100%; padding:14px 16px; border-radius:14px; border:2px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.3s; background:#fff; color:#1a1a2e;"
                         onfocus="this.style.borderColor='#764ba2'" onblur="this.style.borderColor='#e2e8f0'">
                 </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+                    <input type="checkbox" id="auth-use-finance" checked style="width: 18px; height: 18px; accent-color: #764ba2; cursor: pointer;">
+                    <label for="auth-use-finance" style="font-size: 13px; font-weight: 700; color: #4a5568; cursor: pointer; user-select: none;">Учитывать финансы</label>
+                </div>
                 ` : ''}
                 ` : ''}
 
@@ -152,7 +156,8 @@ window.handleAuthSubmit = async function(e) {
             
             // Если владелец, автоматически создаем салон с дефолтами
             if (role === 'owner') {
-                const bizId = await api.createBusinessWithDefaults(businessName);
+                const useFinance = document.getElementById('auth-use-finance') ? document.getElementById('auth-use-finance').checked : true;
+                const bizId = await api.createBusinessWithDefaults(businessName, useFinance);
                 setUI({ activeBusinessId: bizId });
             }
             

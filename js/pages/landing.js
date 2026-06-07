@@ -306,9 +306,9 @@ window.renderLanding = function () {
                     </div>
 
                     <!-- Mini App Interface Layout -->
-                    <div class="grid grid-cols-12 min-h-[480px]">
+                    <div class="grid grid-cols-12 min-h-[480px] relative">
                         <!-- Sidebar inside mock -->
-                        <div class="col-span-3 bg-[#121829] border-r border-white/5 p-4 flex flex-col justify-between">
+                        <div class="hidden md:flex md:col-span-3 bg-[#121829] border-r border-white/5 p-4 flex-col justify-between">
                             <div class="flex flex-col gap-6">
                                 <!-- Mock Logo -->
                                 <div class="flex items-center gap-2">
@@ -344,7 +344,7 @@ window.renderLanding = function () {
                         </div>
 
                         <!-- Content Area inside mock -->
-                        <div class="col-span-9 bg-[#0e1322] p-6 flex flex-col justify-between">
+                        <div class="col-span-12 md:col-span-9 bg-[#0e1322] p-4 md:p-6 flex flex-col justify-between relative pb-16 md:pb-6">
                             <div>
                                 <!-- Top Bar in App Content -->
                                 <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
@@ -376,14 +376,14 @@ window.renderLanding = function () {
                                 `}
 
                                 <!-- Mock Calendar List -->
-                                <div class="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto scrollbar-hide">
+                                <div class="flex flex-col gap-2.5 max-h-[200px] md:max-h-[220px] overflow-y-auto scrollbar-hide">
                                     ${state.ui.simBookings.map(b => `
                                     <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors animate-fade-in">
                                         <div class="flex items-center gap-3">
                                             <div class="text-xs font-bold text-indigo-400 bg-indigo-500/10 w-12 py-1.5 rounded-lg text-center">${b.time}</div>
-                                            <div>
-                                                <div class="text-xs font-bold text-white">${b.client}</div>
-                                                <div class="text-[10px] text-slate-400">${b.service} • Мастер: <span class="text-indigo-300">${b.master}</span></div>
+                                            <div class="max-w-[120px] sm:max-w-none">
+                                                <div class="text-xs font-bold text-white truncate">${b.client}</div>
+                                                <div class="text-[10px] text-slate-400 truncate">${b.service} • Мастер: <span class="text-indigo-300">${b.master}</span></div>
                                             </div>
                                         </div>
                                         ${state.ui.simUseFinance ? `
@@ -395,11 +395,17 @@ window.renderLanding = function () {
                             </div>
 
                             <!-- Footer inside Mock Area -->
-                            <div class="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[9px] text-slate-400">
-                                <span>* Вы можете свободно тестировать любые параметры. Данные симулятора хранятся в сессии.</span>
+                            <div class="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[9px] text-slate-400 mb-1 md:mb-0">
+                                <span class="max-w-[70%] sm:max-w-none leading-relaxed">* Вы можете свободно тестировать любые параметры. Данные симулятора хранятся в сессии.</span>
                                 <button onclick="resetSim()" class="text-indigo-400 hover:text-indigo-300 font-semibold">Сбросить</button>
                             </div>
+
+                            <!-- Mobile Bottom Navigation Bar -->
+                            <div class="flex md:hidden absolute bottom-0 left-0 right-0 bg-[#121829] border-t border-white/5 py-2 px-3 justify-around items-center z-10 rounded-b-3xl">
+                                ${renderMockBottomNav()}
+                            </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -618,6 +624,32 @@ function renderMockMenuItem(menuKey, icon, label) {
     `;
 }
 
+// Рендеринг нижнего меню в мобильной версии демо-окна
+function renderMockBottomNav() {
+    const items = [
+        { key: 'dashboard', icon: 'layout', label: 'Дашборд' },
+        { key: 'bookings', icon: 'calendar', label: 'Записи' },
+        { key: 'masters', icon: 'users', label: 'Мастера' },
+        { key: 'clients', icon: 'smile', label: 'Клиенты' },
+        { key: 'services', icon: 'grid', label: 'Услуги' },
+        { key: 'finance', icon: 'dollar-sign', label: 'Финансы' }
+    ];
+
+    return items.map(item => {
+        if (item.key === 'finance' && !state.ui.simUseFinance) return '';
+        const isDenied = isMenuItemDeniedForRole(item.key, state.ui.simRole);
+        if (isDenied) return '';
+
+        const isSelected = item.key === 'bookings';
+        return `
+        <div class="flex flex-col items-center gap-0.5 cursor-pointer transition-colors ${isSelected ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}">
+            <i data-feather="${item.icon}" class="w-4 h-4"></i>
+            <span class="text-[8px] font-medium leading-none">${item.label}</span>
+        </div>
+        `;
+    }).join('');
+}
+
 // Проверка прав для демо-меню в соответствии с ролью
 function isMenuItemDeniedForRole(menuKey, role) {
     if (role === 'owner') return false; // владельцу видно все
@@ -834,5 +866,14 @@ window.handleLandingContactSubmit = function (e) {
     document.getElementById('contact-phone').value = '';
     document.getElementById('contact-message').value = '';
 
-    showToast(`Спасибо, ${name}! Ваша заявка успешно отправлена.`, 'success');
+    showToast(`Спасибо, ${name}! Открываем диалог в WhatsApp...`, 'success');
+
+    // Формируем текст сообщения
+    const whatsappText = `Здравствуйте! Меня зовут ${name}.\nМой телефон: ${phone}.\nТема: ${subject}.\n\nСообщение:\n${message}`;
+    const whatsappUrl = `https://wa.me/99650888268?text=${encodeURIComponent(whatsappText)}`;
+
+    // Перенаправляем на WhatsApp
+    setTimeout(() => {
+        window.open(whatsappUrl, '_blank');
+    }, 800);
 };

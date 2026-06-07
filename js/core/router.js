@@ -72,6 +72,8 @@ window.renderApp = function () {
   let html = '';
   if (!api.isConfigured() || state.currentPage === 'setup') {
     html = renderSetup();
+  } else if (state.currentPage === 'landing') {
+    html = renderLanding();
   } else if (!state.isAuthenticated) {
     html = renderAuth();
   } else {

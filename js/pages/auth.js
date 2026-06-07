@@ -115,6 +115,12 @@ window.renderAuth = function () {
                     ${isRegister ? 'Войти' : 'Зарегистрироваться'}
                 </button>
             </div>
+
+            <div style="text-align:center; margin-top:16px; border-top:1px solid rgba(0,0,0,0.08); padding-top:16px;">
+                <button onclick="setState({ currentPage: 'landing' })" style="background:none; border:none; color:#4a5568; font-weight:600; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:4px; opacity:0.8; transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
+                    ← Вернуться на главную
+                </button>
+            </div>
         </div>
     </div>
     <style>

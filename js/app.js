@@ -61,12 +61,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (err) {
       console.error('Ошибка инициализации данных:', err);
-      setState({ isAuthenticated: false, currentPage: 'auth' });
+      setState({ isAuthenticated: false, currentPage: 'landing' });
     } finally {
       setUI({ loading: false });
     }
   } else {
-    setState({ isAuthenticated: false, currentPage: 'auth' });
+    setState({ isAuthenticated: false, currentPage: 'landing' });
   }
 
   // Слушаем изменения авторизации
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (event === 'SIGNED_OUT') {
       setState({ 
         isAuthenticated: false, 
-        currentPage: 'auth',
+        currentPage: 'landing',
         userProfile: null,
         myBusinesses: [],
         myEmployments: [],

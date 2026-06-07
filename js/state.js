@@ -4,7 +4,7 @@
 
 window.state = {
   isAuthenticated: false,
-  currentPage: 'dashboard',
+  currentPage: 'landing',
   token: '',  // Токен сессии, сохраняется в sessionStorage
   
   // Данные бизнеса

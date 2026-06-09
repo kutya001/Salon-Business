@@ -731,6 +731,11 @@ window.handleUpdateBookingStatus = async function (id, newStatus) {
   
   const oldStatus = state.bookings[idx].status;
   const b = state.bookings[idx];
+
+  // Проверка: нельзя подтвердить/выполнить запись без назначенного мастера
+  if ((newStatus === 'confirmed' || newStatus === 'completed') && (!b.masterId || b.masterId === 'any')) {
+    return showToast('Невозможно подтвердить или выполнить запись: сначала укажите конкретного мастера и время.', 'error', 5000);
+  }
   
   // Если статус становится выполненным, обязательно проверяем наличие открытой кассовой смены
   let activeShift = null;
@@ -1266,6 +1271,11 @@ window.handleEditBookingFullSubmit = async function() {
     }
   }
 
+  // Проверка: нельзя подтвердить/выполнить запись без назначенного мастера
+  if ((payload.status === 'confirmed' || payload.status === 'completed') && (!payload.masterId || payload.masterId === 'any')) {
+    return showToast('Невозможно подтвердить или выполнить запись: сначала укажите конкретного мастера.', 'error');
+  }
+
   if (!window.isMasterAvailable(payload.masterId, payload.date, payload.time, serviceInfo.durationMins, tempId)) {
     return showToast('Выбранный мастер занят в указанное время', 'error');
   }
@@ -1385,6 +1395,12 @@ window.handleWizardMasterSelectAndReorder = function(masterId) {
 window.handleWizardDateChange = function(val) {
   const md = state.ui.modalData;
   md.draft.date = val;
+  setUI({ modalData: md });
+};
+
+window.handleWizardTimeChange = function(val) {
+  const md = state.ui.modalData;
+  md.draft.time = val;
   setUI({ modalData: md });
 };
 
@@ -1579,7 +1595,8 @@ window.renderBookingModal = function () {
     }
 
     const simDate = draft.date || new Date().toISOString().split('T')[0];
-    const timeSlots = generateTimeSlots('09:00', '20:00', 30);
+    const wizardTimelineStep = state.ui.wizardTimelineStep || 30; // 5, 15, 30, 60
+    const timeSlots = generateTimeSlots('09:00', '20:00', wizardTimelineStep);
     const serviceInfo = getServicesInfo(draft.serviceId);
     const bookingDuration = serviceInfo.durationMins;
 
@@ -1595,7 +1612,7 @@ window.renderBookingModal = function () {
 
     const isSlotOccupied = (mId, date, slotTime) => {
       const slotStart = window.durationToMinutes(slotTime);
-      const slotEnd = slotStart + 30;
+      const slotEnd = slotStart + wizardTimelineStep;
       
       return state.bookings.some(b => {
         if (b.masterId !== mId || b.date !== date || b.status === 'cancelled') return false;
@@ -1606,18 +1623,23 @@ window.renderBookingModal = function () {
       });
     };
 
-    // Отрисовываем заголовки колонок времени
-    const timeHeadersHtml = timeSlots.map(ts => `
-      <th style="text-align: center; font-size: 10px; padding: 4px; min-width: 65px; width: 65px;">${ts}</th>
-    `).join('');
+    // Отрисовываем заголовки колонок (мастера)
+    const mastersHeadersHtml = sortedMasters.map(m => {
+      const isSelected = draft.masterId === m.id;
+      return `
+        <th style="text-align: center; font-size: 11px; padding: 6px; min-width: 100px; color: ${isSelected ? 'var(--primary)' : 'var(--text)'}; font-weight: 800; border-bottom: 2px solid var(--border);">
+          ${m.name.split(' ')[0]} ${isSelected ? '✓' : ''}
+        </th>
+      `;
+    }).join('');
 
-    // Отрисовываем строки мастеров
-    const mastersRowsHtml = sortedMasters.map(m => {
-      const isSelectedM = draft.masterId === m.id;
+    // Отрисовываем строки (временные слоты)
+    const timeRowsHtml = timeSlots.map(ts => {
+      const slotStart = window.durationToMinutes(ts);
       
-      const cellsHtml = timeSlots.map(ts => {
-        const slotStart = window.durationToMinutes(ts);
+      const cellsHtml = sortedMasters.map(m => {
         const occupied = isSlotOccupied(m.id, simDate, ts);
+        const isSelectedM = draft.masterId === m.id;
         
         let cellContent = '';
         let cellBg = 'var(--bg)';
@@ -1625,7 +1647,7 @@ window.renderBookingModal = function () {
 
         if (occupied) {
           cellContent = `
-            <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 4px; border-radius: 6px; font-size: 9px; color: #ef4444; text-align: center; font-weight: 600;">
+            <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.15); padding: 4px; border-radius: 6px; font-size: 9px; color: #ef4444; text-align: center; font-weight: 600;">
               Занято
             </div>
           `;
@@ -1660,47 +1682,78 @@ window.renderBookingModal = function () {
         const clickAttr = isClickable ? `onclick="handleWizardCellClick('${m.id}', '${ts}')"` : '';
 
         return `
-          <td ${dropAttr} ${clickAttr} style="padding: 6px; border: 1px solid var(--border); background: ${cellBg}; vertical-align: middle; height: 36px; min-width: 65px; width: 65px; text-align: center;">
+          <td ${dropAttr} ${clickAttr} style="padding: 4px; border: 1px solid var(--border); background: ${cellBg}; vertical-align: middle; height: 38px; min-width: 100px; text-align: center; cursor: pointer;">
             ${cellContent}
           </td>
         `;
       }).join('');
 
       return `
-        <tr style="border-bottom: 1px solid var(--border); ${isSelectedM ? 'background: rgba(99,102,241,0.02);' : ''}">
-          <td style="position: sticky; left: 0; background: var(--bg); z-index: 10; border-right: 2px solid var(--border); padding: 8px; font-weight: 700; min-width: 110px; width: 110px;">
-            <div style="display: flex; flex-direction: column; gap: 2px; text-align: left;">
-              <button type="button" onclick="handleWizardMasterSelectAndReorder('${m.id}')" class="btn" style="padding: 2px 6px; font-size: 11px; text-align: left; font-weight: 700; color: ${isSelectedM ? 'var(--primary)' : 'var(--text)'}; background: ${isSelectedM ? 'rgba(99,102,241,0.08)' : 'transparent'}; border: ${isSelectedM ? '1px solid var(--primary)' : 'none'}; border-radius: 6px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${m.name.split(' ')[0]} ${isSelectedM ? '✓' : ''}
-              </button>
-              <span style="font-size: 9px; color: var(--text-secondary); padding-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</span>
-            </div>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="position: sticky; left: 0; background: var(--bg); z-index: 10; border-right: 2px solid var(--border); padding: 6px; font-weight: 800; font-size: 11px; text-align: center; color: var(--text-secondary); width: 70px; min-width: 70px;">
+            ${ts}
           </td>
           ${cellsHtml}
         </tr>
       `;
     }).join('');
 
+    // Опции селектора мастеров
+    const masterOptions = `<option value="">👤 Любой мастер</option>` + availableMasters.map(m => `
+      <option value="${m.id}" ${draft.masterId === m.id ? 'selected' : ''}>${m.name}</option>
+    `).join('');
+
+    // Кнопки зума таймлайна
+    const zoomButtonsHtml = `
+      <div style="display: flex; align-items: center; gap: 2px; background: var(--bg-secondary); padding: 3px; border-radius: 8px; height: 36px; border: 1px solid var(--border);">
+        <button type="button" onclick="setUI({ wizardTimelineStep: 60 })" class="btn" style="padding: 2px 6px; font-size: 10px; border-radius: 6px; min-width: 32px; height: 28px; background: ${wizardTimelineStep === 60 ? 'var(--bg)' : 'transparent'}; color: ${wizardTimelineStep === 60 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700; border: none; box-shadow: ${wizardTimelineStep === 60 ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};">1 ч</button>
+        <button type="button" onclick="setUI({ wizardTimelineStep: 30 })" class="btn" style="padding: 2px 6px; font-size: 10px; border-radius: 6px; min-width: 32px; height: 28px; background: ${wizardTimelineStep === 30 ? 'var(--bg)' : 'transparent'}; color: ${wizardTimelineStep === 30 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700; border: none; box-shadow: ${wizardTimelineStep === 30 ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};">30 м</button>
+        <button type="button" onclick="setUI({ wizardTimelineStep: 15 })" class="btn" style="padding: 2px 6px; font-size: 10px; border-radius: 6px; min-width: 32px; height: 28px; background: ${wizardTimelineStep === 15 ? 'var(--bg)' : 'transparent'}; color: ${wizardTimelineStep === 15 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700; border: none; box-shadow: ${wizardTimelineStep === 15 ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};">15 м</button>
+        <button type="button" onclick="setUI({ wizardTimelineStep: 5 })" class="btn" style="padding: 2px 6px; font-size: 10px; border-radius: 6px; min-width: 32px; height: 28px; background: ${wizardTimelineStep === 5 ? 'var(--bg)' : 'transparent'}; color: ${wizardTimelineStep === 5 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700; border: none; box-shadow: ${wizardTimelineStep === 5 ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};">5 м</button>
+      </div>
+    `;
+
     stepContent = `
       <div class="animate-slide-in-right" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-          <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">К какому мастеру и на какое время записать?</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 12px; color: var(--text-secondary);">Дата:</span>
-            <input type="date" id="wizard-date" class="form-input" style="width: auto; padding: 4px 8px; font-size: 12px; height: 30px;" value="${simDate}" onchange="handleWizardDateChange(this.value)">
+        
+        <!-- Панель ручного ввода и фильтров -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+          
+          <div style="display: flex; flex-direction: column; gap: 4px; flex: 1.2; min-width: 130px;">
+            <label class="form-label" style="font-size: 11px; margin-bottom: 2px; font-weight: 700; color: var(--text-secondary);">Мастер</label>
+            <select class="form-select" style="padding: 4px 8px; font-size: 12px; height: 36px; border-radius: 8px;" onchange="handleWizardMasterSelectAndReorder(this.value)">
+              ${masterOptions}
+            </select>
           </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px;">
+            <label class="form-label" style="font-size: 11px; margin-bottom: 2px; font-weight: 700; color: var(--text-secondary);">Дата</label>
+            <input type="date" id="wizard-date" class="form-input" style="padding: 4px 8px; font-size: 12px; height: 36px; border-radius: 8px;" value="${simDate}" onchange="handleWizardDateChange(this.value)">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px; flex: 0.8; min-width: 90px;">
+            <label class="form-label" style="font-size: 11px; margin-bottom: 2px; font-weight: 700; color: var(--text-secondary);">Время</label>
+            <input type="time" id="wizard-time" class="form-input" style="padding: 4px 8px; font-size: 12px; height: 36px; border-radius: 8px;" value="${draft.time || ''}" onchange="handleWizardTimeChange(this.value)">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+            <label class="form-label" style="font-size: 11px; margin-bottom: 2px; font-weight: 700; color: var(--text-secondary);">Масштаб</label>
+            ${zoomButtonsHtml}
+          </div>
+
         </div>
 
-        <div class="wizard-timeline-container" style="overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 12px; max-height: 250px; background: var(--bg-secondary);">
+        <!-- Вертикальный скроллируемый таймлайн -->
+        <div class="wizard-timeline-container" style="overflow-x: auto; overflow-y: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 12px; max-height: 280px; background: var(--bg-secondary);">
           <table style="border-collapse: separate; border-spacing: 0; width: 100%;">
             <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
               <tr>
-                <th style="position: sticky; left: 0; background: var(--bg); border-right: 2px solid var(--border); border-bottom: 1px solid var(--border); font-size: 11px; padding: 6px; z-index: 30; min-width: 110px; width: 110px;">Мастер</th>
-                ${timeHeadersHtml}
+                <th style="position: sticky; left: 0; background: var(--bg); border-right: 2px solid var(--border); border-bottom: 2px solid var(--border); font-size: 11px; padding: 6px; z-index: 30; width: 70px; min-width: 70px; text-align: center;">Время</th>
+                ${mastersHeadersHtml}
               </tr>
             </thead>
             <tbody>
-              ${mastersRowsHtml}
+              ${timeRowsHtml}
             </tbody>
           </table>
         </div>
@@ -1708,12 +1761,12 @@ window.renderBookingModal = function () {
         <div style="display: flex; flex-direction: column; gap: 4px; background: var(--theme-50); border: 1px solid rgba(99,102,241,0.15); padding: 10px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
           <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text);">
             <i data-feather="info" style="width: 14px; height: 14px; color: var(--primary);"></i>
-            <span>Как спланировать время?</span>
+            <span>Планирование времени и мастера:</span>
           </div>
           <p style="margin-top: 2px;">
-            1. Перетащите блок <strong style="color: var(--primary);">🎯 Новая</strong> в свободную ячейку любого мастера.<br>
-            2. Или просто **кликните** по любой свободной ячейке в таблице.<br>
-            *Выбранный мастер автоматически поднимается на верхнюю строчку.*
+            1. Выберите мастера и введите дату/время в полях сверху.<br>
+            2. Или перетащите блок <strong style="color: var(--primary);">🎯 Новая</strong> по вертикальной сетке.<br>
+            3. Или просто **кликните** по любой свободной ячейке в колонке нужного мастера.
           </p>
         </div>
 
@@ -1721,12 +1774,12 @@ window.renderBookingModal = function () {
           <button type="button" onclick="setBookingWizardStep(3)" class="btn btn-secondary" style="flex: 1; border: none;">⬅ Назад</button>
           <button type="button" onclick="
             const md = state.ui.modalData;
-            if (!md.draft.masterId) {
-              showToast('Пожалуйста, выберите мастера и время на таймлайне', 'warning');
+            if (!md.draft.time) {
+              showToast('Пожалуйста, выберите время записи', 'warning');
             } else {
               setBookingWizardStep(5);
             }
-          " class="btn btn-primary" style="flex: 1;" ${!draft.masterId ? 'disabled style="opacity: 0.5;"' : ''}>Далее ➡</button>
+          " class="btn btn-primary" style="flex: 1;" ${!draft.time ? 'disabled style="opacity: 0.5;"' : ''}>Далее ➡</button>
         </div>
       </div>
     `;
@@ -1937,6 +1990,11 @@ window.handleCreateBookingSubmit = function () {
     status: md.isEdit ? (state.bookings.find(b => b.id === md.bookingId)?.status || 'pending') : (draft.status || 'pending'),
     price: serviceInfo.price
   };
+
+  // Проверка: нельзя подтвердить/выполнить запись без назначенного мастера
+  if ((payload.status === 'confirmed' || payload.status === 'completed') && (!payload.masterId || payload.masterId === 'any')) {
+    return showToast('Невозможно подтвердить или выполнить запись: сначала укажите конкретного мастера.', 'error');
+  }
 
   // Оптимистичное обновление
   const tempId = md.isEdit ? md.bookingId : ('b_temp_' + Date.now());

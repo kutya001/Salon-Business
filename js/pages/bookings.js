@@ -345,7 +345,7 @@ function renderBookingsTable(bookings) {
     const statusHtmlMobile = `<span class="badge ${statusColor}" style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; padding: 0;" title="${statusLabel}"><i data-feather="${iconStr}" style="width: 14px; height: 14px;"></i></span>`;
 
     return `
-      <div id="booking-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+      <div id="booking-table-mobile-${b.id}" class="card p-4" onclick="showBookingDetails('${b.id}')" style="margin-bottom: 12px; border-left: 4px solid ${b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : 'var(--text-secondary)'}; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
             <div style="font-weight: 800; font-size: 14px;">${formatDate(b.date)} в <span style="color: var(--primary);">${formatTime(b.time)}</span></div>
@@ -592,7 +592,7 @@ function renderBookingsTimeline(bookings) {
             const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
 
             return `
-              <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+              <div id="booking-desktop-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" ontouchstart="handleBookingTouchStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                   <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)} (${b.duration || '01:00'})</span>
                 </div>
@@ -605,7 +605,7 @@ function renderBookingsTimeline(bookings) {
           
           colsHtml.push(`<td colspan="${span}" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`);
         } else {
-          colsHtml.push(`<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи"></td>`);
+          colsHtml.push(`<td class="timeline-cell-drop" data-time="${col.id}" data-master-id="${m.id}" ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи"></td>`);
         }
       } else {
         // Режим недели или месяца
@@ -634,7 +634,7 @@ function renderBookingsTimeline(bookings) {
           const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
 
           return `
-            <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div id="booking-desktop-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" ontouchstart="handleBookingTouchStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                 <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)}</span>
               </div>
@@ -645,7 +645,7 @@ function renderBookingsTimeline(bookings) {
           `;
         }).join('');
         
-        colsHtml.push(`<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи">${bookingBlocks}</td>`);
+        colsHtml.push(`<td class="timeline-cell-drop" data-time="${col.id}" data-master-id="${m.id}" ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи">${bookingBlocks}</td>`);
       }
     }
     
@@ -739,7 +739,7 @@ function renderBookingsTimeline(bookings) {
             const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
 
             return `
-              <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+              <div id="booking-mobile-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" ontouchstart="handleBookingTouchStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                   <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)} (${b.duration || '01:00'})</span>
                 </div>
@@ -752,7 +752,7 @@ function renderBookingsTimeline(bookings) {
           
           return `<td rowspan="${rowspan}" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-width: 100px;">${bookingBlocks}</td>`;
         } else {
-          return `<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${ts}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${ts}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 50px; cursor: pointer; min-width: 100px;" title="Кликните для создания новой записи"></td>`;
+          return `<td class="timeline-cell-drop" data-time="${ts}" data-master-id="${m.id}" ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${ts}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${ts}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 50px; cursor: pointer; min-width: 100px;" title="Кликните для создания новой записи"></td>`;
         }
       }).join('');
       
@@ -870,11 +870,7 @@ window.handleBookingDragStart = function(event, bookingId) {
   event.dataTransfer.setData('text/plain', bookingId);
 };
 
-window.handleBookingDrop = function(event, colId, masterId) {
-  event.preventDefault();
-  const bookingId = event.dataTransfer.getData('text/plain');
-  if (!bookingId) return;
-
+window.moveBooking = function(bookingId, colId, masterId) {
   const booking = state.bookings.find(b => b.id === bookingId);
   if (!booking) return;
 
@@ -890,7 +886,8 @@ window.handleBookingDrop = function(event, colId, masterId) {
 
   const durationMins = window.durationToMinutes(booking.duration || '01:00');
 
-  if (!window.isMasterAvailable(masterId, newDate, newTime, durationMins, bookingId)) {
+  // Валидация: проверять доступность нового мастера, если он назначен конкретный
+  if (masterId && !window.isMasterAvailable(masterId, newDate, newTime, durationMins, bookingId)) {
     return showToast('Невозможно перенести: Мастер занят', 'error');
   }
 
@@ -902,6 +899,9 @@ window.handleBookingDrop = function(event, colId, masterId) {
 
   const idx = state.bookings.findIndex(b => b.id === bookingId);
   if (idx !== -1) {
+    const oldBooking = { ...state.bookings[idx] };
+
+    // Optimistic UI update
     state.bookings[idx] = { 
       ...state.bookings[idx], 
       ...payload, 
@@ -912,8 +912,130 @@ window.handleBookingDrop = function(event, colId, masterId) {
 
     api.updateBooking(bookingId, payload).catch(e => {
       showToast('Ошибка при сохранении переноса', 'error');
+      const currentIdx = state.bookings.findIndex(b => b.id === bookingId);
+      if (currentIdx !== -1) {
+        state.bookings[currentIdx] = oldBooking;
+        setState({ bookings: state.bookings });
+      }
     });
   }
+};
+
+window.handleBookingDrop = function(event, colId, masterId) {
+  event.preventDefault();
+  const bookingId = event.dataTransfer.getData('text/plain');
+  if (!bookingId) return;
+  window.moveBooking(bookingId, colId, masterId);
+};
+
+window.handleBookingDropTouch = function(bookingId, colId, masterId) {
+  window.moveBooking(bookingId, colId, masterId);
+};
+
+// Touch drag-and-drop state
+let touchDragData = null;
+
+window.handleBookingTouchStart = function(event, bookingId) {
+  // Игнорируем мультитач
+  if (event.touches.length > 1) return;
+  
+  const touch = event.touches[0];
+  const element = event.currentTarget;
+  
+  touchDragData = {
+    bookingId: bookingId,
+    element: element,
+    startX: touch.clientX,
+    startY: touch.clientY,
+    initialRect: element.getBoundingClientRect(),
+    clone: null,
+    lastHoveredCell: null
+  };
+  
+  document.addEventListener('touchmove', handleBookingTouchMove, { passive: false });
+  document.addEventListener('touchend', handleBookingTouchEnd);
+  document.addEventListener('touchcancel', handleBookingTouchEnd);
+};
+
+window.handleBookingTouchMove = function(event) {
+  if (!touchDragData) return;
+  
+  const touch = event.touches[0];
+  event.preventDefault(); // Предотвращаем скролл страницы
+  
+  if (!touchDragData.clone) {
+    const original = touchDragData.element;
+    const clone = original.cloneNode(true);
+    
+    clone.style.position = 'fixed';
+    clone.style.width = touchDragData.initialRect.width + 'px';
+    clone.style.height = touchDragData.initialRect.height + 'px';
+    clone.style.left = touchDragData.initialRect.left + 'px';
+    clone.style.top = touchDragData.initialRect.top + 'px';
+    clone.style.zIndex = '9999';
+    clone.style.pointerEvents = 'none';
+    clone.style.opacity = '0.8';
+    clone.style.boxShadow = '0 10px 25px rgba(0,0,0,0.15)';
+    clone.style.transform = 'scale(1.05)';
+    clone.style.transition = 'none';
+    
+    document.body.appendChild(clone);
+    touchDragData.clone = clone;
+    original.style.opacity = '0.3';
+  }
+  
+  const dx = touch.clientX - touchDragData.startX;
+  const dy = touch.clientY - touchDragData.startY;
+  
+  touchDragData.clone.style.transform = `scale(1.05) translate(${dx}px, ${dy}px)`;
+  
+  const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (elementUnderTouch) {
+    const cell = elementUnderTouch.closest('.timeline-cell-drop');
+    
+    if (cell !== touchDragData.lastHoveredCell) {
+      if (touchDragData.lastHoveredCell) {
+        touchDragData.lastHoveredCell.style.background = '';
+      }
+      
+      if (cell) {
+        cell.style.background = 'rgba(99,102,241,0.15)';
+      }
+      
+      touchDragData.lastHoveredCell = cell;
+    }
+  }
+};
+
+window.handleBookingTouchEnd = function(event) {
+  if (!touchDragData) return;
+  
+  document.removeEventListener('touchmove', handleBookingTouchMove);
+  document.removeEventListener('touchend', handleBookingTouchEnd);
+  document.removeEventListener('touchcancel', handleBookingTouchEnd);
+  
+  if (touchDragData.element) {
+    touchDragData.element.style.opacity = '';
+  }
+  
+  if (touchDragData.clone) {
+    touchDragData.clone.remove();
+  }
+  
+  if (touchDragData.lastHoveredCell) {
+    touchDragData.lastHoveredCell.style.background = '';
+    
+    const targetCell = touchDragData.lastHoveredCell;
+    const newTimeOrDate = targetCell.getAttribute('data-time');
+    const masterId = targetCell.getAttribute('data-master-id');
+    const bookingId = touchDragData.bookingId;
+    
+    if (newTimeOrDate && masterId !== null) {
+      window.handleBookingDropTouch(bookingId, newTimeOrDate, masterId);
+    }
+  }
+  
+  touchDragData = null;
 };
 
 // Быстрое изменение мастера записи (Optimistic UI)

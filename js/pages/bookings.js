@@ -475,13 +475,14 @@ function renderBookingsTimeline(bookings) {
   const mode = state.ui.timelineMode || 'day';
   const slotDateStr = state.ui.timelineDate || new Date().toISOString().split('T')[0];
   const slotDate = new Date(slotDateStr);
+  const timelineStep = state.ui.timelineStep || 60; // 5, 15, 30, 60
 
   let columns = [];
   let colTitle = '';
   
   if (mode === 'day') {
-    // День: часы
-    const hours = generateTimeSlots('09:00', '20:00', 60);
+    // День: часы с учетом масштабирования
+    const hours = generateTimeSlots('09:00', '20:00', timelineStep);
     columns = hours.map(h => ({ id: h, label: h, type: 'hour' }));
     colTitle = formatDate(slotDateStr);
   } else if (mode === 'week') {
@@ -524,7 +525,13 @@ function renderBookingsTimeline(bookings) {
       // Поиск записей
       let matchBookings = [];
       if (mode === 'day') {
-        matchBookings = bookings.filter(b => b.masterId === m.id && b.date === slotDateStr && b.time.startsWith(col.id.split(':')[0]));
+        matchBookings = bookings.filter(b => {
+          if (b.masterId !== m.id || b.date !== slotDateStr) return false;
+          const bStart = window.durationToMinutes(b.time);
+          const slotStart = window.durationToMinutes(col.id);
+          const slotEnd = slotStart + timelineStep;
+          return bStart >= slotStart && bStart < slotEnd;
+        });
       } else {
         matchBookings = bookings.filter(b => b.masterId === m.id && b.date === col.id);
       }
@@ -577,10 +584,21 @@ function renderBookingsTimeline(bookings) {
     <div class="card p-0" style="box-shadow: 0 4px 12px rgba(0,0,0,0.02); overflow: hidden;">
       <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 16px;">
         
-        <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 4px; border-radius: 10px;">
-          <button onclick="setUI({ timelineMode: 'day' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'day' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'day' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'day' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'day' ? '700' : '500'}; transition: all 0.2s;">День</button>
-          <button onclick="setUI({ timelineMode: 'week' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'week' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'week' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'week' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'week' ? '700' : '500'}; transition: all 0.2s;">Неделя</button>
-          <button onclick="setUI({ timelineMode: 'month' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'month' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'month' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'month' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'month' ? '700' : '500'}; transition: all 0.2s;">Месяц</button>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 4px; border-radius: 10px;">
+            <button onclick="setUI({ timelineMode: 'day' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'day' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'day' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'day' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'day' ? '700' : '500'}; transition: all 0.2s;">День</button>
+            <button onclick="setUI({ timelineMode: 'week' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'week' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'week' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'week' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'week' ? '700' : '500'}; transition: all 0.2s;">Неделя</button>
+            <button onclick="setUI({ timelineMode: 'month' })" class="btn" style="padding: 6px 16px; font-size: 12px; border-radius: 8px; background: ${mode === 'month' ? 'var(--bg)' : 'transparent'}; box-shadow: ${mode === 'month' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'}; color: ${mode === 'month' ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: ${mode === 'month' ? '700' : '500'}; transition: all 0.2s;">Месяц</button>
+          </div>
+
+          ${mode === 'day' ? `
+          <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-secondary); padding: 4px; border-radius: 10px;">
+            <button onclick="setUI({ timelineStep: 60 })" class="btn" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; background: ${timelineStep === 60 ? 'var(--bg)' : 'transparent'}; color: ${timelineStep === 60 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700;" title="Шаг 1 час">1 ч</button>
+            <button onclick="setUI({ timelineStep: 30 })" class="btn" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; background: ${timelineStep === 30 ? 'var(--bg)' : 'transparent'}; color: ${timelineStep === 30 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700;" title="Шаг 30 минут">30 м</button>
+            <button onclick="setUI({ timelineStep: 15 })" class="btn" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; background: ${timelineStep === 15 ? 'var(--bg)' : 'transparent'}; color: ${timelineStep === 15 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700;" title="Шаг 15 минут">15 м</button>
+            <button onclick="setUI({ timelineStep: 5 })" class="btn" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; background: ${timelineStep === 5 ? 'var(--bg)' : 'transparent'}; color: ${timelineStep === 5 ? 'var(--text)' : 'var(--text-secondary)'}; font-weight: 700;" title="Шаг 5 минут">5 м</button>
+          </div>
+          ` : ''}
         </div>
 
         <div style="display: flex; align-items: center; gap: 16px; background: var(--bg-secondary); padding: 4px 12px; border-radius: 12px;">
@@ -1314,6 +1332,61 @@ window.handleEditBookingFullSubmit = async function() {
     showToast('Ошибка обновления записи на сервере', 'error');
   }
 };
+// Обработчики интерактивного планировщика (Шаг 4) в модалке
+window.handleWizardBookingDragStart = function(event) {
+  event.dataTransfer.setData('text/plain', 'wizard-draft');
+};
+
+window.handleWizardBookingDrop = function(event, timeSlot, masterId) {
+  event.preventDefault();
+  const data = event.dataTransfer.getData('text/plain');
+  if (data !== 'wizard-draft') return;
+
+  const md = state.ui.modalData;
+  const serviceInfo = getServicesInfo(md.draft.serviceId);
+  const dateVal = md.draft.date || new Date().toISOString().split('T')[0];
+  
+  if (!window.isMasterAvailable(masterId, dateVal, timeSlot, serviceInfo.durationMins, md.isEdit ? md.bookingId : null)) {
+    return showToast('Выбранный мастер занят в указанное время', 'error');
+  }
+
+  md.draft.masterId = masterId;
+  md.draft.time = timeSlot;
+  md.draft.date = dateVal;
+  setUI({ modalData: md });
+  showToast(`Запись перенесена на ${timeSlot}, мастер: ${state.masters.find(x => x.id === masterId)?.name || 'Любой'}`, 'success');
+};
+
+window.handleWizardCellClick = function(masterId, timeSlot) {
+  const md = state.ui.modalData;
+  const serviceInfo = getServicesInfo(md.draft.serviceId);
+  const dateVal = md.draft.date || new Date().toISOString().split('T')[0];
+  
+  if (!window.isMasterAvailable(masterId, dateVal, timeSlot, serviceInfo.durationMins, md.isEdit ? md.bookingId : null)) {
+    return showToast('Выбранный мастер занят в указанное время', 'error');
+  }
+
+  md.draft.masterId = masterId;
+  md.draft.time = timeSlot;
+  md.draft.date = dateVal;
+  setUI({ modalData: md });
+  showToast(`Выбрано время ${timeSlot}, мастер: ${state.masters.find(x => x.id === masterId)?.name || 'Любой'}`, 'success');
+};
+
+window.handleWizardMasterSelectAndReorder = function(masterId) {
+  const md = state.ui.modalData;
+  md.draft.masterId = masterId;
+  if (!md.draft.time) {
+    md.draft.time = '09:00';
+  }
+  setUI({ modalData: md });
+};
+
+window.handleWizardDateChange = function(val) {
+  const md = state.ui.modalData;
+  md.draft.date = val;
+  setUI({ modalData: md });
+};
 
 // Переход по шагам в модалке
 window.setBookingWizardStep = function(step) {
@@ -1505,28 +1578,156 @@ window.renderBookingModal = function () {
       });
     }
 
-    let mastersHtml = `
-      <button type="button" onclick="handleWizardMasterSelect('')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; border-color: var(--primary);">
-        <span style="font-weight: 800; color: var(--primary);">👤 Любой мастер</span>
-      </button>
-    `;
-    
-    if (availableMasters.length === 0) {
-      mastersHtml += `<div style="text-align: center; color: var(--text-secondary); padding: 16px; font-size: 13px;">Нет мастеров, выполняющих все выбранные услуги</div>`;
-    } else {
-      mastersHtml += availableMasters.map(m => `
-        <button type="button" onclick="handleWizardMasterSelect('${m.id}')" class="btn btn-secondary" style="justify-content: flex-start; text-align: left; padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-          <span style="font-weight: 700;">${m.name}</span>
-          <span style="font-size: 11px; color: var(--text-secondary);">${m.specialization}</span>
-        </button>
-      `).join('');
+    const simDate = draft.date || new Date().toISOString().split('T')[0];
+    const timeSlots = generateTimeSlots('09:00', '20:00', 30);
+    const serviceInfo = getServicesInfo(draft.serviceId);
+    const bookingDuration = serviceInfo.durationMins;
+
+    // Сортируем мастеров: выбранный в данный момент мастер идет первым
+    let sortedMasters = [...availableMasters];
+    if (draft.masterId) {
+      const idx = sortedMasters.findIndex(m => m.id === draft.masterId);
+      if (idx > -1) {
+        const selectedM = sortedMasters.splice(idx, 1)[0];
+        sortedMasters.unshift(selectedM);
+      }
     }
 
+    const isSlotOccupied = (mId, date, slotTime) => {
+      const slotStart = window.durationToMinutes(slotTime);
+      const slotEnd = slotStart + 30;
+      
+      return state.bookings.some(b => {
+        if (b.masterId !== mId || b.date !== date || b.status === 'cancelled') return false;
+        if (md.isEdit && b.id === md.bookingId) return false;
+        const bStart = window.durationToMinutes(b.time);
+        const bEnd = bStart + window.durationToMinutes(b.duration || '01:00');
+        return bStart < slotEnd && bEnd > slotStart;
+      });
+    };
+
+    // Отрисовываем заголовки колонок времени
+    const timeHeadersHtml = timeSlots.map(ts => `
+      <th style="text-align: center; font-size: 10px; padding: 4px; min-width: 65px; width: 65px;">${ts}</th>
+    `).join('');
+
+    // Отрисовываем строки мастеров
+    const mastersRowsHtml = sortedMasters.map(m => {
+      const isSelectedM = draft.masterId === m.id;
+      
+      const cellsHtml = timeSlots.map(ts => {
+        const slotStart = window.durationToMinutes(ts);
+        const occupied = isSlotOccupied(m.id, simDate, ts);
+        
+        let cellContent = '';
+        let cellBg = 'var(--bg)';
+        let isClickable = true;
+
+        if (occupied) {
+          cellContent = `
+            <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 4px; border-radius: 6px; font-size: 9px; color: #ef4444; text-align: center; font-weight: 600;">
+              Занято
+            </div>
+          `;
+          cellBg = 'rgba(239,68,68,0.02)';
+          isClickable = false;
+        } else {
+          // Проверяем, попадает ли этот слот под планируемую запись
+          const draftStart = draft.time ? window.durationToMinutes(draft.time) : null;
+          if (isSelectedM && draftStart !== null) {
+            const draftEnd = draftStart + bookingDuration;
+            if (slotStart === draftStart) {
+              // Начало новой записи
+              cellContent = `
+                <div draggable="true" ondragstart="handleWizardBookingDragStart(event)" style="background: rgba(99,102,241,0.15); border: 2px dashed var(--primary); padding: 4px 6px; border-radius: 6px; cursor: grab; font-size: 9px; font-weight: 700; color: var(--primary); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 8px rgba(99,102,241,0.15);" title="Перетащите меня">
+                  🎯 Новая (${bookingDuration}м)
+                </div>
+              `;
+              cellBg = 'rgba(99,102,241,0.05)';
+            } else if (slotStart > draftStart && slotStart < draftEnd) {
+              // Продолжение новой записи
+              cellContent = `
+                <div style="background: rgba(99,102,241,0.05); border: 1px dashed rgba(99,102,241,0.4); padding: 4px; border-radius: 6px; font-size: 9px; color: var(--primary); text-align: center;">
+                  •••
+                </div>
+              `;
+              cellBg = 'rgba(99,102,241,0.02)';
+            }
+          }
+        }
+
+        const dropAttr = !occupied ? `ondragover="event.preventDefault()" ondrop="handleWizardBookingDrop(event, '${ts}', '${m.id}')"` : '';
+        const clickAttr = isClickable ? `onclick="handleWizardCellClick('${m.id}', '${ts}')"` : '';
+
+        return `
+          <td ${dropAttr} ${clickAttr} style="padding: 6px; border: 1px solid var(--border); background: ${cellBg}; vertical-align: middle; height: 36px; min-width: 65px; width: 65px; text-align: center;">
+            ${cellContent}
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border); ${isSelectedM ? 'background: rgba(99,102,241,0.02);' : ''}">
+          <td style="position: sticky; left: 0; background: var(--bg); z-index: 10; border-right: 2px solid var(--border); padding: 8px; font-weight: 700; min-width: 110px; width: 110px;">
+            <div style="display: flex; flex-direction: column; gap: 2px; text-align: left;">
+              <button type="button" onclick="handleWizardMasterSelectAndReorder('${m.id}')" class="btn" style="padding: 2px 6px; font-size: 11px; text-align: left; font-weight: 700; color: ${isSelectedM ? 'var(--primary)' : 'var(--text)'}; background: ${isSelectedM ? 'rgba(99,102,241,0.08)' : 'transparent'}; border: ${isSelectedM ? '1px solid var(--primary)' : 'none'}; border-radius: 6px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${m.name.split(' ')[0]} ${isSelectedM ? '✓' : ''}
+              </button>
+              <span style="font-size: 9px; color: var(--text-secondary); padding-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</span>
+            </div>
+          </td>
+          ${cellsHtml}
+        </tr>
+      `;
+    }).join('');
+
     stepContent = `
-      <div class="animate-slide-in-right" style="display: flex; flex-direction: column;">
-        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">К какому мастеру записать?</p>
-        ${mastersHtml}
-        <button type="button" onclick="setBookingWizardStep(3)" class="btn btn-secondary" style="margin-top: 16px; border: none;">⬅ Назад</button>
+      <div class="animate-slide-in-right" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+          <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">К какому мастеру и на какое время записать?</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Дата:</span>
+            <input type="date" id="wizard-date" class="form-input" style="width: auto; padding: 4px 8px; font-size: 12px; height: 30px;" value="${simDate}" onchange="handleWizardDateChange(this.value)">
+          </div>
+        </div>
+
+        <div class="wizard-timeline-container" style="overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 12px; max-height: 250px; background: var(--bg-secondary);">
+          <table style="border-collapse: separate; border-spacing: 0; width: 100%;">
+            <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
+              <tr>
+                <th style="position: sticky; left: 0; background: var(--bg); border-right: 2px solid var(--border); border-bottom: 1px solid var(--border); font-size: 11px; padding: 6px; z-index: 30; min-width: 110px; width: 110px;">Мастер</th>
+                ${timeHeadersHtml}
+              </tr>
+            </thead>
+            <tbody>
+              ${mastersRowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px; background: var(--theme-50); border: 1px solid rgba(99,102,241,0.15); padding: 10px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
+          <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text);">
+            <i data-feather="info" style="width: 14px; height: 14px; color: var(--primary);"></i>
+            <span>Как спланировать время?</span>
+          </div>
+          <p style="margin-top: 2px;">
+            1. Перетащите блок <strong style="color: var(--primary);">🎯 Новая</strong> в свободную ячейку любого мастера.<br>
+            2. Или просто **кликните** по любой свободной ячейке в таблице.<br>
+            *Выбранный мастер автоматически поднимается на верхнюю строчку.*
+          </p>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 12px;">
+          <button type="button" onclick="setBookingWizardStep(3)" class="btn btn-secondary" style="flex: 1; border: none;">⬅ Назад</button>
+          <button type="button" onclick="
+            const md = state.ui.modalData;
+            if (!md.draft.masterId) {
+              showToast('Пожалуйста, выберите мастера и время на таймлайне', 'warning');
+            } else {
+              setBookingWizardStep(5);
+            }
+          " class="btn btn-primary" style="flex: 1;" ${!draft.masterId ? 'disabled style="opacity: 0.5;"' : ''}>Далее ➡</button>
+        </div>
       </div>
     `;
   } else if (step === 5) {

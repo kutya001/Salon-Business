@@ -477,6 +477,13 @@ function renderBookingsTimeline(bookings) {
   const slotDate = new Date(slotDateStr);
   const timelineStep = state.ui.timelineStep || 60; // 5, 15, 30, 60
 
+  const anyMasterVirtual = {
+    id: '',
+    name: 'Любой мастер',
+    specialization: 'Не назначен'
+  };
+  const mastersForTimeline = [...state.masters, anyMasterVirtual];
+
   let columns = [];
   let colTitle = '';
   
@@ -512,15 +519,15 @@ function renderBookingsTimeline(bookings) {
     colTitle = `${monthNames[m]} ${y}`;
   }
 
-  // Заголовки колонок
+  // Заголовки колонок для горизонтальной таблицы (десктоп)
   const headersHtml = columns.map(col => `
     <th style="text-align: center; font-weight: 700; width: ${mode === 'day' ? '80px' : '110px'}; min-width: ${mode === 'day' ? '80px' : '110px'};">
       <div style="color: var(--text-secondary); font-size: 11px;">${col.label}</div>
     </th>
   `).join('');
 
-  // Строки по мастерам
-  const rowsHtml = state.masters.map(m => {
+  // 1. Рендеринг строк для горизонтальной таблицы (десктоп / общая)
+  const rowsHtml = mastersForTimeline.map(m => {
     let skipCols = 0;
     const colsHtml = [];
     
@@ -537,7 +544,13 @@ function renderBookingsTimeline(bookings) {
         const slotEnd = slotStart + timelineStep;
         
         const matchBookings = bookings.filter(b => {
-          if (b.masterId !== m.id || b.date !== slotDateStr) return false;
+          const bDate = b.date ? String(b.date).split('T')[0].split(' ')[0] : '';
+          if (bDate !== slotDateStr) return false;
+          
+          const isAny = !b.masterId || b.masterId === 'any';
+          const isM = m.id === '' ? isAny : b.masterId === m.id;
+          if (!isM) return false;
+          
           const bStart = window.durationToMinutes(b.time);
           return bStart >= slotStart && bStart < slotEnd;
         });
@@ -592,12 +605,17 @@ function renderBookingsTimeline(bookings) {
           
           colsHtml.push(`<td colspan="${span}" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`);
         } else {
-          // Пустая ячейка с кликом для создания записи
           colsHtml.push(`<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи"></td>`);
         }
       } else {
         // Режим недели или месяца
-        const matchBookings = bookings.filter(b => b.masterId === m.id && b.date === col.id);
+        const matchBookings = bookings.filter(b => {
+          const bDate = b.date ? String(b.date).split('T')[0].split(' ')[0] : '';
+          if (bDate !== col.id) return false;
+          
+          const isAny = !b.masterId || b.masterId === 'any';
+          return m.id === '' ? isAny : b.masterId === m.id;
+        });
         
         const bookingBlocks = matchBookings.map(b => {
           let actions = '';
@@ -646,6 +664,126 @@ function renderBookingsTimeline(bookings) {
     `;
   }).join('');
 
+  // 2. Рендеринг для мобильной вертикальной таблицы (только День)
+  let mobileTimelineHtml = '';
+  if (mode === 'day') {
+    const timeSlots = columns.map(c => c.id);
+    const skipRowsForMaster = {};
+    mastersForTimeline.forEach(m => {
+      skipRowsForMaster[m.id] = 0;
+    });
+
+    const mobileHeadersHtml = mastersForTimeline.map(m => `
+      <th style="text-align: center; font-size: 11px; padding: 6px; min-width: 100px; font-weight: 800; border-bottom: 2px solid var(--border); z-index: 20; background: var(--bg);">
+        ${m.name.split(' ')[0]}
+        <div style="font-size: 8px; color: var(--text-secondary); font-weight: 500;">${m.specialization}</div>
+      </th>
+    `).join('');
+
+    const mobileRowsHtml = timeSlots.map((ts, i) => {
+      const slotStart = window.durationToMinutes(ts);
+      const slotEnd = slotStart + timelineStep;
+      
+      const cellsHtml = mastersForTimeline.map(m => {
+        if (skipRowsForMaster[m.id] > 0) {
+          skipRowsForMaster[m.id]--;
+          return ''; // Ячейка объединена по вертикали (rowspan)
+        }
+        
+        const matchBookings = bookings.filter(b => {
+          const bDate = b.date ? String(b.date).split('T')[0].split(' ')[0] : '';
+          if (bDate !== slotDateStr) return false;
+          
+          const isAny = !b.masterId || b.masterId === 'any';
+          const isM = m.id === '' ? isAny : b.masterId === m.id;
+          if (!isM) return false;
+          
+          const bStart = window.durationToMinutes(b.time);
+          return bStart >= slotStart && bStart < slotEnd;
+        });
+        
+        if (matchBookings.length > 0) {
+          let maxEnd = slotStart;
+          matchBookings.forEach(b => {
+            const bStart = window.durationToMinutes(b.time);
+            const bEnd = bStart + window.durationToMinutes(b.duration || '01:00');
+            if (bEnd > maxEnd) maxEnd = bEnd;
+          });
+          
+          let rowspan = 1;
+          for (let j = i + 1; j < timeSlots.length; j++) {
+            const nextSlotStart = window.durationToMinutes(timeSlots[j]);
+            if (nextSlotStart < maxEnd) {
+              rowspan++;
+            } else {
+              break;
+            }
+          }
+          
+          skipRowsForMaster[m.id] = rowspan - 1;
+          
+          const bookingBlocks = matchBookings.map(b => {
+            let actions = '';
+            if (hasPermission('bookings_status') && (b.status === 'pending' || b.status === 'confirmed')) {
+              const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
+              const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
+              actions = `
+                <div style="display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 4px;">
+                  <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', '${nextAction}')" style="background: #10b981; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i data-feather="${nextIcon}" style="width: 12px; height: 12px;"></i></button>
+                  <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.2);"><i data-feather="x" style="width: 12px; height: 12px;"></i></button>
+                </div>
+              `;
+            }
+
+            const bgColor = b.status === 'completed' ? '#f0fdf4' : b.status === 'confirmed' ? 'var(--theme-50)' : b.status === 'pending' ? '#fffbeb' : '#f8fafc';
+            const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
+
+            return `
+              <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                  <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)} (${b.duration || '01:00'})</span>
+                </div>
+                <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px;">${b.clientName}</div>
+                <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px;">${b.serviceName}</div>
+                ${actions}
+              </div>
+            `;
+          }).join('');
+          
+          return `<td rowspan="${rowspan}" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-width: 100px;">${bookingBlocks}</td>`;
+        } else {
+          return `<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${ts}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${ts}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 50px; cursor: pointer; min-width: 100px;" title="Кликните для создания новой записи"></td>`;
+        }
+      }).join('');
+      
+      return `
+        <tr>
+          <td style="font-weight: 800; font-size: 11px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 10; text-align: center; width: 60px; min-width: 60px;">
+            ${ts}
+          </td>
+          ${cellsHtml}
+        </tr>
+      `;
+    }).join('');
+
+    mobileTimelineHtml = `
+      <div class="md-hidden" style="overflow-x: auto; overflow-y: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 12px; max-height: calc(100vh - 250px); background: var(--bg-secondary);">
+        <table style="border-collapse: separate; border-spacing: 0; width: 100%;">
+          <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
+            <tr>
+              <th style="position: sticky; left: 0; background: var(--bg); border-right: 2px solid var(--border); border-bottom: 2px solid var(--border); font-size: 11px; padding: 6px; z-index: 30; width: 60px; min-width: 60px; text-align: center;">Время</th>
+              ${mobileHeadersHtml}
+            </tr>
+          </thead>
+          <tbody>
+            ${mobileRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Общий рендеринг контейнера
   return `
     <div class="card p-0" style="box-shadow: 0 4px 12px rgba(0,0,0,0.02); overflow: hidden;">
       <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 16px;">
@@ -688,19 +826,42 @@ function renderBookingsTimeline(bookings) {
         </div>
 
       </div>
-      <div style="overflow-x: auto; max-height: calc(100vh - 200px);">
-        <table class="data-table" style="border-collapse: separate; border-spacing: 0;">
-          <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
-            <tr>
-              <th style="width: 100px; min-width: 100px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 30; padding: 8px; font-size: 12px;">Мастер</th>
-              ${headersHtml}
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-      </div>
+      
+      ${mode === 'day' ? `
+        <!-- Десктопное представление (горизонтальное) -->
+        <div class="hidden md-block" style="overflow-x: auto; max-height: calc(100vh - 200px);">
+          <table class="data-table" style="border-collapse: separate; border-spacing: 0;">
+            <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
+              <tr>
+                <th style="width: 100px; min-width: 100px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 30; padding: 8px; font-size: 12px;">Мастер</th>
+                ${headersHtml}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Мобильное представление (вертикальное) -->
+        ${mobileTimelineHtml}
+      ` : `
+        <!-- Общее горизонтальное представление для недели/месяца -->
+        <div style="overflow-x: auto; max-height: calc(100vh - 200px);">
+          <table class="data-table" style="border-collapse: separate; border-spacing: 0;">
+            <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg);">
+              <tr>
+                <th style="width: 100px; min-width: 100px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 30; padding: 8px; font-size: 12px;">Мастер</th>
+                ${headersHtml}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `}
+      
     </div>
   `;
 }

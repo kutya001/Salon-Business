@@ -521,52 +521,118 @@ function renderBookingsTimeline(bookings) {
 
   // Строки по мастерам
   const rowsHtml = state.masters.map(m => {
-    const colsHtml = columns.map(col => {
-      // Поиск записей
-      let matchBookings = [];
+    let skipCols = 0;
+    const colsHtml = [];
+    
+    for (let i = 0; i < columns.length; i++) {
+      const col = columns[i];
+      
       if (mode === 'day') {
-        matchBookings = bookings.filter(b => {
+        if (skipCols > 0) {
+          skipCols--;
+          continue;
+        }
+        
+        const slotStart = window.durationToMinutes(col.id);
+        const slotEnd = slotStart + timelineStep;
+        
+        const matchBookings = bookings.filter(b => {
           if (b.masterId !== m.id || b.date !== slotDateStr) return false;
           const bStart = window.durationToMinutes(b.time);
-          const slotStart = window.durationToMinutes(col.id);
-          const slotEnd = slotStart + timelineStep;
           return bStart >= slotStart && bStart < slotEnd;
         });
-      } else {
-        matchBookings = bookings.filter(b => b.masterId === m.id && b.date === col.id);
-      }
+        
+        if (matchBookings.length > 0) {
+          let maxEnd = slotStart;
+          matchBookings.forEach(b => {
+            const bStart = window.durationToMinutes(b.time);
+            const bEnd = bStart + window.durationToMinutes(b.duration || '01:00');
+            if (bEnd > maxEnd) maxEnd = bEnd;
+          });
+          
+          let span = 1;
+          for (let j = i + 1; j < columns.length; j++) {
+            const nextColStart = window.durationToMinutes(columns[j].id);
+            if (nextColStart < maxEnd) {
+              span++;
+            } else {
+              break;
+            }
+          }
+          
+          skipCols = span - 1;
+          
+          const bookingBlocks = matchBookings.map(b => {
+            let actions = '';
+            if (hasPermission('bookings_status') && (b.status === 'pending' || b.status === 'confirmed')) {
+              const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
+              const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
+              actions = `
+                <div style="display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 4px;">
+                  <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', '${nextAction}')" style="background: #10b981; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i data-feather="${nextIcon}" style="width: 12px; height: 12px;"></i></button>
+                  <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.2);"><i data-feather="x" style="width: 12px; height: 12px;"></i></button>
+                </div>
+              `;
+            }
 
-      const bookingBlocks = matchBookings.map(b => {
-        let actions = '';
-        if (hasPermission('bookings_status') && (b.status === 'pending' || b.status === 'confirmed')) {
-          const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
-          const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
-          actions = `
-            <div style="display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 4px;">
-              <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', '${nextAction}')" style="background: #10b981; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i data-feather="${nextIcon}" style="width: 12px; height: 12px;"></i></button>
-              <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.2);"><i data-feather="x" style="width: 12px; height: 12px;"></i></button>
+            const bgColor = b.status === 'completed' ? '#f0fdf4' : b.status === 'confirmed' ? 'var(--theme-50)' : b.status === 'pending' ? '#fffbeb' : '#f8fafc';
+            const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
+
+            return `
+              <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                  <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)} (${b.duration || '01:00'})</span>
+                </div>
+                <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px;">${b.clientName}</div>
+                <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px;">${b.serviceName}</div>
+                ${actions}
+              </div>
+            `;
+          }).join('');
+          
+          colsHtml.push(`<td colspan="${span}" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`);
+        } else {
+          // Пустая ячейка с кликом для создания записи
+          colsHtml.push(`<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи"></td>`);
+        }
+      } else {
+        // Режим недели или месяца
+        const matchBookings = bookings.filter(b => b.masterId === m.id && b.date === col.id);
+        
+        const bookingBlocks = matchBookings.map(b => {
+          let actions = '';
+          if (hasPermission('bookings_status') && (b.status === 'pending' || b.status === 'confirmed')) {
+            const nextAction = b.status === 'pending' ? 'confirmed' : 'completed';
+            const nextIcon = b.status === 'pending' ? 'check' : 'credit-card';
+            actions = `
+              <div style="display: flex; gap: 4px; margin-top: 6px; justify-content: flex-end; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 4px;">
+                <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', '${nextAction}')" style="background: #10b981; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i data-feather="${nextIcon}" style="width: 12px; height: 12px;"></i></button>
+                <button onclick="event.stopPropagation(); handleUpdateBookingStatus('${b.id}', 'cancelled')" style="background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.2);"><i data-feather="x" style="width: 12px; height: 12px;"></i></button>
+              </div>
+            `;
+          }
+
+          const bgColor = b.status === 'completed' ? '#f0fdf4' : b.status === 'confirmed' ? 'var(--theme-50)' : b.status === 'pending' ? '#fffbeb' : '#f8fafc';
+          const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
+
+          return `
+            <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="event.stopPropagation(); showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)}</span>
+              </div>
+              <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px;">${b.clientName}</div>
+              <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px;">${b.serviceName}</div>
+              ${actions}
             </div>
           `;
-        }
+        }).join('');
+        
+        colsHtml.push(`<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" onclick="handleTimelineCellClick('${m.id}', '${col.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px; cursor: pointer;" title="Кликните для создания новой записи">${bookingBlocks}</td>`);
+      }
+    }
+    
+    const colsHtmlStr = colsHtml.join('');
 
-        const bgColor = b.status === 'completed' ? '#f0fdf4' : b.status === 'confirmed' ? 'var(--theme-50)' : b.status === 'pending' ? '#fffbeb' : '#f8fafc';
-        const bdColor = b.status === 'completed' ? '#10b981' : b.status === 'confirmed' ? 'var(--primary)' : b.status === 'pending' ? '#f59e0b' : 'var(--border)';
-
-        return `
-          <div id="booking-${b.id}" draggable="true" ondragstart="handleBookingDragStart(event, '${b.id}')" onclick="showBookingDetails('${b.id}')" class="animate-scale-in" style="background: ${bgColor}; border: 1px solid ${bdColor}; border-left: 3px solid ${bdColor}; padding: 4px 6px; border-radius: 6px; margin-bottom: 4px; cursor: grab; text-align: left; font-size: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-              <span style="font-weight: 800; color: ${bdColor}; font-size: 9px;">${formatTime(b.time)}</span>
-            </div>
-            <div style="font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px;">${b.clientName}</div>
-            <div style="color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px;">${b.serviceName}</div>
-            ${actions}
-          </div>
-        `;
-      }).join('');
- 
-      return `<td ondragover="event.preventDefault()" ondrop="handleBookingDrop(event, '${col.id}', '${m.id}')" style="padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg-secondary); min-height: 60px;">${bookingBlocks}</td>`;
-    }).join('');
- 
     return `
       <tr>
         <td style="font-weight: 700; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: sticky; left: 0; z-index: 10;">
@@ -575,7 +641,7 @@ function renderBookingsTimeline(bookings) {
             <div style="font-size: 8px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${m.specialization}</div>
           </div>
         </td>
-        ${colsHtml}
+        ${colsHtmlStr}
       </tr>
     `;
   }).join('');
@@ -700,8 +766,17 @@ window.handleQuickUpdateBookingMaster = async function (id, newMasterId) {
   const idx = state.bookings.findIndex(b => b.id === id);
   if (idx === -1) return;
   
-  const oldMasterId = state.bookings[idx].masterId;
-  const oldMasterName = state.bookings[idx].masterName;
+  const b = state.bookings[idx];
+  const oldMasterId = b.masterId;
+  const oldMasterName = b.masterName;
+
+  // Валидация: проверять доступность нового мастера, если он назначен конкретный
+  const durationMins = window.durationToMinutes(b.duration || '01:00');
+  if (newMasterId && !window.isMasterAvailable(newMasterId, b.date, b.time, durationMins, id)) {
+    showToast('Выбранный мастер занят в указанное время', 'error');
+    if (window.render) window.render();
+    return;
+  }
   
   const master = state.masters.find(m => m.id === newMasterId) || { name: 'Любой мастер' };
   
@@ -1030,25 +1105,49 @@ window.renderBookingMessageModal = function () {
 };
 
 // Открытие модалки создания/редактирования записи
-window.showCreateBookingModal = function () {
+window.showCreateBookingModal = function (prefilledData) {
+  const defaults = {
+    clientName: '',
+    clientPhone: '',
+    genderCategory: '',
+    serviceId: '',
+    masterId: '',
+    date: '',
+    time: '',
+    paymentMethod: 'cash',
+    notes: '',
+    status: (state.ui.filters && state.ui.filters.status) ? state.ui.filters.status : 'pending'
+  };
+  
+  const draft = { ...defaults, ...prefilledData };
+
   setUI({ 
     modal: 'createBooking', 
     modalData: {
       step: 1,
       isEdit: false,
-      draft: {
-        clientName: '',
-        clientPhone: '',
-        genderCategory: '',
-        serviceId: '',
-        masterId: '',
-        date: '',
-        time: '',
-        paymentMethod: 'cash',
-        notes: '',
-        status: (state.ui.filters && state.ui.filters.status) ? state.ui.filters.status : 'pending'
-      }
+      draft: draft
     } 
+  });
+};
+
+window.handleTimelineCellClick = function(masterId, colId) {
+  if (!hasPermission('bookings_edit')) return;
+  
+  const mode = state.ui.timelineMode || 'day';
+  let date = state.ui.timelineDate || new Date().toISOString().split('T')[0];
+  let time = '09:00';
+  
+  if (mode === 'day') {
+    time = colId;
+  } else {
+    date = colId;
+  }
+  
+  window.showCreateBookingModal({
+    masterId: masterId,
+    date: date,
+    time: time
   });
 };
 
@@ -1423,18 +1522,9 @@ window.setBookingWizardStep = function(step) {
       data.draft.clientPhone = phoneInput.value.trim();
     }
   } else if (data.step === 5) {
-    const dateInput = document.getElementById('b-date');
-    const timeInput = document.getElementById('b-time');
     const notesInput = document.getElementById('b-notes');
-    if (dateInput && timeInput) {
-      if (goingForward) {
-        if (!dateInput.value || !timeInput.value) {
-          return showToast('Пожалуйста, укажите дату и время', 'error');
-        }
-      }
-      data.draft.date = dateInput.value;
-      data.draft.time = timeInput.value;
-      data.draft.notes = notesInput ? notesInput.value.trim() : '';
+    if (notesInput) {
+      data.draft.notes = notesInput.value.trim();
     }
   }
 
@@ -1786,16 +1876,6 @@ window.renderBookingModal = function () {
   } else if (step === 5) {
     stepContent = `
       <div class="animate-slide-in-right" style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="display: flex; gap: 12px; width: 100%;">
-          <div class="form-group" style="flex: 1;">
-            <label class="form-label">Дата</label>
-            <input type="date" id="b-date" class="form-input" value="${draft.date}" required>
-          </div>
-          <div class="form-group" style="flex: 1;">
-            <label class="form-label">Время</label>
-            <input type="time" id="b-time" class="form-input" value="${draft.time}" required>
-          </div>
-        </div>
         <div class="form-group">
           <label class="form-label">Способ оплаты</label>
           <div style="display: flex; gap: 8px; margin-top: 4px;">
